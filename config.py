@@ -10,7 +10,8 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-CHATRULES_VERSION = 'v0.1.0'
+
+CHATRULES_VERSION = 'v0.1.1'
 
 
 # ADMINISTRATIVE SETTINGS
