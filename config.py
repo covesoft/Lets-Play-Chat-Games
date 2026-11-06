@@ -22,12 +22,17 @@ ADMIN_IDS = [int(x) for x in os.getenv("ADMIN_IDS", "").split(",") if x.strip().
 
 APP_ID = os.getenv("CHATRULES_APP_ID")
 
-BOT_PERMISSIONS_INT = 274877958144
-# Send Messages, .. in Threads, Embed Links, Attach Files, that's it.
-# needs add reactions
+BOT_PERMISSIONS_INT = 274878024768
+# Send Messages, .. in Threads,
+#  Embed Links, Attach Files,
+# View Channels, Add Reactions, and Read Message History
 
 # URLS
 CHATRULES_LINK_OTHER_BOTS = "https://pivot.quest/dbots/"
+
+CHATRULES_LINK_THIS_BOT = "https://pivot.quest/dbots/#lets-play"
+
+CHATRULES_LINK_GITHUB = "https://github.com/covesoft/Lets-Play-Chat-Games"
 
 CHATRULES_LINK_DONATE = "https://ko-fi.com/lepivo/goal?g=8"
 

@@ -14,7 +14,7 @@ from config import (
 
 logging.basicConfig(level=logging.INFO)
 
-DEVELOPMENT_MODE = False
+DEVELOPMENT_MODE = True
 
 class ChatRulesBot(commands.Bot):
     def __init__(self):
