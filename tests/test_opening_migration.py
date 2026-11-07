@@ -45,7 +45,7 @@ async def test_schema_five_upgrade_registers_legacy_capacity_without_guessing_st
     )
     columns = {t: ",".join(r[1] for r in rows(path, f"PRAGMA table_info({t})")) for t in tables}
     before = {t: rows(path, f"SELECT {columns[t]} FROM {t}") for t in tables}
-    assert (await bootstrap.initialize_database(path)).schema_version == SCHEMA_VERSION == 8
+    assert (await bootstrap.initialize_database(path)).schema_version == SCHEMA_VERSION == 9
     for table, value in before.items():
         actual = rows(path, f"SELECT {columns[table]} FROM {table}")
         if table == "nr_sessions":

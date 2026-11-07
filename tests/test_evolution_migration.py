@@ -35,7 +35,7 @@ async def test_schema_six_upgrade_preserves_scores_offer_clocks_and_original_pac
     ]
     columns = {t: ",".join(r[1] for r in rows(path, f"PRAGMA table_info({t})")) for t in tables}
     before = {t: rows(path, f"SELECT {columns[t]} FROM {t}") for t in tables}
-    assert (await bootstrap.initialize_database(path)).schema_version == SCHEMA_VERSION == 8
+    assert (await bootstrap.initialize_database(path)).schema_version == SCHEMA_VERSION == 9
     for table, snapshot in before.items():
         if table == "nr_sessions":
             i = columns[table].split(",").index("pacing_version")
@@ -94,7 +94,7 @@ async def test_failed_migration_seven_restores_rebuilt_tables_columns_ids_and_me
     assert rows(path, "SELECT name FROM sqlite_schema WHERE name LIKE '%_v5'") == []
     assert rows(path, "SELECT name FROM sqlite_schema WHERE name='nr_evolution'") == []
     monkeypatch.setattr(bootstrap, "MIGRATIONS", original)
-    assert (await bootstrap.initialize_database(path)).schema_version == 8
+    assert (await bootstrap.initialize_database(path)).schema_version == SCHEMA_VERSION
 
 
 @pytest.mark.asyncio

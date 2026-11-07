@@ -11,6 +11,7 @@ from urllib.parse import urlencode, urlsplit
 
 from dotenv import dotenv_values
 
+CHATGAMES_DING_EMOJI = "<a:NUH_UH_neon:1568499898071126026>"
 CHATGAMES_BOT_PERMISSIONS_INT = 274878024768
 CHATGAMES_LINK_GITHUB = "https://github.com/covesoft/Lets-Play-Chat-Games"
 CHATGAMES_LINK_OTHER_BOTS = "https://pivot.quest/dbots/"
@@ -31,7 +32,7 @@ class Settings:
     profanity_list_path: Path | None = field(default=None, repr=False)
     phrase_suitability_list_path: Path | None = field(default=None, repr=False)
     badge_emoji_map_path: Path | None = None
-    ding_emoji: str | None = None
+    ding_emoji: str | None = CHATGAMES_DING_EMOJI
     development_mode: bool = False
     sync_commands: bool = False
     other_bots_url: str = CHATGAMES_LINK_OTHER_BOTS
@@ -152,7 +153,7 @@ def load_settings(
             base, _value(env, "CHATGAMES_PHRASE_SUITABILITY_LIST_PATH")
         ),
         badge_emoji_map_path=_path(base, _value(env, "CHATGAMES_BADGE_EMOJI_MAP_PATH")),
-        ding_emoji=_value(env, "CHATGAMES_DING_EMOJI"),
+        ding_emoji=_value(env, "CHATGAMES_DING_EMOJI") or CHATGAMES_DING_EMOJI,
         development_mode=_boolean(env, "CHATGAMES_DEVELOPMENT_MODE"),
         sync_commands=_boolean(env, "CHATGAMES_SYNC_COMMANDS"),
         other_bots_url=_url(env, "CHATGAMES_LINK_OTHER_BOTS", CHATGAMES_LINK_OTHER_BOTS),

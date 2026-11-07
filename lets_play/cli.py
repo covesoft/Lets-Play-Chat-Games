@@ -47,10 +47,15 @@ def main(argv: list[str] | None = None, *, base_dir: Path | None = None) -> int:
                 f"Database ready: schema={info.schema_version}, journal={info.journal_mode}, foreign_keys=on."
             )
             return 0
+
+        # Run the discord bot
         settings.require_token()
         from lets_play.bot import run_bot
 
         logging.basicConfig(level=logging.INFO, format="%(levelname)s:%(name)s:%(message)s")
+        logging.getLogger(__name__).info("="*50)
+        logging.getLogger(__name__).info("-"*5 + " Launching Let's Play Chat Games Discord bot " + "-"*5)
+
         asyncio.run(run_bot(settings))
         return 0
     except ConfigError as exc:
@@ -63,5 +68,5 @@ def main(argv: list[str] | None = None, *, base_dir: Path | None = None) -> int:
         )
         return 1
     except KeyboardInterrupt:
-        logging.getLogger(__name__).info("Bot stopped by intervention.")
+        logging.getLogger(__name__).info("-"*10 + " Bot stopped by intervention. " + "-"*30)
         return 0

@@ -12,10 +12,9 @@ or the installed `lets-play` command. Use `CHATGAMES_*` configuration names; the
 are no legacy launcher/configuration aliases. No token or external private list
 is required for offline tests.
 
-Keep the New Rules domain independent of Discord and storage. Do not treat the
-offline parser/contracts or migration bookkeeping as implemented gameplay. Finish M1
-interfaces, parser examples, and persistent transaction boundaries before wiring
-playable commands. Resolve the relevant open contracts at their designated gates.
+Keep the New Rules domain independent of Discord and storage. M1 is accepted and closed at v0.2.9/schema 8. M2 is in progress. Preserve the
+existing engine/storage APIs; the v0.3.0 development preview wires only the opening
+path. Do not claim later-round play, modes or full recovery from that preview. Resolve the relevant open contracts at their designated gates.
 
 Never commit `.env`, production word lists, databases/sidecars, transcripts, or
 media. Use harmless fixtures. Do not contact/invite collaborators or deploy the
@@ -33,7 +32,7 @@ python -m lets_play --check-config
 For packaging/dependency changes, also run `python -m build` and `python -m pip
 check` (or `uv pip check`). Record actual results and remaining limits in the
 private implementation notes when available. Never report a mock/offline check
-as live Discord or Windows evidence. M1 is authorized in bounded increments.
+as live Discord or Windows evidence. M2 is authorized in bounded increments.
 The owner verified the earlier v0.1.3 shell live, schema-7/WAL/FK bootstrap, and v0.2.8
 tests on Windows 11 (944 passed in 70.72s). Source hygiene uses NUL-framed Git I/O.
 Later increments still need their own Windows/CI evidence.
@@ -114,3 +113,14 @@ created before actual resumption; do not backfill missing chat or mode success.
 Old capability/dependency/recovery pauses, legacy clockless revival and unsupported
 modes require specialized policy or explicit authorized ending. Startup adapter,
 send reconciliation/leases, real announcements and cleanup remain M2/later work.
+
+Schema 9 appends only the Discord outbound-attempt guard. The development preview
+uses one bounded FIFO and one publisher per live session, and one bot process per
+database. Capture Gateway receipts before async SDK callbacks/HTTP defers. Raw
+reaction source IDs use the pinned SDK Gateway session/sequence, independently of
+the actor/target offense guard. Claims commit before HTTP; unknown sends pause and
+are never blindly retried. All startup routes enter recovery before output/timers.
+Current preview recovery permits manager ending only. Do not infer live emoji
+usability from markup or permission bits: the admission probe must really react.
+Later-round pacing, modes, full summary baselines, automatic resume, final-output
+retry/24-hour cleanup and public release remain future increments.

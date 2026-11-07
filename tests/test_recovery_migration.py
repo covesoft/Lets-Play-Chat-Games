@@ -31,7 +31,7 @@ async def test_schema_seven_upgrade_preserves_every_existing_row_without_startin
         )
     ]
     before = {t: rows(path, f"SELECT * FROM {t}") for t in tables}
-    assert (await bootstrap.initialize_database(path)).schema_version == SCHEMA_VERSION == 8
+    assert (await bootstrap.initialize_database(path)).schema_version == SCHEMA_VERSION == 9
     for t, value in before.items():
         assert rows(path, f"SELECT * FROM {t}") == value
     assert rows(path, "SELECT COUNT(*) FROM nr_recoveries") == [(0,)]
@@ -68,4 +68,4 @@ async def test_failed_migration_eight_rolls_back_all_ddl_and_preserves_released_
         assert rows(path, f"SELECT * FROM {t}") == value
     assert rows(path, "SELECT name FROM sqlite_schema WHERE name='nr_recoveries'") == []
     monkeypatch.setattr(bootstrap, "MIGRATIONS", original)
-    assert (await bootstrap.initialize_database(path)).schema_version == 8
+    assert (await bootstrap.initialize_database(path)).schema_version == SCHEMA_VERSION

@@ -63,7 +63,7 @@ async def test_fresh_and_repeated_startup_preserve_wal_schema_and_integrity(tmp_
     first = await initialize_database(path)
     second = await initialize_database(path)
     assert first == second
-    assert first.schema_version == SCHEMA_VERSION == 8
+    assert first.schema_version == SCHEMA_VERSION == 9
     assert first.journal_mode == "wal"
     assert first.foreign_keys
     assert first.busy_timeout_ms == 10000

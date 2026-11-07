@@ -534,5 +534,17 @@ MIGRATIONS = (
             ) STRICT""",
         ),
     ),
+    Migration(
+        version=9,
+        name="discord_opening_delivery_attempts",
+        statements=(
+            """CREATE TABLE nr_discord_deliveries (
+                output_id INTEGER PRIMARY KEY REFERENCES nr_opening_outputs ON DELETE CASCADE,
+                state TEXT NOT NULL CHECK(state IN ('sending','delivered','failed')),
+                attempted_at_utc INTEGER NOT NULL,
+                message_id INTEGER CHECK(message_id>0)
+            ) STRICT""",
+        ),
+    ),
 )
 SCHEMA_VERSION = MIGRATIONS[-1].version

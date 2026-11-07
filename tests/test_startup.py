@@ -42,7 +42,7 @@ async def test_sdk_construction_and_close_need_no_token_or_network(tmp_path):
         assert bot._connection.max_messages is None
         assert bot._connection.member_cache_flags.value == 0
         assert not bot.commands
-        assert not bot.tree.get_commands()
+        assert {c.name for c in bot.tree.get_commands()} == {"start-game", "rules", "end-game"}
     assert bot.is_closed()
     assert not list(tmp_path.iterdir())
 
@@ -75,7 +75,7 @@ async def test_setup_initializes_database_and_only_syncs_with_opt_in_and_command
         )
     async with bot:
         await bot.setup_hook()
-        assert sync_mock.await_count == int(should_sync)
+        assert sync_mock.await_count == int(sync)
     assert settings.database_path.exists()
 
 
