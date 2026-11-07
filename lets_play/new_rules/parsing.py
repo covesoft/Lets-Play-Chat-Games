@@ -106,6 +106,11 @@ class MessageView:
             for char in tail
         )
 
+    def starts_with_word(self, word: str) -> bool:
+        if not self.words or self.words[0].key != word_key(word):
+            return False
+        return is_word_gap(self.logical[: self.words[0].start])
+
 
 def word_key(word: str) -> str:
     # NFC leaves literal punctuation intact: NFKC would turn … into ... .

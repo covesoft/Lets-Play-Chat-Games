@@ -2,6 +2,9 @@
 
 The package supplies bootstrap/migration infrastructure and an offline New Rules
 event unit of work. It is not wired to live Discord gameplay.
+Pure ordinary-subset [hand preparation](HANDS.md) can supply legal result states;
+offers, their consumption, publication, and round resolution are not persisted by
+that API. Those operations still require a composed transition service.
 `initialize_database()` opens one aiosqlite connection, initializes it, reports
 safe metadata, and closes it on success or failure. `--init-db` invokes it without
 Discord. The live shell invokes it in `setup_hook()` before command sync.
@@ -125,6 +128,9 @@ serialize dataclasses generically. Raw content, filenames, URLs, media, and even
 objects never enter the store. Parser/evaluator/score version pins are checked on
 read: mismatches raise `IncompatibleState` and require an explicit recovery policy,
 rather than silently changing live semantics after an upgrade.
+v0.2.3 pins `ordinary-subset-2` as the evaluator version. Offline session fixtures
+saved under v0.2.2's `representatives-1` refuse automatic reinterpretation. The
+live shell has not created gameplay sessions; schema 2 itself is unchanged.
 
 Marker intents contain identifiers only and commit with the fault. Read at most
 100 per page; acknowledge only after successful/terminal handling. Acknowledgement

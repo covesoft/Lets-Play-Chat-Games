@@ -1,0 +1,602 @@
+[
+  {
+    "id": "NR007-0",
+    "card": "NR007",
+    "content": "quiet over...",
+    "outcome": "pass"
+  },
+  {
+    "id": "NR007-1",
+    "card": "NR007",
+    "content": "QUIET over...",
+    "outcome": "fail"
+  },
+  {
+    "id": "NR007-2",
+    "card": "NR007",
+    "content": "ǅ",
+    "outcome": "fail"
+  },
+  {
+    "id": "NR007-3",
+    "card": "NR007",
+    "content": "123 中文",
+    "outcome": "pass"
+  },
+  {
+    "id": "NR007-4",
+    "card": "NR007",
+    "content": "**Quiet**",
+    "outcome": "fail"
+  },
+  {
+    "id": "NR007-exemption-0",
+    "card": "NR007",
+    "content": null,
+    "outcome": "not_applicable"
+  },
+  {
+    "id": "NR007-exemption-1",
+    "card": "NR007",
+    "content": "",
+    "outcome": "not_applicable"
+  },
+  {
+    "id": "NR007-exemption-2",
+    "card": "NR007",
+    "content": "-# whole message\nWRONG?",
+    "outcome": "not_applicable"
+  },
+  {
+    "id": "NR008-0",
+    "card": "NR008",
+    "content": "QUIET OVER...",
+    "outcome": "pass"
+  },
+  {
+    "id": "NR008-1",
+    "card": "NR008",
+    "content": "Quiet OVER...",
+    "outcome": "fail"
+  },
+  {
+    "id": "NR008-2",
+    "card": "NR008",
+    "content": "ß",
+    "outcome": "fail"
+  },
+  {
+    "id": "NR008-3",
+    "card": "NR008",
+    "content": "SS",
+    "outcome": "pass"
+  },
+  {
+    "id": "NR008-4",
+    "card": "NR008",
+    "content": "123 中文",
+    "outcome": "pass"
+  },
+  {
+    "id": "NR008-exemption-0",
+    "card": "NR008",
+    "content": null,
+    "outcome": "not_applicable"
+  },
+  {
+    "id": "NR008-exemption-1",
+    "card": "NR008",
+    "content": "",
+    "outcome": "not_applicable"
+  },
+  {
+    "id": "NR008-exemption-2",
+    "card": "NR008",
+    "content": "-# whole message\nWRONG?",
+    "outcome": "not_applicable"
+  },
+  {
+    "id": "NR010-0",
+    "card": "NR010",
+    "content": "over?",
+    "outcome": "pass"
+  },
+  {
+    "id": "NR010-1",
+    "card": "NR010",
+    "content": "“over?”",
+    "outcome": "pass"
+  },
+  {
+    "id": "NR010-2",
+    "card": "NR010",
+    "content": "**over??**",
+    "outcome": "pass"
+  },
+  {
+    "id": "NR010-3",
+    "card": "NR010",
+    "content": "over？",
+    "outcome": "fail"
+  },
+  {
+    "id": "NR010-4",
+    "card": "NR010",
+    "content": "over...",
+    "outcome": "fail"
+  },
+  {
+    "id": "NR010-5",
+    "card": "NR010",
+    "content": "over? 🦆",
+    "outcome": "fail"
+  },
+  {
+    "id": "NR010-exemption-0",
+    "card": "NR010",
+    "content": null,
+    "outcome": "not_applicable"
+  },
+  {
+    "id": "NR010-exemption-1",
+    "card": "NR010",
+    "content": "",
+    "outcome": "not_applicable"
+  },
+  {
+    "id": "NR010-exemption-2",
+    "card": "NR010",
+    "content": "-# whole message\nWRONG?",
+    "outcome": "not_applicable"
+  },
+  {
+    "id": "NR013-0",
+    "card": "NR013",
+    "content": "over...",
+    "outcome": "pass"
+  },
+  {
+    "id": "NR013-1",
+    "card": "NR013",
+    "content": "over?",
+    "outcome": "fail"
+  },
+  {
+    "id": "NR013-2",
+    "card": "NR013",
+    "content": "`why?`",
+    "outcome": "fail"
+  },
+  {
+    "id": "NR013-3",
+    "card": "NR013",
+    "content": "||why?||",
+    "outcome": "fail"
+  },
+  {
+    "id": "NR013-4",
+    "card": "NR013",
+    "content": "why？",
+    "outcome": "pass"
+  },
+  {
+    "id": "NR013-exemption-0",
+    "card": "NR013",
+    "content": null,
+    "outcome": "not_applicable"
+  },
+  {
+    "id": "NR013-exemption-1",
+    "card": "NR013",
+    "content": "",
+    "outcome": "not_applicable"
+  },
+  {
+    "id": "NR013-exemption-2",
+    "card": "NR013",
+    "content": "-# whole message\nWRONG?",
+    "outcome": "not_applicable"
+  },
+  {
+    "id": "NR017-0",
+    "card": "NR017",
+    "content": "one two three four five",
+    "outcome": "pass"
+  },
+  {
+    "id": "NR017-1",
+    "card": "NR017",
+    "content": "one two three four five six",
+    "outcome": "fail"
+  },
+  {
+    "id": "NR017-2",
+    "card": "NR017",
+    "content": "don't well-known red duck",
+    "outcome": "pass"
+  },
+  {
+    "id": "NR017-3",
+    "card": "NR017",
+    "content": "<@123456> 🦆",
+    "outcome": "pass"
+  },
+  {
+    "id": "NR017-4",
+    "card": "NR017",
+    "content": "  ",
+    "outcome": "pass"
+  },
+  {
+    "id": "NR017-exemption-0",
+    "card": "NR017",
+    "content": null,
+    "outcome": "not_applicable"
+  },
+  {
+    "id": "NR017-exemption-1",
+    "card": "NR017",
+    "content": "",
+    "outcome": "not_applicable"
+  },
+  {
+    "id": "NR017-exemption-2",
+    "card": "NR017",
+    "content": "-# whole message\nWRONG?",
+    "outcome": "not_applicable"
+  },
+  {
+    "id": "NR019-0",
+    "card": "NR019",
+    "content": "don't",
+    "outcome": "pass"
+  },
+  {
+    "id": "NR019-1",
+    "card": "NR019",
+    "content": "well-known",
+    "outcome": "fail"
+  },
+  {
+    "id": "NR019-2",
+    "card": "NR019",
+    "content": "123",
+    "outcome": "pass"
+  },
+  {
+    "id": "NR019-3",
+    "card": "NR019",
+    "content": "🦆",
+    "outcome": "fail"
+  },
+  {
+    "id": "NR019-4",
+    "card": "NR019",
+    "content": "  ",
+    "outcome": "fail"
+  },
+  {
+    "id": "NR019-5",
+    "card": "NR019",
+    "content": "**over**",
+    "outcome": "pass"
+  },
+  {
+    "id": "NR019-exemption-0",
+    "card": "NR019",
+    "content": null,
+    "outcome": "not_applicable"
+  },
+  {
+    "id": "NR019-exemption-1",
+    "card": "NR019",
+    "content": "",
+    "outcome": "not_applicable"
+  },
+  {
+    "id": "NR019-exemption-2",
+    "card": "NR019",
+    "content": "-# whole message\nWRONG?",
+    "outcome": "not_applicable"
+  },
+  {
+    "id": "NR022-0",
+    "card": "NR022",
+    "content": "a b c",
+    "outcome": "pass"
+  },
+  {
+    "id": "NR022-1",
+    "card": "NR022",
+    "content": "Duck duck",
+    "outcome": "fail"
+  },
+  {
+    "id": "NR022-2",
+    "card": "NR022",
+    "content": "café café",
+    "outcome": "fail"
+  },
+  {
+    "id": "NR022-3",
+    "card": "NR022",
+    "content": "don't don’t",
+    "outcome": "fail"
+  },
+  {
+    "id": "NR022-4",
+    "card": "NR022",
+    "content": "a-b a",
+    "outcome": "fail"
+  },
+  {
+    "id": "NR022-5",
+    "card": "NR022",
+    "content": "🦆 🦆",
+    "outcome": "pass"
+  },
+  {
+    "id": "NR022-exemption-0",
+    "card": "NR022",
+    "content": null,
+    "outcome": "not_applicable"
+  },
+  {
+    "id": "NR022-exemption-1",
+    "card": "NR022",
+    "content": "",
+    "outcome": "not_applicable"
+  },
+  {
+    "id": "NR022-exemption-2",
+    "card": "NR022",
+    "content": "-# whole message\nWRONG?",
+    "outcome": "not_applicable"
+  },
+  {
+    "id": "NR024-0",
+    "card": "NR024",
+    "content": "yes, over...",
+    "outcome": "pass"
+  },
+  {
+    "id": "NR024-1",
+    "card": "NR024",
+    "content": "# Yes, over...",
+    "outcome": "pass"
+  },
+  {
+    "id": "NR024-2",
+    "card": "NR024",
+    "content": "**yes** indeed",
+    "outcome": "pass"
+  },
+  {
+    "id": "NR024-3",
+    "card": "NR024",
+    "content": "yesterday",
+    "outcome": "fail"
+  },
+  {
+    "id": "NR024-4",
+    "card": "NR024",
+    "content": "oh yes",
+    "outcome": "fail"
+  },
+  {
+    "id": "NR024-5",
+    "card": "NR024",
+    "content": "# ",
+    "outcome": "fail"
+  },
+  {
+    "id": "NR024-exemption-0",
+    "card": "NR024",
+    "content": null,
+    "outcome": "not_applicable"
+  },
+  {
+    "id": "NR024-exemption-1",
+    "card": "NR024",
+    "content": "",
+    "outcome": "not_applicable"
+  },
+  {
+    "id": "NR024-exemption-2",
+    "card": "NR024",
+    "content": "-# whole message\nWRONG?",
+    "outcome": "not_applicable"
+  },
+  {
+    "id": "NR025-0",
+    "card": "NR025",
+    "content": "Sorry!",
+    "outcome": "fail"
+  },
+  {
+    "id": "NR025-1",
+    "card": "NR025",
+    "content": "||SORRY||",
+    "outcome": "fail"
+  },
+  {
+    "id": "NR025-2",
+    "card": "NR025",
+    "content": "sorryish",
+    "outcome": "pass"
+  },
+  {
+    "id": "NR025-3",
+    "card": "NR025",
+    "content": "sorry's",
+    "outcome": "pass"
+  },
+  {
+    "id": "NR025-4",
+    "card": "NR025",
+    "content": "apologies",
+    "outcome": "pass"
+  },
+  {
+    "id": "NR025-exemption-0",
+    "card": "NR025",
+    "content": null,
+    "outcome": "not_applicable"
+  },
+  {
+    "id": "NR025-exemption-1",
+    "card": "NR025",
+    "content": "",
+    "outcome": "not_applicable"
+  },
+  {
+    "id": "NR025-exemption-2",
+    "card": "NR025",
+    "content": "-# whole message\nWRONG?",
+    "outcome": "not_applicable"
+  },
+  {
+    "id": "NR027-0",
+    "card": "NR027",
+    "content": "MAYBE.",
+    "outcome": "fail"
+  },
+  {
+    "id": "NR027-1",
+    "card": "NR027",
+    "content": "`maybe`",
+    "outcome": "fail"
+  },
+  {
+    "id": "NR027-2",
+    "card": "NR027",
+    "content": "maybes",
+    "outcome": "pass"
+  },
+  {
+    "id": "NR027-3",
+    "card": "NR027",
+    "content": "may-be",
+    "outcome": "pass"
+  },
+  {
+    "id": "NR027-4",
+    "card": "NR027",
+    "content": "perhaps",
+    "outcome": "pass"
+  },
+  {
+    "id": "NR027-exemption-0",
+    "card": "NR027",
+    "content": null,
+    "outcome": "not_applicable"
+  },
+  {
+    "id": "NR027-exemption-1",
+    "card": "NR027",
+    "content": "",
+    "outcome": "not_applicable"
+  },
+  {
+    "id": "NR027-exemption-2",
+    "card": "NR027",
+    "content": "-# whole message\nWRONG?",
+    "outcome": "not_applicable"
+  },
+  {
+    "id": "NR033-0",
+    "card": "NR033",
+    "content": "please, over...",
+    "outcome": "pass"
+  },
+  {
+    "id": "NR033-1",
+    "card": "NR033",
+    "content": "# PLEASE remember",
+    "outcome": "pass"
+  },
+  {
+    "id": "NR033-2",
+    "card": "NR033",
+    "content": "pleased",
+    "outcome": "fail"
+  },
+  {
+    "id": "NR033-3",
+    "card": "NR033",
+    "content": "oh please",
+    "outcome": "fail"
+  },
+  {
+    "id": "NR033-4",
+    "card": "NR033",
+    "content": "  ",
+    "outcome": "fail"
+  },
+  {
+    "id": "NR033-exemption-0",
+    "card": "NR033",
+    "content": null,
+    "outcome": "not_applicable"
+  },
+  {
+    "id": "NR033-exemption-1",
+    "card": "NR033",
+    "content": "",
+    "outcome": "not_applicable"
+  },
+  {
+    "id": "NR033-exemption-2",
+    "card": "NR033",
+    "content": "-# whole message\nWRONG?",
+    "outcome": "not_applicable"
+  },
+  {
+    "id": "NR024-leading-content-0",
+    "card": "NR024",
+    "content": "<@123456> yes",
+    "outcome": "fail"
+  },
+  {
+    "id": "NR024-leading-content-1",
+    "card": "NR024",
+    "content": "🦆 yes",
+    "outcome": "fail"
+  },
+  {
+    "id": "NR024-leading-content-2",
+    "card": "NR024",
+    "content": "‼ yes",
+    "outcome": "fail"
+  },
+  {
+    "id": "NR024-leading-content-3",
+    "card": "NR024",
+    "content": "“yes",
+    "outcome": "pass"
+  },
+  {
+    "id": "NR033-leading-content-0",
+    "card": "NR033",
+    "content": "<@123456> please",
+    "outcome": "fail"
+  },
+  {
+    "id": "NR033-leading-content-1",
+    "card": "NR033",
+    "content": "🦆 please",
+    "outcome": "fail"
+  },
+  {
+    "id": "NR033-leading-content-2",
+    "card": "NR033",
+    "content": "‼ please",
+    "outcome": "fail"
+  },
+  {
+    "id": "NR033-leading-content-3",
+    "card": "NR033",
+    "content": "“please",
+    "outcome": "pass"
+  }
+]

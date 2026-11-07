@@ -1,7 +1,7 @@
 # Offline text API
 
 The offline domain package provides plain-data contracts, transient text views,
-and four reference text predicates. It is not connected to Discord event handlers.
+and fifteen ordinary text predicates. It is not connected to Discord event handlers.
 Candidate event evaluation and exact score values are described in
 [EVALUATION.md](EVALUATION.md). Schema 2 supplies an offline event unit of work
 ([STORAGE.md](STORAGE.md)); a session engine, playable commands, and the full
@@ -19,10 +19,10 @@ result = evaluate_text_rule(view, RuleInstance("example-instance", "NR034"))
 ```
 
 `RuleEvaluation` returns an instance ID, typed pass/fail/not-applicable outcome,
-and a stable reason code on failure. This predicate layer supports NR034 (ending
-word), NR011 (literal three-period ending), NR016 (formatting), and NR036 (a frozen
-phrase). Other card
-IDs raise `NotImplementedError`; they never receive a default successful result.
+and a stable reason code on failure. Supported text IDs are NR007, NR008, NR010,
+NR011, NR013, NR016, NR017, NR019, NR022, NR024, NR025, NR027, NR033, NR034, and
+NR036. The current [ordinary subset](HANDS.md) lists their behavior and metadata.
+Other card IDs raise `NotImplementedError`; they never receive a default successful result.
 The engine must select the active instances and phase before invoking ordinary
 predicates. No ordinary predicate should run as mode enforcement.
 
@@ -113,6 +113,35 @@ Missing, wordless, formatted, object-containing, or unknown parameter inputs rai
 also applies to phrase input. Error messages do not echo the phrase. This is an
 evaluator input contract, not a guild-bank suitability/profanity/length policy or
 a phrase-offer/consumption service. No production word list is used or needed.
+
+## Additional predicate policy
+
+NR007/NR008 compare logical text with Python's Unicode lower/uppercase mapping.
+Uncased scripts/numbers do not require an alphabetic letter to be present; a
+titlecase letter must meet the selected mapping, and lowercase `ß` fails uppercase
+while `SS` passes. Markup wrappers/object identifiers are not displayed letters.
+
+NR010 requires the quote-aware logical ending to finish with ASCII `?`; repeated
+question marks are allowed. NR013 forbids ASCII `?` anywhere in logical content,
+including code/spoilers. Fullwidth `？` is not silently mapped to ASCII.
+
+NR017 counts at most five parser words; NR019 requires exactly one. Numbers count
+as words, contractions retain internal apostrophes, hyphens split words, and opaque
+Discord objects/emoji are not word credit. Present wordless text can satisfy a
+maximum but fails an exact-one requirement. NR022 disallows repeated normalized
+word identities; canonical Unicode, case and apostrophe variants compare equally.
+
+NR024/NR033 require the first logical word to be `yes`/`please`, through supported
+heading/formatting wrappers. `yesterday`/`pleased` and an earlier different word
+do not qualify. NR025/NR027 forbid whole word identities `sorry`/`maybe` without
+substring matching or contraction expansion (`sorry's` is its own word).
+Leading whitespace/quote/punctuation may precede a required first word; a leading
+visible symbol, emoji, or Discord object blocks it. Heading wrappers are already
+handled in the logical view.
+
+The original 73 parser fixtures remain; `ordinary_rule_examples.json` adds 100
+independently specified boundary/applicability/composition examples for these
+eleven additional predicates. This does not implement the remaining catalog.
 
 ## Bounds and verification
 

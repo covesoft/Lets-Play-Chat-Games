@@ -3,14 +3,16 @@
 Let’s Play is a Discord chat-game bot. Its first game, **New Rules**, is a party
 conversation game where unusual rules accumulate as people chat.
 
-**Current status: v0.2.2, M1 database unit-of-work increment.** The application can validate its
+**Current status: v0.2.3, M1 legal-hand increment.** The application can validate its
 configuration offline, initialize its SQLite database, and log in to Discord.
-Offline domain contracts, text views, six representative rules, and exact score
+Offline domain contracts, text views, seventeen ordinary rules, and exact score
 arithmetic are implemented. An offline SQLite unit of work now atomically applies
 those candidates with event/reaction guards, score aggregates, and marker intents.
-The transition engine, live game commands, marker delivery, and achievements are
-not implemented yet. The owner verified the v0.1.3 shell/database startup and the
-v0.2.1 suite (282 tests) on Windows. This increment has local offline checks;
+The ordinary subset also has bounded witness checks, legal replacements, frozen
+three-template offers, and pure choice revalidation. The transition engine, live
+game commands, marker delivery, and achievements are not implemented yet. The
+owner verified the earlier live shell and v0.2.2 tests/bootstrap on Windows
+(325 tests; schema 2, WAL, foreign keys). This increment has local offline checks;
 M1 remains in progress.
 Public setup and operational documentation is under `docs/`. Private design
 notes are excluded from Git and package distributions.
@@ -68,6 +70,7 @@ handling belongs to M2 and must work for uncached/old targets.
 
 The parser API and its tested boundaries are documented in [docs/PARSER.md](docs/PARSER.md).
 See [docs/EVALUATION.md](docs/EVALUATION.md) for candidate decisions and score values.
+See [docs/HANDS.md](docs/HANDS.md) for the implemented ordinary subset and offer API.
 The live shell does not yet invoke these offline evaluators.
 
 The guild installation uses `bot` and `applications.commands` with permission
@@ -115,7 +118,7 @@ update commands.
 | `lets_play/__main__.py` | Standard `python -m lets_play` entry point |
 | `lets_play/config.py` | Explicit, immutable runtime configuration |
 | `lets_play/cli.py`, `lets_play/bot.py` | Offline tools and Discord shell |
-| `lets_play/new_rules/` | Typed contracts, transient parser, representative evaluation, and exact scoring |
+| `lets_play/new_rules/` | Contracts, parsing, ordinary subset, witness/offer preparation, and exact scoring |
 | `lets_play/storage/` | WAL migrations, live-state codecs, and atomic event unit of work |
 | `tests/` | Configuration, offline startup, SDK boundary, and real SQLite checks |
 | `docs/` | Public configuration, dependency, and storage documentation |

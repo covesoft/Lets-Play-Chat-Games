@@ -23,13 +23,14 @@ including changes that later return to the same visible state.
 | --- | --- |
 | NR004 | Every ordinary human message; no attachments passes, one or more attachments fails once. Native voice attachments count; link previews do not. |
 | NR006 | Ordinary reaction actions by their actor; message creates return not-applicable for this card. |
-| NR011, NR016, NR034 | Present ordinary text, including whitespace/punctuation-only text; absent or empty text is not-applicable. |
+| NR007, NR008, NR010, NR011, NR013, NR016, NR017, NR019, NR022, NR024, NR025, NR027, NR033, NR034 | Present ordinary text, including whitespace/punctuation-only text; absent or empty text is not-applicable. |
 | NR036 | Present ordinary text against a frozen phrase; each active instance is evaluated separately. |
 
 Unsupported cards raise `NotImplementedError`. Invalid instance configurations
 raise `RuleConfigurationError`. Only NR036 can have two active instances, and
-their normalized word requirements must differ. These basic guards do not
-implement a deck, collective compatibility, legal hands, or phrase-bank services.
+their normalized word requirements must differ. These context guards do not
+establish full feasibility. Use the separate [witness and hand API](HANDS.md) for
+the implemented subset; the complete catalog and guild-bank service remain absent.
 
 An exact received `-# ` prefix exempts the whole message, including its media,
 before parsing. Its decision contains only human-traffic/whisper counters, with

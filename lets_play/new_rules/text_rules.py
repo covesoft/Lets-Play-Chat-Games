@@ -3,13 +3,24 @@
 from lets_play.new_rules.contracts import Outcome, RuleEvaluation, RuleInstance
 from lets_play.new_rules.parsing import MessageView, is_word_gap, parse_message
 
-SUPPORTED_TEXT_RULES = frozenset({"NR011", "NR016", "NR034", "NR036"})
 TEXT_FAILURE_REASONS = {
+    "NR007": "lowercase_required",
+    "NR008": "uppercase_required",
+    "NR010": "required_question_ending",
     "NR011": "required_three_periods",
     "NR016": "formatting_forbidden",
+    "NR013": "questions_forbidden",
+    "NR017": "maximum_five_words",
+    "NR019": "exactly_one_word",
+    "NR022": "repeated_word",
+    "NR024": "required_yes_prefix",
+    "NR025": "sorry_forbidden",
+    "NR027": "maybe_forbidden",
+    "NR033": "required_please_prefix",
     "NR034": "required_ending_word",
     "NR036": "required_phrase",
 }
+SUPPORTED_TEXT_RULES = frozenset(TEXT_FAILURE_REASONS)
 
 
 class RuleConfigurationError(ValueError):
@@ -65,6 +76,26 @@ def evaluate_text_rule(view: MessageView, instance: RuleInstance) -> RuleEvaluat
     if view.is_whisper or not view.has_text:
         return RuleEvaluation(instance.instance_id, Outcome.NOT_APPLICABLE)
     match instance.card_id:
+        case "NR007":
+            passed = view.logical == view.logical.lower()
+        case "NR008":
+            passed = view.logical == view.logical.upper()
+        case "NR010":
+            passed = view.ending.endswith("?")
+        case "NR013":
+            passed = "?" not in view.logical
+        case "NR017":
+            passed = len(view.words) <= 5
+        case "NR019":
+            passed = len(view.words) == 1
+        case "NR022":
+            passed = len(set(view.word_keys)) == len(view.words)
+        case "NR024" | "NR033":
+            required = "yes" if instance.card_id == "NR024" else "please"
+            passed = view.starts_with_word(required)
+        case "NR025" | "NR027":
+            forbidden = "sorry" if instance.card_id == "NR025" else "maybe"
+            passed = forbidden not in view.word_keys
         case "NR034":
             passed = view.ends_with_word("over")
         case "NR011":

@@ -7,6 +7,7 @@ This module does not implement a full event router, session engine, or mode.
 
 from dataclasses import dataclass
 
+from lets_play.new_rules.catalog import CHATGAMES_MAX_ACTIVE_DONT_FORGET
 from lets_play.new_rules.contracts import (
     EmojiIdentity,
     EventKind,
@@ -30,7 +31,7 @@ from lets_play.new_rules.text_rules import (
 )
 
 SUPPORTED_RULES = SUPPORTED_TEXT_RULES | {"NR004", "NR006"}
-EVALUATOR_VERSION = "representatives-1"
+EVALUATOR_VERSION = "ordinary-subset-2"
 FAILURE_REASONS = TEXT_FAILURE_REASONS | {
     "NR004": "attachments_forbidden",
     "NR006": "reaction_prohibited",
@@ -56,7 +57,7 @@ class EvaluationContext:
         cards = [instance.card_id for instance in self.active_instances]
         if len(set(ids)) != len(ids):
             raise RuleConfigurationError("Active rule instance IDs must be unique.")
-        if cards.count("NR036") > 2 or any(
+        if cards.count("NR036") > CHATGAMES_MAX_ACTIVE_DONT_FORGET or any(
             cards.count(card) > 1 for card in set(cards) - {"NR036"}
         ):
             raise RuleConfigurationError("Only the phrase card may have two active instances.")

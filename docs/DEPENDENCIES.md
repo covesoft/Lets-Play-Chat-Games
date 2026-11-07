@@ -34,6 +34,10 @@ The v0.2.2 SQLite unit of work also adds no dependencies. It uses the pinned
 `aiosqlite` and standard-library SQLite, JSON, and exact fractions. Schema 2 uses
 SQLite STRICT tables (3.37+). Runtime and build pins remain unchanged.
 
+The v0.2.3 ordinary compatibility/hand increment adds no dependencies. It uses
+the existing parser, immutable domain values, and injected randomness. Schema 2
+and the dependency pins remain unchanged.
+
 | Development/build tool | Pin | Purpose |
 | --- | --- | --- |
 | `pytest` | 9.2.0 | Offline test runner |
