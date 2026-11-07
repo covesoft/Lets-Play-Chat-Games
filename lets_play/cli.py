@@ -15,7 +15,7 @@ from lets_play.config import ConfigError, load_settings
 
 def main(argv: list[str] | None = None, *, base_dir: Path | None = None) -> int:
     parser = argparse.ArgumentParser(description="Let's Play — New Rules (development scaffold)")
-    parser.add_argument("--version", action="version", version=f"Let's Play {__version__}")
+    parser.add_argument("--version", action="version", version=f"Let's Play is on version {__version__}!")
     mode = parser.add_mutually_exclusive_group()
     mode.add_argument(
         "--check-config", action="store_true", help="Validate without a login or DB write"

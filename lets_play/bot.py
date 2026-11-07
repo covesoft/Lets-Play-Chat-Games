@@ -57,7 +57,8 @@ class LetsPlayBot(commands.Bot):
         )
         self.game_runtime = OpeningRuntime(store, DiscordTransport(self))
         if self.settings.sync_commands and self.tree.get_commands():
-            await self.tree.sync()
+            cmds = await self.tree.sync()
+            logger.info(f"Synced {len(cmds)} application commands to Discord.")
         elif self.settings.sync_commands:
             logger.info("Command sync skipped: no registered application commands.")
         else:
@@ -71,6 +72,7 @@ class LetsPlayBot(commands.Bot):
         if self.settings.development_mode:
             for guild in self.guilds:
                 logger.info("Guild %s [%s]", guild.id, guild.name)
+        logger.info("- "*25 + "-")
 
     async def on_disconnect(self):
         if self.game_runtime and not self.game_runtime.closed:
@@ -139,7 +141,7 @@ class LetsPlayBot(commands.Bot):
 
     async def on_message(self, message):
         # No message-prefix commands; receipt capture occurs at dispatch above.
-        pass
+        pass # This function is intentionally left blank to avoid processing messages with command prefixes.
 
     async def close(self):
         if self.game_runtime:
@@ -149,6 +151,6 @@ class LetsPlayBot(commands.Bot):
 
 
 async def run_bot(settings: Settings) -> None:
-    token = settings.require_token()
+    token = settings.require_token() # called again just for safety; settings.require_token() raises if token is missing
     async with LetsPlayBot(settings) as bot:
         await bot.start(token)
