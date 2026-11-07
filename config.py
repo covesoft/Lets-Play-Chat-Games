@@ -1,57 +1,40 @@
-# New Chat Rules discord bot conversation game
-# Configuration
-# file: config.py
-# Started 2026-11-05
+"""Compatibility names for the original starter; new code accepts Settings.
 
-import os
+Importing this shim needs no token, opens no database, and makes no API calls.
+"""
+
 from pathlib import Path
-from typing import Any
-from dotenv import load_dotenv
 
-load_dotenv()
-
-
-CHATRULES_VERSION = 'v0.1.1'
-
-
-# ADMINISTRATIVE SETTINGS
-CHATRULES_DISCORD_TOKEN = os.getenv("CHATRULES_DISCORD_TOKEN")
+from lets_play import __version__
+from lets_play.config import BOT_PERMISSIONS_INT, load_settings
 
 BASE_DIR = Path(__file__).resolve().parent
+settings = load_settings(base_dir=BASE_DIR)
+CHATRULES_VERSION = f"v{__version__}"
+CHATRULES_DISCORD_TOKEN = settings.token
+ADMIN_IDS = sorted(settings.admin_ids)
+APP_ID = settings.app_id
+CHATRULES_LINK_OTHER_BOTS = settings.other_bots_url
+CHATRULES_LINK_THIS_BOT = settings.this_bot_url
+CHATRULES_LINK_GITHUB = settings.repository_url
+CHATRULES_LINK_DONATE = settings.donate_url
+CHATRULES_LINK_VOTE = settings.vote_url
+SUPPORT_SERVER_INVITE = settings.support_url
+CHATRULES_LINK_INVITE = settings.invite_url
 
-ADMIN_IDS = [int(x) for x in os.getenv("ADMIN_IDS", "").split(",") if x.strip().isdigit()]
-
-APP_ID = os.getenv("CHATRULES_APP_ID")
-
-BOT_PERMISSIONS_INT = 274878024768
-# Send Messages, .. in Threads,
-#  Embed Links, Attach Files,
-# View Channels, Add Reactions, and Read Message History
-
-# URLS
-CHATRULES_LINK_OTHER_BOTS = "https://pivot.quest/dbots/"
-
-CHATRULES_LINK_THIS_BOT = "https://pivot.quest/dbots/#lets-play"
-
-CHATRULES_LINK_GITHUB = "https://github.com/covesoft/Lets-Play-Chat-Games"
-
-CHATRULES_LINK_DONATE = "https://ko-fi.com/lepivo/goal?g=8"
-
-CHATRULES_LINK_VOTE = f"https://top.gg/bot/{APP_ID}/vote"
-
-_CHATRULES_LINK_SUPPORT = "https://discord.gg/"
-
-SUPPORT_SERVER_INVITE = _CHATRULES_LINK_SUPPORT + os.getenv("CHATRULES_SUPPORT_INVITE_CODE", "support")
-
-CHATRULES_LINK_INVITE = (
-    "https://discord.com/oauth2/authorize"
-    f"?client_id={APP_ID}"
-    f"&permissions={BOT_PERMISSIONS_INT}"
-    "&integration_type=0"
-    "&scope=applications.commands+bot"
-)
-
-### Runtime check
-if not CHATRULES_DISCORD_TOKEN:
-    raise RuntimeError("Missing CHATRULES_DISCORD_TOKEN in .env")
-### EOF ###
+__all__ = [
+    "ADMIN_IDS",
+    "APP_ID",
+    "BASE_DIR",
+    "BOT_PERMISSIONS_INT",
+    "CHATRULES_DISCORD_TOKEN",
+    "CHATRULES_LINK_DONATE",
+    "CHATRULES_LINK_GITHUB",
+    "CHATRULES_LINK_INVITE",
+    "CHATRULES_LINK_OTHER_BOTS",
+    "CHATRULES_LINK_THIS_BOT",
+    "CHATRULES_LINK_VOTE",
+    "CHATRULES_VERSION",
+    "SUPPORT_SERVER_INVITE",
+    "settings",
+]

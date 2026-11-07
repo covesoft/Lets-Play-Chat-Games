@@ -1,0 +1,50 @@
+[build-system]
+requires = ["setuptools==84.2.1"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "lets-play-chat-games"
+version = "0.1.2"
+description = "Let's Play — a Discord chat-game bot, starting with New Rules."
+readme = "README.md"
+requires-python = ">=3.13,<3.14"
+license = "AGPL-3.0-only"
+license-files = ["LICENSE"]
+dependencies = [
+    "aiosqlite==0.22.1",
+    "better-profanity==0.7.0",
+    "discord.py==2.7.1",
+    "emoji==2.16.0",
+    "python-dotenv==1.2.4",
+]
+
+[project.scripts]
+lets-play = "lets_play.cli:main"
+
+[project.urls]
+Repository = "https://github.com/covesoft/Lets-Play-Chat-Games"
+
+[dependency-groups]
+dev = [
+    "build==1.6.1",
+    "pytest==9.2.0",
+    "pytest-asyncio==1.4.1.post1",
+    "ruff==0.17.4",
+]
+
+[tool.setuptools.packages.find]
+include = ["lets_play*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "strict"
+asyncio_default_fixture_loop_scope = "function"
+addopts = "-ra --strict-config --strict-markers"
+filterwarnings = ["error"]
+
+[tool.ruff]
+target-version = "py313"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E4", "E7", "E9", "F", "I", "UP", "B", "ASYNC"]
