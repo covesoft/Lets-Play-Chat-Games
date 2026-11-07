@@ -135,7 +135,8 @@ def render(state, *, kind=None, page=0):
                 inline=False,
             )
         if not state.scores:
-            embed.description = "The game has ended. No scored participation was recorded."
+            #embed.description = "The game has ended. No scored participation was recorded."
+            embed.description = "Maybe now's not the time.. The game has been closed."
         if page:
             button(view, "Previous results", session, "results", page - 1)
         if state.more_scores:
@@ -356,8 +357,8 @@ class DiscordGame:
             await interaction.followup.send(embed=embed, ephemeral=True)
         else:
             await interaction.followup.send(
-                "New Rules is a chat game: remember the current rules while you talk. "
-                "Start with /start-game new-rules; three humans are needed. "
+                "**New Rules** is a chat game: follow evolving rules while you chat. "
+                "Start with `/start-game new-rules`; minimum 3 players. "
                 "Once active, everyone posting in the exact game channel participates. "
                 "Start a message with `-# ` to whisper.",
                 ephemeral=True,
@@ -473,9 +474,9 @@ class DiscordGame:
                 else:
                     replies = {
                         "joined": "You're in!",
-                        "opening": "Three players joined; the first picker is being announced.",
+                        "opening": "Three players joined; the first choice is being announced.",
                         "selected": "Choice saved; the start time is being announced.",
-                        "unauthorized": "Only the named picker can choose.",
+                        "unauthorized": "You weren't selected to choose.",
                         "paused": "Enforcement is paused.",
                     }
                     reply = replies.get(
