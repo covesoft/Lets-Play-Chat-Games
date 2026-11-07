@@ -664,7 +664,7 @@ async def test_real_released_schema_two_upgrades_without_touching_score_rows(tmp
             ordinary_posts,ordinary_observations,ordinary_quality_n)
             VALUES ('session',303,1,1,1,'1')""")
     before = rows(path, "SELECT * FROM nr_participants")
-    assert (await initialize_database(path)).schema_version == SCHEMA_VERSION == 3
+    assert (await initialize_database(path)).schema_version == SCHEMA_VERSION == 4
     assert rows(path, "PRAGMA integrity_check") == [("ok",)]
     assert rows(path, "PRAGMA foreign_key_check") == []
     assert rows(path, "SELECT * FROM nr_participants") == before
@@ -699,7 +699,7 @@ async def test_migration_three_failure_restores_released_schema_two(tmp_path, mo
     assert "started_at_utc" not in {row[1] for row in rows(path, "PRAGMA table_info(nr_rounds)")}
     assert rows(path, "SELECT COUNT(*) FROM sqlite_schema WHERE name='nr_offers'") == [(0,)]
     monkeypatch.setattr(bootstrap, "MIGRATIONS", original)
-    assert (await bootstrap.initialize_database(path)).schema_version == 3
+    assert (await bootstrap.initialize_database(path)).schema_version == bootstrap.SCHEMA_VERSION
 
 
 @pytest.mark.asyncio

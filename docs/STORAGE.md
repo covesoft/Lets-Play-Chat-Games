@@ -5,7 +5,8 @@ event unit of work. It is not wired to live Discord gameplay.
 Pure ordinary-subset [hand preparation](HANDS.md) supplies legal result states.
 Schema 3's [ordinary flow](ORDINARY_FLOW.md) persists later-round offers,
 publication acknowledgements, selection, announced cutover and pending-award
-closure boundaries. Award resolution and the complete session engine remain absent.
+closure boundaries. Schema 4 composes [general progression](PROGRESSION.md) with
+ordinary cutover. Mode/theme resolution and the complete session engine remain absent.
 `initialize_database()` opens one aiosqlite connection, initializes it, reports
 safe metadata, and closes it on success or failure. `--init-db` invokes it without
 Discord. The live shell invokes it in `setup_hook()` before command sync.
@@ -34,6 +35,12 @@ reader locks, not just fabricated exceptions.
   aggregates, and message-marker intents. It requires SQLite 3.37+ for STRICT tables.
 * Schema **3** appends ordinary-flow tables and nullable `started_at_utc` on round
   rows. Existing scores and unknown legacy start times are preserved, not inferred.
+* Schema **4** appends New Rules-only global profiles/general badge membership,
+  live credit/streak/party counters, ordered round-resolution/finalization guards,
+  and bounded-read streak notice intents. Existing scores/offers/deadlines remain
+  unchanged. Migration itself does not grant credit or badges. Legacy round
+  creation order is numbered without inventing unknown start times; missing
+  enrollment evidence stays unknown and requires recovery before resolution.
 * New databases must be empty and unclaimed. Foreign, unrecognized nonempty, and
   newer-version databases fail clearly; there is no automatic downgrade/adoption.
 
@@ -131,7 +138,7 @@ serialize dataclasses generically. Raw content, filenames, URLs, media, and even
 objects never enter the store. Parser/evaluator/score version pins are checked on
 read: mismatches raise `IncompatibleState` and require an explicit recovery policy,
 rather than silently changing live semantics after an upgrade.
-v0.2.3/v0.2.4 pin `ordinary-subset-2` as the evaluator version. Offline session fixtures
+v0.2.3 through v0.2.5 pin `ordinary-subset-2` as the evaluator version. Offline session fixtures
 saved under v0.2.2's `representatives-1` refuse automatic reinterpretation. The
 live shell has not created gameplay sessions. Migration 3 preserves that score schema.
 
@@ -181,9 +188,12 @@ The live shell still only bootstraps the database and logs in. Schema 3 persists
 later ordinary offers, publication clocks and ordered activation; use OrdinaryFlow
 ingress once a session has a receipt watermark. Low-level `apply()` then refuses
 to bypass its ordering boundary. Complete admission, pacing, picker rotation,
-opening/mode/refresh/held/revival and startup-recovery services, award/credit
+opening/mode/refresh/held/revival and startup-recovery services, theme/mode
 resolution, delivery workers and safe ended-session purge remain unimplemented.
-Round-closure rows identify pending-award boundaries; they do not certify finalized awards.
+Schema 4 adds atomic ordinary game credit and once-only general resolution.
+Round-closure rows alone do not certify resolved progress; consult
+`nr_round_resolutions`/`nr_game_finalizations`, which still do not certify future
+mode/theme awards. The general finalizer does not authorize or end a session.
 Foreign-key cascades provide a cleanup foundation, not an implemented retention
 service. Do not delete live evidence before future finalization commits.
 

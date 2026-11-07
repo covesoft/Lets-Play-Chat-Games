@@ -41,6 +41,10 @@ and the dependency pins remain unchanged.
 The v0.2.4 durable ordinary-flow increment adds no dependencies. Schema 3 uses the
 existing SQLite/aiosqlite stack and exact UTC microsecond timestamps.
 
+The v0.2.5 New Rules general-progression increment also adds no dependencies.
+Schema 4 uses the existing SQLite STRICT/transaction support and window functions.
+The supported SQLite floor remains 3.37; dependency pins and environment keys are unchanged.
+
 | Development/build tool | Pin | Purpose |
 | --- | --- | --- |
 | `pytest` | 9.2.0 | Offline test runner |

@@ -7,7 +7,8 @@ It performs no Discord I/O. The live shell still does not invoke gameplay.
 
 This is a later-round foundation: lobby/opening admission, adaptive warnings,
 picker eligibility/rotation, full refresh/held/revival, mode flow, startup recovery,
-award/credit resolution, cleanup, and delivery workers remain separate work.
+theme/mode resolution, cleanup, and delivery workers remain separate work.
+Schema 4 [general progression](PROGRESSION.md) is composed with successful cutover.
 
 ## Transaction and receipt contract
 
@@ -120,9 +121,13 @@ only with activation, remains after replacement and is scoped to the session.
 Output reads are bounded to 100 identifiers and exclude acknowledged/retired/
 ended work. Live rows use foreign-key cleanup; no purge service is implemented.
 
-`nr_round_closures` is a durable pending-awards boundary, not completed badge,
-streak, picker, global-game-credit or profile resolution. Score/offer/provenance
-evidence stays available. Future resolution must commit idempotently before purge.
+`nr_round_closures` remains closure evidence. Schema 4 additionally records
+`nr_round_resolutions` and applies general progression in the same cutover unit:
+ordinary credit reconciliation, clean/party progress, streak notice intents and
+activated deliberate-choice Rulemaker. A failure rolls back the whole cutover.
+Theme/mode resolution is still absent; no general guard certifies those predicates.
+Legacy pending closures must resolve in order before further cutovers. Do not
+purge evidence until all required finalization/delivery is complete.
 No per-game history service is created.
 
 Reopening a database handle is tested. A disruptive bot/Gateway restart is a

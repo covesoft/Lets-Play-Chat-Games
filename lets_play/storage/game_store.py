@@ -64,6 +64,21 @@ def _mutating(method):
     return guarded
 
 
+def _unit_mutating(method):
+    """Rollback-only writes for application facades over an existing unit."""
+
+    @wraps(method)
+    async def guarded(self, *args, **kwargs):
+        self.unit._check(write=True)
+        try:
+            return await method(self, *args, **kwargs)
+        except BaseException:
+            self.unit._rollback_only = True
+            raise
+
+    return guarded
+
+
 class ApplyStatus(StrEnum):
     APPLIED = "applied"
     DUPLICATE_EVENT = "duplicate_event"
@@ -295,8 +310,9 @@ class GameUnitOfWork:
             # Existing rounds cannot be reopened via a stale owner or ABA update.
             await _execute(
                 self._conn,
-                "INSERT INTO nr_rounds(session_id,round_id) VALUES (?,?)",
-                (new.route.session_id, new.round_id),
+                """INSERT INTO nr_rounds(session_id,round_id,round_number)
+                SELECT ?,?,MAX(round_number)+1 FROM nr_rounds WHERE session_id=?""",
+                (new.route.session_id, new.round_id, new.route.session_id),
             )
         await _execute(
             self._conn,
@@ -379,6 +395,13 @@ class GameUnitOfWork:
                 f"ON CONFLICT ({','.join(keys)}) DO UPDATE SET {update}",
                 (*keys.values(), *encode_score(total)),
             )
+        await _execute(
+            self._conn,
+            """INSERT INTO nr_player_progress(session_id,actor_id,first_round_number)
+            SELECT session_id,?,round_number FROM nr_rounds WHERE session_id=? AND round_id=?
+            ON CONFLICT(session_id,actor_id) DO NOTHING""",
+            (actor_id, session_id, round_id),
+        )
 
     @_mutating
     async def apply(self, decision: MessageDecision | ReactionDecision) -> ApplyStatus:
@@ -467,6 +490,12 @@ class GameUnitOfWork:
                         result.reason_code,
                     ),
                 )
+        # Local import keeps the repository primitive independent of its facade.
+        # Score, credit flag, global increment and threshold badge share this unit.
+        if decision.enroll:
+            from lets_play.storage.progression import Progression
+
+            await Progression(self).credit_ordinary(session_id, decision.actor_id)
         return ApplyStatus.APPLIED
 
     @staticmethod

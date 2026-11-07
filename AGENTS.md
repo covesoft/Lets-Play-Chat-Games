@@ -34,8 +34,8 @@ For packaging/dependency changes, also run `python -m build` and `python -m pip
 check` (or `uv pip check`). Record actual results and remaining limits in the
 private implementation notes when available. Never report a mock/offline check
 as live Discord or Windows evidence. M1 is authorized in bounded increments.
-The owner verified the earlier v0.1.3 shell live, schema-2 bootstrap, and v0.2.3
-tests on Windows (655 passed). Source hygiene uses NUL-framed Git I/O.
+The owner verified the earlier v0.1.3 shell live, schema-2 bootstrap, and v0.2.4
+tests on Windows 11 (690 passed in 15.78s). Source hygiene uses NUL-framed Git I/O.
 Later increments still need their own Windows/CI evidence.
 
 Schema 2 is an offline evaluation unit of work, not a transition/admission or
@@ -57,5 +57,14 @@ contiguous server receipt sequence for every flow action, chat/reaction, and tim
 Never skip a sequence gap or backdate a timer over queued chat. Publication ACKs
 are external facts, not output preparation. Old rules apply until the announced
 whole-second cutover; missing/late ACK requests explicit recovery. Closures retain
-pending award evidence; they are not resolved awards. Actual delivery, full startup
+closure evidence; only nr_round_resolutions certifies general progression. Actual delivery, full startup
 recovery, opening/admission, pacing, succession, and refresh/held remain unfinished.
+
+Schema 4 progression is New Rules only. Score qualification, live credit flag,
+global increment and Familiar Face commit together. Resolve actual closures in
+round creation order; never resolve an open/revival round. OrdinaryFlow composes
+general resolution with cutover. Compose finalize_ended with a trusted terminal
+owner update after earlier closures resolve; it neither authorizes nor ends a game.
+Do not purge evidence before general finalization and future mode/theme awards.
+Reconcile legacy pending closures explicitly before further activation. Unknown
+enrollment evidence/version pins require recovery, never guessed streaks/awards.

@@ -1,4 +1,4 @@
-"""Durable later-round ordinary choices. No Discord I/O or award resolution.
+"""Durable later-round ordinary choices, composed with general progression.
 
 Every action carries a server-ordered envelope. Sequence gaps fail before a timer
 can close a round over queued chat. Publication acknowledgement is an explicit
@@ -9,7 +9,6 @@ import json
 from dataclasses import dataclass, replace
 from datetime import datetime, timedelta
 from enum import StrEnum
-from functools import wraps
 
 from lets_play.new_rules.catalog import CARD_SPECS
 from lets_play.new_rules.compatibility import legal_completions
@@ -29,6 +28,7 @@ from lets_play.new_rules.hands import ChoiceStatus, OrdinaryHand, revalidate_cho
 from lets_play.new_rules.parsing import parse_message
 from lets_play.new_rules.text_rules import phrase_keys
 from lets_play.storage.game_store import ApplyStatus, GameUnitOfWork, _execute, _row
+from lets_play.storage.game_store import _unit_mutating as _write
 from lets_play.storage.offer_codec import decode_hand, encode_hand, utc_datetime, utc_int
 
 CHATGAMES_CHOICE_SECONDS = 60
@@ -94,19 +94,6 @@ class OutputIntent:
 class FlowWatermark:
     last_sequence: int
     observed_at: datetime
-
-
-def _write(method):
-    @wraps(method)
-    async def guarded(self, *args, **kwargs):
-        self.unit._check(write=True)
-        try:
-            return await method(self, *args, **kwargs)
-        except BaseException:
-            self.unit._rollback_only = True
-            raise
-
-    return guarded
 
 
 class OrdinaryFlow:
@@ -603,7 +590,7 @@ class OrdinaryFlow:
             offer_id=None,
             transition_id=None,
         )
-        # A closure is a once-only pending-awards boundary, not awarded badges.
+        # Closure and general resolution share this unit; mode/theme work remains.
         await _execute(
             self.conn,
             "INSERT INTO nr_round_closures VALUES (?,?,?,?)",
@@ -636,6 +623,9 @@ class OrdinaryFlow:
             "UPDATE nr_activations SET stage='activated' WHERE session_id=? AND offer_id=?",
             (frame.route.session_id, row["offer_id"]),
         )
+        from lets_play.storage.progression import Progression
+
+        await Progression(self.unit).resolve_round(frame.route.session_id, old.round_id)
         return FlowStatus.ACTIVATED
 
     @_write

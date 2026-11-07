@@ -203,5 +203,76 @@ MIGRATIONS = (
             ) STRICT""",
         ),
     ),
+    Migration(
+        version=4,
+        name="new_rules_general_progression",
+        statements=(
+            "ALTER TABLE nr_sessions ADD COLUMN progression_version TEXT NOT NULL DEFAULT 'general-1'",
+            "ALTER TABLE nr_rounds ADD COLUMN round_number INTEGER NOT NULL DEFAULT 1 CHECK(round_number > 0)",
+            # Round creation order is durable even for legacy unknown start times.
+            """WITH numbered AS MATERIALIZED (
+                SELECT rowid AS rid,ROW_NUMBER() OVER (PARTITION BY session_id ORDER BY rowid) AS n
+                FROM nr_rounds)
+                UPDATE nr_rounds SET round_number=(SELECT n FROM numbered WHERE rid=nr_rounds.rowid)""",
+            "CREATE UNIQUE INDEX nr_round_number ON nr_rounds(session_id,round_number)",
+            "CREATE INDEX nr_score_actor_round ON nr_round_scores(session_id,actor_id,round_id)",
+            """CREATE TABLE nr_profiles (
+                actor_id INTEGER PRIMARY KEY CHECK(actor_id > 0),
+                games_played INTEGER NOT NULL DEFAULT 0 CHECK(games_played >= 0)
+            ) STRICT""",
+            """CREATE TABLE nr_badges (
+                actor_id INTEGER NOT NULL REFERENCES nr_profiles ON DELETE CASCADE,
+                badge_key TEXT NOT NULL CHECK(badge_key IN
+                    ('rulemaker','spotless','familiar_face','party_animal','very_careful')),
+                PRIMARY KEY(actor_id,badge_key)
+            ) STRICT""",
+            """CREATE TABLE nr_player_progress (
+                session_id TEXT NOT NULL,
+                actor_id INTEGER NOT NULL,
+                first_round_number INTEGER CHECK(first_round_number > 0),
+                game_count_credited INTEGER NOT NULL DEFAULT 0 CHECK(game_count_credited IN (0,1)),
+                current_clean_streak INTEGER NOT NULL DEFAULT 0 CHECK(current_clean_streak >= 0),
+                best_clean_streak INTEGER NOT NULL DEFAULT 0
+                    CHECK(best_clean_streak >= current_clean_streak),
+                personal_rounds_played INTEGER NOT NULL DEFAULT 0 CHECK(personal_rounds_played >= 0),
+                party_rounds INTEGER NOT NULL DEFAULT 0 CHECK(party_rounds >= 0),
+                PRIMARY KEY(session_id,actor_id),
+                FOREIGN KEY(session_id,actor_id) REFERENCES nr_participants ON DELETE CASCADE
+            ) STRICT""",
+            """INSERT INTO nr_player_progress(session_id,actor_id,first_round_number)
+                SELECT p.session_id,p.actor_id,(SELECT MIN(r.round_number)
+                    FROM nr_round_scores AS s JOIN nr_rounds AS r USING(session_id,round_id)
+                    WHERE s.session_id=p.session_id AND s.actor_id=p.actor_id)
+                FROM nr_participants AS p""",
+            """CREATE TABLE nr_round_resolutions (
+                session_id TEXT NOT NULL,
+                round_id TEXT NOT NULL,
+                round_number INTEGER NOT NULL CHECK(round_number > 0),
+                kind TEXT NOT NULL CHECK(kind IN ('activation','ending')),
+                PRIMARY KEY(session_id,round_id),
+                UNIQUE(session_id,round_number),
+                FOREIGN KEY(session_id,round_id) REFERENCES nr_rounds ON DELETE CASCADE
+            ) STRICT""",
+            """CREATE TABLE nr_game_finalizations (
+                session_id TEXT PRIMARY KEY REFERENCES nr_sessions ON DELETE CASCADE,
+                final_round_id TEXT NOT NULL,
+                FOREIGN KEY(session_id,final_round_id) REFERENCES nr_round_resolutions
+                    ON DELETE CASCADE
+            ) STRICT""",
+            """CREATE TABLE nr_streak_notices (
+                notice_id INTEGER PRIMARY KEY AUTOINCREMENT,
+                session_id TEXT NOT NULL,
+                round_id TEXT NOT NULL,
+                actor_id INTEGER NOT NULL,
+                milestone INTEGER NOT NULL CHECK(milestone IN (3,5,7,9)),
+                acknowledged INTEGER NOT NULL DEFAULT 0 CHECK(acknowledged IN (0,1)),
+                UNIQUE(session_id,round_id,actor_id),
+                FOREIGN KEY(session_id,round_id) REFERENCES nr_round_resolutions ON DELETE CASCADE,
+                FOREIGN KEY(session_id,actor_id) REFERENCES nr_player_progress ON DELETE CASCADE
+            ) STRICT""",
+            """CREATE INDEX nr_pending_streak_notices ON nr_streak_notices(notice_id)
+                WHERE acknowledged=0""",
+        ),
+    ),
 )
 SCHEMA_VERSION = MIGRATIONS[-1].version
