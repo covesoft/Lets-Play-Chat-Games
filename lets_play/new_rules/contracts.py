@@ -87,6 +87,10 @@ class EventKind(StrEnum):
     RECOVERY_PUBLISHED = "recovery_published"
     PACING_REGISTER = "pacing_register"
     WARNING_PUBLISHED = "warning_published"
+    LOBBY_CREATE = "lobby_create"
+    LOBBY_PUBLISHED = "lobby_published"
+    LOBBY_JOIN = "lobby_join"
+    END_PUBLISHED = "end_published"
 
 
 @dataclass(frozen=True, slots=True)

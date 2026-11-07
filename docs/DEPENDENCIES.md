@@ -49,6 +49,10 @@ The v0.2.6 ordinary warning/succession increment adds no dependencies. Schema 5
 uses exact fractions, a saved injected random seed and standard-library Random/SHA-256
 for deterministic replay. There is no claim of cryptographic game randomness.
 
+The v0.2.7 opening/admission increment adds no dependencies. Schema 6 uses the
+existing SQLite STRICT/transaction support, saved facts and bounded configuration
+codecs. Direct/transitive pins and environment keys remain unchanged.
+
 | Development/build tool | Pin | Purpose |
 | --- | --- | --- |
 | `pytest` | 9.2.0 | Offline test runner |

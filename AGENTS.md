@@ -34,8 +34,8 @@ For packaging/dependency changes, also run `python -m build` and `python -m pip
 check` (or `uv pip check`). Record actual results and remaining limits in the
 private implementation notes when available. Never report a mock/offline check
 as live Discord or Windows evidence. M1 is authorized in bounded increments.
-The owner verified the earlier v0.1.3 shell live, schema-4/WAL/FK bootstrap, and v0.2.5
-tests on Windows 11 (753 passed in 28.35s). Source hygiene uses NUL-framed Git I/O.
+The owner verified the earlier v0.1.3 shell live, schema-5/WAL/FK bootstrap, and v0.2.6
+tests on Windows 11 (813 passed in 45.09s). Source hygiene uses NUL-framed Git I/O.
 Later increments still need their own Windows/CI evidence.
 
 Schema 2 is an offline evaluation unit of work, not a transition/admission or
@@ -58,7 +58,7 @@ Never skip a sequence gap or backdate a timer over queued chat. Publication ACKs
 are external facts, not output preparation. Old rules apply until the announced
 whole-second cutover; missing/late ACK requests explicit recovery. Closures retain
 closure evidence; only nr_round_resolutions certifies general progression. Actual delivery, full startup
-recovery, opening/admission and refresh/held remain unfinished.
+recovery and refresh/held remain unfinished.
 
 Schema 4 progression is New Rules only. Score qualification, live credit flag,
 global increment and Familiar Face commit together. Resolve actual closures in
@@ -76,4 +76,16 @@ before the first at/after-cutoff receipt is scored; later events remain old-roun
 until activation. Preserve exact-score candidate evidence and unrated eligibility.
 Rotation service commits only at valid activation, together with general resolution
 and next-round pacing. Single ordinary advancement only: full held refresh/revival,
-opening/admission, scheduler/publisher/reconciliation and startup recovery remain.
+scheduler/publisher/reconciliation and startup recovery remain.
+
+Schema 6 OpeningFlow reserves real guild/channel capacity before publishing a lobby.
+Lobbies/opening/recovery have no nr_sessions/nr_rounds or score effects. Actual
+publication starts original 180s/60s clocks. Quorum is starter plus two distinct
+humans; joins do not credit a game. First acknowledged activation creates round
+one, consumes its phrase/turn, grants deliberate Rulemaker and initializes pacing
+in one unit. Its receipt hands over to OrdinaryFlow without dropping its body.
+Preplay source guards prevent replayed ignored events becoming scored. Ending
+releases the reservation with general finalization; final delivery remains separate.
+Persisted entitlement facts are trusted server state, not client-supplied capacity.
+Grant authorization/full promotion/settings UI remain M5 work. Legacy slots retain
+unknown phrase allowance rather than guessing a downgrade; frozen offers survive.

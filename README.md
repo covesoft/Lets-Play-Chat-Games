@@ -3,7 +3,7 @@
 Let’s Play is a Discord chat-game bot. Its first game, **New Rules**, is a party
 conversation game where unusual rules accumulate as people chat.
 
-**Current status: v0.2.6, M1 ordinary pacing and succession increment.** The application can validate its
+**Current status: v0.2.7, M1 opening and admission increment.** The application can validate its
 configuration offline, initialize its SQLite database, and log in to Discord.
 Offline domain contracts, text views, seventeen ordinary rules, and exact score
 arithmetic are implemented. An offline SQLite unit of work now atomically applies
@@ -15,10 +15,12 @@ with ordered ingress and once-only closure boundaries. Schema 4 adds atomic
 New Rules game credit, profiles, five general badge predicates, ordinary round
 resolution and streak-notice intents. Schema 5 adds ordinary warning publication
 clocks, immutable exact-score picker snapshots and persistent shuffled rotation.
-Opening/admission, full held/revival/recovery, theme/mode achievements,
+Schema 6 adds atomic guild/channel lobby reservations, three-human quorum,
+publication-started lobby/choice clocks, first activation and ordered handover.
+Full held/revival/recovery, theme/mode achievements,
 live commands and delivery workers remain unfinished.
-The owner verified the earlier live shell, schema-4/WAL/FK bootstrap,
-and v0.2.5 tests on Windows 11 (753 passed). This increment has local offline checks;
+The owner verified the earlier live shell, schema-5/WAL/FK bootstrap,
+and v0.2.6 tests on Windows 11 (813 passed). This increment has local offline checks;
 M1 remains in progress.
 Public setup and operational documentation is under `docs/`. Private design
 notes are excluded from Git and package distributions.
@@ -80,6 +82,7 @@ See [docs/HANDS.md](docs/HANDS.md) for the implemented ordinary subset and offer
 See [docs/ORDINARY_FLOW.md](docs/ORDINARY_FLOW.md) for durable publication/cutover boundaries.
 See [docs/PROGRESSION.md](docs/PROGRESSION.md) for New Rules credit and general resolution APIs.
 See [docs/PACING.md](docs/PACING.md) for ordinary warning and succession APIs.
+See [docs/OPENING.md](docs/OPENING.md) for admission, lobby and first-rule activation APIs.
 The live shell does not yet invoke these offline evaluators.
 
 The guild installation uses `bot` and `applications.commands` with permission

@@ -5,13 +5,14 @@ already-playing ordinary sessions. It persists frozen offers, publication facts,
 selection, announced cutover, phrase usage, and old-round closure boundaries.
 It performs no Discord I/O. The live shell still does not invoke gameplay.
 
-This is a later-round foundation: lobby/opening admission,
-full refresh/held/revival, mode flow, startup recovery,
+This is a later-round foundation: full refresh/held/revival, mode flow, startup recovery,
 theme/mode resolution, cleanup, and delivery workers remain separate work.
 Schema 4 [general progression](PROGRESSION.md) is composed with successful cutover.
 Schema 5 [ordinary pacing](PACING.md) shares ingress and cutover: registered rounds
 must obtain their frozen picker before an offer can be prepared. At activation,
 rotation service and next-round timing/estimate commit with all existing effects.
+Schema 6 [opening/admission](OPENING.md) creates the first playing owner and
+transfers its existing receipt lane here; it does not create an artificial old round.
 
 ## Transaction and receipt contract
 

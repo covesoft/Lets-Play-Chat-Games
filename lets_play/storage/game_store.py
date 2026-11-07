@@ -237,6 +237,7 @@ class GameUnitOfWork:
         self._active = True
         self._rollback_only = False
         self._ordered_flow = False
+        self._opening_activation = False
         self._task = asyncio.current_task()
 
     def _check(self, *, write: bool = False) -> None:
@@ -257,6 +258,15 @@ class GameUnitOfWork:
         p = context.position
         if p.lifecycle is not Lifecycle.PLAYING or not p.round_id or p.revision != 0:
             raise ValueError("A new stored evaluation owner must be playing at revision zero.")
+        reservation = await _row(
+            self._conn,
+            "SELECT session_id FROM nr_admissions WHERE channel_id=? AND stage<>'ended'",
+            (p.route.channel_id,),
+        )
+        if reservation is not None and (
+            reservation[0] != p.route.session_id or not self._opening_activation
+        ):
+            raise sqlite3.IntegrityError("The exact channel is already reserved.")
         await _execute(
             self._conn,
             """INSERT INTO nr_sessions (
@@ -288,6 +298,14 @@ class GameUnitOfWork:
             "INSERT INTO nr_rounds(session_id,round_id) VALUES (?,?)",
             (p.route.session_id, p.round_id),
         )
+        if reservation is None:
+            # Internal fixture/repository seed, not entitlement-aware admission.
+            await _execute(
+                self._conn,
+                """INSERT INTO nr_admissions(session_id,guild_id,channel_id,stage,playing_session_id)
+                VALUES (?,?,?,'legacy',?)""",
+                (p.route.session_id, p.route.guild_id, p.route.channel_id, p.route.session_id),
+            )
 
     @_mutating
     async def set_owner(self, expected: SessionPosition, replacement: EvaluationContext) -> bool:
@@ -334,6 +352,12 @@ class GameUnitOfWork:
                 expected.revision,
             ),
         )
+        if new.lifecycle is Lifecycle.ENDED:
+            await _execute(
+                self._conn,
+                "UPDATE nr_admissions SET stage='ended' WHERE playing_session_id=?",
+                (new.route.session_id,),
+            )
         return True
 
     async def get_score(
@@ -423,6 +447,12 @@ class GameUnitOfWork:
         current = await self.get_context(session_id)
         if current is None:
             return ApplyStatus.UNKNOWN_SESSION
+        if await _row(
+            self._conn,
+            "SELECT 1 FROM nr_preplay_sources WHERE session_id=? AND event_kind=? AND source_id=?",
+            decision.source_key,
+        ):
+            return ApplyStatus.DUPLICATE_EVENT
         prior = await _row(
             self._conn,
             "SELECT 1 FROM nr_processed_events WHERE session_id=? AND event_kind=? AND source_id=?",

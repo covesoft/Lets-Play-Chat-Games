@@ -691,6 +691,11 @@ class OrdinaryFlow:
             available_templates,
         ):
             return FlowResult(FlowStatus.REPLAY)
+        return await self._ingest_entered(event)
+
+    async def _ingest_entered(self, event: MessageEvent | ReactionEvent) -> FlowResult:
+        """Evaluate an already-ordered receipt, including an opening handover."""
+        frame = event.envelope
         context = await self.unit.get_context(frame.route.session_id)
         decision = (
             evaluate_message(event, context)

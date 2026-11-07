@@ -183,7 +183,7 @@ class RoundPacing:
 
         if not await OrdinaryFlow(self.unit)._enter(frame, EventKind.PACING_REGISTER, None):
             return "replay"
-        target = message_target(estimated_players)
+        message_target(estimated_players)
         context = await self.unit.get_context(frame.route.session_id)
         p = context.position
         row = await self._record(p.route.session_id, p.round_id)
@@ -241,6 +241,13 @@ class RoundPacing:
             "UPDATE nr_rounds SET started_at_utc=? WHERE session_id=? AND round_id=?",
             (start, p.route.session_id, p.round_id),
         )
+        await self._initialize(context, start, estimated_players, seed, previous_picker_id)
+        await self._advance_due(frame)
+        return "registered"
+
+    async def _initialize(self, context, start, estimate, seed, previous_picker_id=None):
+        """Compose real first activation with pacing, without allocating another receipt."""
+        p = context.position
         created = await _execute(
             self.conn,
             "INSERT INTO nr_rotation(session_id,previous_picker) VALUES (?,?) ON CONFLICT(session_id) DO NOTHING",
@@ -252,9 +259,7 @@ class RoundPacing:
                 "INSERT INTO nr_rotation_members(session_id,actor_id,served_cycle) VALUES (?,?,0)",
                 (p.route.session_id, previous_picker_id),
             )
-        await self._insert(context, start, estimated_players, target, seed)
-        await self._advance_due(frame)
-        return "registered"
+        await self._insert(context, start, estimate, message_target(estimate), seed)
 
     async def _insert(self, context, start, estimate, target, seed):
         p = context.position

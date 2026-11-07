@@ -340,5 +340,77 @@ MIGRATIONS = (
             ) STRICT""",
         ),
     ),
+    Migration(
+        version=6,
+        name="guild_admission_and_opening_activation",
+        statements=(
+            """CREATE TABLE nr_guild_entitlements (
+                guild_id INTEGER PRIMARY KEY CHECK(guild_id>0),
+                premium_until_utc INTEGER
+            ) STRICT""",
+            """CREATE TABLE nr_admissions (
+                session_id TEXT PRIMARY KEY,
+                guild_id INTEGER NOT NULL CHECK(guild_id>0),
+                channel_id INTEGER NOT NULL CHECK(channel_id>0),
+                starter_id INTEGER CHECK(starter_id>0),
+                create_source_id TEXT,
+                version TEXT NOT NULL DEFAULT 'opening-1',
+                revision INTEGER NOT NULL DEFAULT 0 CHECK(revision>=0),
+                stage TEXT NOT NULL CHECK(stage IN
+                    ('lobby_prepared','lobby_published','opening_prepared','opening_published',
+                    'selected','recovery','active','legacy','ended')),
+                playing_session_id TEXT UNIQUE REFERENCES nr_sessions ON DELETE CASCADE,
+                phrase_draw_limit INTEGER CHECK(phrase_draw_limit IN (5,15)),
+                random_seed INTEGER CHECK(random_seed>=0),
+                config_json TEXT,
+                prepared_at_utc INTEGER,
+                lobby_published_at_utc INTEGER,
+                lobby_deadline_utc INTEGER,
+                picker_id INTEGER CHECK(picker_id>0),
+                hand_json TEXT,
+                offer_prepared_at_utc INTEGER,
+                offer_published_at_utc INTEGER,
+                selected_at_utc INTEGER,
+                selected_incoming TEXT,
+                chosen_by_picker INTEGER NOT NULL DEFAULT 0 CHECK(chosen_by_picker IN (0,1)),
+                effective_at_utc INTEGER,
+                announced_at_utc INTEGER,
+                end_reason TEXT CHECK(end_reason IN ('expired','manager','unavailable')),
+                last_sequence INTEGER NOT NULL DEFAULT 0 CHECK(last_sequence>=0),
+                observed_at_utc INTEGER
+            ) STRICT""",
+            """CREATE UNIQUE INDEX nr_admitted_channel ON nr_admissions(channel_id)
+                WHERE stage<>'ended'""",
+            "CREATE INDEX nr_guild_slots ON nr_admissions(guild_id,stage)",
+            """CREATE UNIQUE INDEX nr_admission_request ON nr_admissions(guild_id,create_source_id)
+                WHERE create_source_id IS NOT NULL""",
+            """INSERT INTO nr_admissions(session_id,guild_id,channel_id,stage,playing_session_id)
+                SELECT session_id,guild_id,channel_id,
+                    CASE WHEN lifecycle='ended' THEN 'ended' ELSE 'legacy' END,session_id
+                FROM nr_sessions""",
+            """CREATE TABLE nr_lobby_members (
+                session_id TEXT NOT NULL REFERENCES nr_admissions ON DELETE CASCADE,
+                actor_id INTEGER NOT NULL CHECK(actor_id>0),
+                PRIMARY KEY(session_id,actor_id)
+            ) STRICT""",
+            """CREATE TABLE nr_opening_outputs (
+                output_id INTEGER PRIMARY KEY AUTOINCREMENT,
+                session_id TEXT NOT NULL REFERENCES nr_admissions ON DELETE CASCADE,
+                kind TEXT NOT NULL CHECK(kind IN ('lobby','offer','activation','recovery','closed')),
+                message_id INTEGER CHECK(message_id>0),
+                acknowledged_at_utc INTEGER,
+                retired_at_utc INTEGER,
+                UNIQUE(session_id,kind)
+            ) STRICT""",
+            """CREATE INDEX nr_pending_opening_outputs ON nr_opening_outputs(output_id)
+                WHERE acknowledged_at_utc IS NULL AND retired_at_utc IS NULL""",
+            """CREATE TABLE nr_preplay_sources (
+                session_id TEXT NOT NULL REFERENCES nr_admissions ON DELETE CASCADE,
+                event_kind TEXT NOT NULL CHECK(event_kind IN ('message_create','reaction_add')),
+                source_id TEXT NOT NULL,
+                PRIMARY KEY(session_id,event_kind,source_id)
+            ) STRICT""",
+        ),
+    ),
 )
 SCHEMA_VERSION = MIGRATIONS[-1].version

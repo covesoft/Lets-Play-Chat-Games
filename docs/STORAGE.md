@@ -45,6 +45,10 @@ reader locks, not just fabricated exceptions.
   warning publication/deadline/output state, immutable candidate snapshots and
   session-local rotation service. Existing scores/profiles remain unchanged;
   no legacy pacing starts automatically and unknown start times stay unknown.
+* Schema **6** adds admission/slot, three-human lobby, opening output/config and
+  preplay-source records, plus a minimal persisted guild-entitlement fact. Legacy
+  sessions reserve their existing slot without inferred lobby/phrase history.
+  No gameplay round exists before first activation. See [OPENING.md](OPENING.md).
 * New databases must be empty and unclaimed. Foreign, unrecognized nonempty, and
   newer-version databases fail clearly; there is no automatic downgrade/adoption.
 
@@ -83,9 +87,11 @@ async with open_game_store(Path("data/example.sqlite3")) as store:
 ```
 
 `insert_session` is an internal persistence primitive for a playing evaluation
-owner. It does not implement lobby/quorum, capacity/entitlement admission, or
-opening-hand checks. A partial unique index reserves one non-ended session per
-channel, but complete guild admission still needs an application service.
+owner. It registers a legacy slot for fixtures but does not authorize guild
+capacity, lobby/quorum or opening-hand admission. It refuses to steal a live
+lobby's channel. Use OpeningFlow for real admission; only its guarded first
+activation may create the reserved playing owner. Exact-channel uniqueness and
+guild count checks then share the same write transaction.
 
 `GameUnitOfWork.set_owner(expected_position, replacement_context)` compares the
 complete persisted owner, including a monotonic `revision`. It returns false
@@ -191,8 +197,7 @@ cascades. They are offline correctness checks, not host throughput measurements.
 The live shell still only bootstraps the database and logs in. Schema 3 persists
 later ordinary offers, publication clocks and ordered activation; use OrdinaryFlow
 ingress once a session has a receipt watermark. Low-level `apply()` then refuses
-to bypass its ordering boundary. Complete admission,
-opening/mode/refresh/held/revival and startup-recovery services, theme/mode
+to bypass its ordering boundary. Complete mode/refresh/held/revival and startup-recovery services, theme/mode
 resolution, delivery workers and safe ended-session purge remain unimplemented.
 Schema 4 adds atomic ordinary game credit and once-only general resolution.
 Round-closure rows alone do not certify resolved progress; consult
@@ -200,6 +205,10 @@ Round-closure rows alone do not certify resolved progress; consult
 mode/theme awards. The general finalizer does not authorize or end a session.
 Schema 5 supplies ordinary pacing/succession over the shared lane; see
 [PACING.md](PACING.md) for publication, snapshot and rotation boundaries.
+Schema 6 supplies opening/admission and ordered first activation. Permission and
+capability facts, grant control, actual publishers/schedulers and full recovery
+remain integration work. Internal legacy seeds are not an admission bypass for a
+public command.
 Foreign-key cascades provide a cleanup foundation, not an implemented retention
 service. Do not delete live evidence before future finalization commits.
 

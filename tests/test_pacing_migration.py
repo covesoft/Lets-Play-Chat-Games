@@ -65,7 +65,7 @@ async def test_upgrade_preserves_schema_four_scores_and_globals_without_starting
         "nr_player_progress",
     )
     before = {table: rows(path, f"SELECT * FROM {table}") for table in tables}
-    assert (await bootstrap.initialize_database(path)).schema_version == SCHEMA_VERSION == 5
+    assert (await bootstrap.initialize_database(path)).schema_version == SCHEMA_VERSION == 6
     for table, snapshot in before.items():
         assert rows(path, f"SELECT * FROM {table}") == snapshot
     assert rows(path, "SELECT ordinary_posts,started_at_utc FROM nr_rounds") == [(6, None)]
@@ -97,4 +97,4 @@ async def test_failed_schema_five_upgrade_restores_schema_four_columns_data_and_
     assert rows(path, "SELECT COUNT(*) FROM sqlite_schema WHERE name='nr_round_pacing'") == [(0,)]
     assert "ordinary_posts" not in {row[1] for row in rows(path, "PRAGMA table_info(nr_rounds)")}
     monkeypatch.setattr(bootstrap, "MIGRATIONS", original)
-    assert (await bootstrap.initialize_database(path)).schema_version == 5
+    assert (await bootstrap.initialize_database(path)).schema_version == SCHEMA_VERSION
