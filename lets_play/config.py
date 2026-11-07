@@ -11,11 +11,11 @@ from urllib.parse import urlencode, urlsplit
 
 from dotenv import dotenv_values
 
-BOT_PERMISSIONS_INT = 274878024768
-REPOSITORY_URL = "https://github.com/covesoft/Lets-Play-Chat-Games"
-OTHER_BOTS_URL = "https://pivot.quest/dbots/"
-THIS_BOT_URL = "https://pivot.quest/dbots/#lets-play"
-DONATE_URL = "https://ko-fi.com/lepivo/goal?g=8"
+CHATGAMES_BOT_PERMISSIONS_INT = 274878024768
+CHATGAMES_LINK_GITHUB = "https://github.com/covesoft/Lets-Play-Chat-Games"
+CHATGAMES_LINK_OTHER_BOTS = "https://pivot.quest/dbots/"
+CHATGAMES_LINK_THIS_BOT = "https://pivot.quest/dbots/#lets-play"
+CHATGAMES_LINK_DONATE = "https://ko-fi.com/lepivo/goal?g=8"
 
 
 class ConfigError(ValueError):
@@ -34,17 +34,17 @@ class Settings:
     ding_emoji: str | None = None
     development_mode: bool = False
     sync_commands: bool = False
-    other_bots_url: str = OTHER_BOTS_URL
-    this_bot_url: str = THIS_BOT_URL
-    repository_url: str = REPOSITORY_URL
-    donate_url: str = DONATE_URL
+    other_bots_url: str = CHATGAMES_LINK_OTHER_BOTS
+    this_bot_url: str = CHATGAMES_LINK_THIS_BOT
+    repository_url: str = CHATGAMES_LINK_GITHUB
+    donate_url: str = CHATGAMES_LINK_DONATE
     support_url: str | None = None
     vote_url: str | None = None
     privacy_contact_url: str | None = None
 
     def require_token(self) -> str:
         if not self.token:
-            raise ConfigError("CHATRULES_DISCORD_TOKEN is required for live startup.")
+            raise ConfigError("CHATGAMES_DISCORD_TOKEN is required for live startup.")
         return self.token
 
     @property
@@ -54,7 +54,7 @@ class Settings:
         query = urlencode(
             {
                 "client_id": self.app_id,
-                "permissions": BOT_PERMISSIONS_INT,
+                "permissions": CHATGAMES_BOT_PERMISSIONS_INT,
                 "integration_type": 0,
                 "scope": "applications.commands bot",
             }
@@ -130,36 +130,36 @@ def load_settings(
     else:
         env = environ
     owners = set()
-    for item in (_value(env, "ADMIN_IDS") or "").split(","):
+    for item in (_value(env, "CHATGAMES_ADMIN_IDS") or "").split(","):
         if item.strip():
-            owners.add(_snowflake(item.strip(), "ADMIN_IDS"))
-    database = _value(env, "CHATRULES_DATABASE_PATH") or "data/lets_play.sqlite3"
+            owners.add(_snowflake(item.strip(), "CHATGAMES_ADMIN_IDS"))
+    database = _value(env, "CHATGAMES_DATABASE_PATH") or "data/lets_play.sqlite3"
     if database == ":memory:":
-        raise ConfigError("CHATRULES_DATABASE_PATH must name an on-disk database for WAL.")
-    support_url = _url(env, "CHATRULES_LINK_SUPPORT")
-    support_code = _value(env, "CHATRULES_SUPPORT_INVITE_CODE")
+        raise ConfigError("CHATGAMES_DATABASE_PATH must name an on-disk database for WAL.")
+    support_url = _url(env, "CHATGAMES_LINK_SUPPORT")
+    support_code = _value(env, "CHATGAMES_SUPPORT_INVITE_CODE")
     if support_url is None and support_code is not None:
         if not re.fullmatch(r"[A-Za-z0-9_-]+", support_code):
-            raise ConfigError("CHATRULES_SUPPORT_INVITE_CODE must contain an invite code.")
+            raise ConfigError("CHATGAMES_SUPPORT_INVITE_CODE must contain an invite code.")
         support_url = f"https://discord.gg/{support_code}"
     return Settings(
-        token=_value(env, "CHATRULES_DISCORD_TOKEN"),
-        app_id=_snowflake(_value(env, "CHATRULES_APP_ID"), "CHATRULES_APP_ID"),
+        token=_value(env, "CHATGAMES_DISCORD_TOKEN"),
+        app_id=_snowflake(_value(env, "CHATGAMES_APP_ID"), "CHATGAMES_APP_ID"),
         admin_ids=frozenset(owners),
         database_path=_path(base, database),
-        profanity_list_path=_path(base, _value(env, "CHATRULES_PROFANITY_LIST_PATH")),
+        profanity_list_path=_path(base, _value(env, "CHATGAMES_PROFANITY_LIST_PATH")),
         phrase_suitability_list_path=_path(
-            base, _value(env, "CHATRULES_PHRASE_SUITABILITY_LIST_PATH")
+            base, _value(env, "CHATGAMES_PHRASE_SUITABILITY_LIST_PATH")
         ),
-        badge_emoji_map_path=_path(base, _value(env, "CHATRULES_BADGE_EMOJI_MAP_PATH")),
-        ding_emoji=_value(env, "CHATRULES_DING_EMOJI"),
-        development_mode=_boolean(env, "CHATRULES_DEVELOPMENT_MODE"),
-        sync_commands=_boolean(env, "CHATRULES_SYNC_COMMANDS"),
-        other_bots_url=_url(env, "CHATRULES_LINK_OTHER_BOTS", OTHER_BOTS_URL),
-        this_bot_url=_url(env, "CHATRULES_LINK_THIS_BOT", THIS_BOT_URL),
-        repository_url=_url(env, "CHATRULES_LINK_GITHUB", REPOSITORY_URL),
-        donate_url=_url(env, "CHATRULES_LINK_DONATE", DONATE_URL),
+        badge_emoji_map_path=_path(base, _value(env, "CHATGAMES_BADGE_EMOJI_MAP_PATH")),
+        ding_emoji=_value(env, "CHATGAMES_DING_EMOJI"),
+        development_mode=_boolean(env, "CHATGAMES_DEVELOPMENT_MODE"),
+        sync_commands=_boolean(env, "CHATGAMES_SYNC_COMMANDS"),
+        other_bots_url=_url(env, "CHATGAMES_LINK_OTHER_BOTS", CHATGAMES_LINK_OTHER_BOTS),
+        this_bot_url=_url(env, "CHATGAMES_LINK_THIS_BOT", CHATGAMES_LINK_THIS_BOT),
+        repository_url=_url(env, "CHATGAMES_LINK_GITHUB", CHATGAMES_LINK_GITHUB),
+        donate_url=_url(env, "CHATGAMES_LINK_DONATE", CHATGAMES_LINK_DONATE),
         support_url=support_url,
-        vote_url=_url(env, "CHATRULES_LINK_VOTE"),
-        privacy_contact_url=_url(env, "CHATRULES_PRIVACY_CONTACT_URL"),
+        vote_url=_url(env, "CHATGAMES_LINK_VOTE"),
+        privacy_contact_url=_url(env, "CHATGAMES_PRIVACY_CONTACT_URL"),
     )

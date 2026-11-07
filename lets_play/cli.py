@@ -36,7 +36,7 @@ def main(argv: list[str] | None = None, *, base_dir: Path | None = None) -> int:
             print(
                 "Invite: available."
                 if settings.invite_url
-                else "Invite: omitted until CHATRULES_APP_ID is set."
+                else "Invite: omitted until CHATGAMES_APP_ID is set."
             )
             return 0
         if args.init_db:

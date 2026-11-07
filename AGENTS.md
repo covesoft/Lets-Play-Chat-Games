@@ -1,13 +1,16 @@
 # Let’s Play development
 
 This repository implements the New Rules chat game in the Let’s Play application.
-Read `docs/NEW_RULES_PROJECT_BIBLE.md` before changing game behavior; it contains
-the current contracts, bounded milestone plan, and implementation evidence.
-The accepted product baseline is v0.32. Follow its documented change protocol.
+Owner-provided design notes may be available privately under `design/`. Consult
+them before changing game behavior. Never commit, package, or copy their contents
+into public documentation. The public `docs/` directory contains operational
+documentation only.
 
 Use Python 3.13. `pyproject.toml` owns dependency pins; update `uv.lock` and both
-requirements exports together. Keep the existing launcher compatible. No token
-or external private list is required for offline tests.
+requirements exports together. Run the application with `python -m lets_play`
+or the installed `lets-play` command. Use `CHATGAMES_*` configuration names; there
+are no legacy launcher/configuration aliases. No token or external private list
+is required for offline tests.
 
 Keep the New Rules domain independent of Discord and storage. Do not treat M0’s
 empty domain package or migration bookkeeping as implemented gameplay. Finish M1
@@ -24,10 +27,11 @@ Run meaningful checks for each change:
 python -m pytest
 python -m ruff check .
 python -m ruff format --check .
-python discordbot_chatgames.py --check-config
+python -m lets_play --check-config
 ```
 
 For packaging/dependency changes, also run `python -m build` and `python -m pip
 check` (or `uv pip check`). Record actual results and remaining limits in the
-bible’s implementation ledger. Never report a mock/offline check as live Discord
-or Windows evidence.
+private implementation notes when available. Never report a mock/offline check
+as live Discord or Windows evidence. Stay in M0 until scaffolding adjustments
+and the owner's configuration, venv, login, and database checks are finished.

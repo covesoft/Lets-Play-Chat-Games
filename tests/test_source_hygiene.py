@@ -9,6 +9,7 @@ def test_git_ignores_runtime_secrets_and_lists_but_keeps_public_examples():
     private_paths = [
         ".env",
         ".env.production",
+        "design/NEW_RULES_PROJECT_BIBLE.md",
         "private/words.txt",
         "private_lists/words.txt",
         "wordlists/words.txt",

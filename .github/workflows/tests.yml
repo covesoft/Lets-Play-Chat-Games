@@ -24,7 +24,7 @@ jobs:
       - run: python -m pip install -r requirements-dev.txt
       - run: python -m pip install -e . --no-deps
       - run: python -m pip check
-      - run: python discordbot_chatgames.py --check-config
+      - run: python -m lets_play --check-config
       - run: python -m pytest
       - run: python -m ruff check .
       - run: python -m ruff format --check .
