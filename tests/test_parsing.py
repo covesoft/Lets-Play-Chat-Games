@@ -85,7 +85,7 @@ def test_repr_does_not_log_transient_message_tokens_links_or_objects():
 
 def test_no_default_pass_for_an_unimplemented_card():
     with pytest.raises(NotImplementedError):
-        evaluate_text_rule(parse_message("over..."), RuleInstance("next-rule", "NR036"))
+        evaluate_text_rule(parse_message("over..."), RuleInstance("next-rule", "NR037"))
 
 
 @pytest.mark.parametrize("prefix", ["> " * 100, "- " * 100])

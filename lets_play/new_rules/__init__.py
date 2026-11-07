@@ -1,7 +1,7 @@
-"""New Rules offline domain contracts and first text-parser predicates.
+"""New Rules offline contracts, parsing, representative evaluation, and scoring.
 
-This package is independent of Discord and storage. Session transitions, scoring,
-and live gameplay are not implemented by the first M1 parser increment.
+This package is independent of Discord and storage. Persistent score application,
+session transitions, and live gameplay are not implemented by these increments.
 """
 
 GAME_KEY = "new-rules"

@@ -11,6 +11,8 @@ def test_git_ignores_runtime_secrets_and_lists_but_keeps_public_examples():
         ".env.production",
         "design/NEW_RULES_PROJECT_BIBLE.md",
         "private/words.txt",
+        "private/quoted name.txt",
+        "private/naïve.txt",
         "private_lists/words.txt",
         "wordlists/words.txt",
         "data/game.sqlite3",
@@ -21,22 +23,24 @@ def test_git_ignores_runtime_secrets_and_lists_but_keeps_public_examples():
         "run.log",
     ]
     result = subprocess.run(
-        ["git", "check-ignore", "--no-index", "--stdin"],
-        input="\n".join(private_paths) + "\n",
+        ["git", "check-ignore", "--no-index", "-z", "--stdin"],
+        # Binary NUL framing avoids Windows text-mode CRLF translation and Git's
+        # C-style quoting of paths. No secrets/files need to exist for this test.
+        input=b"\0".join(path.encode("utf-8") for path in private_paths) + b"\0",
         cwd=root,
         capture_output=True,
-        text=True,
         timeout=10,
     )
     assert result.returncode == 0
-    assert set(result.stdout.splitlines()) == set(private_paths)
+    assert {path.decode("utf-8") for path in result.stdout.split(b"\0") if path} == set(
+        private_paths
+    )
     public = subprocess.run(
-        ["git", "check-ignore", "--no-index", "--stdin"],
-        input=".env.example\nlets_play/config.py\ntests/test_config.py\n",
+        ["git", "check-ignore", "--no-index", "-z", "--stdin"],
+        input=b".env.example\0lets_play/config.py\0tests/test_config.py\0",
         cwd=root,
         capture_output=True,
-        text=True,
         timeout=10,
     )
     assert public.returncode == 1
-    assert public.stdout == ""
+    assert public.stdout == b""

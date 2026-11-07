@@ -4,6 +4,7 @@ from dataclasses import dataclass, field
 from enum import StrEnum
 from unicodedata import category, normalize
 
+import emoji
 import regex
 from markdown_it.token import Token
 
@@ -109,6 +110,21 @@ class MessageView:
 def word_key(word: str) -> str:
     # NFC leaves literal punctuation intact: NFKC would turn … into ... .
     return normalize("NFC", word).translate(_APOSTROPHE_MAP).casefold()
+
+
+def is_word_gap(text: str) -> bool:
+    """Punctuation/spacing between phrase words, including apostrophe substitutes.
+
+    Visible symbols and Discord object placeholders interrupt a phrase. U+2212
+    is accepted as a common hyphen substitute, as in ordinary word tokenization.
+    """
+    # Some standalone emoji (for example ‼) have Unicode punctuation categories.
+    if emoji.emoji_list(text):
+        return False
+    return all(
+        char.isspace() or char in _APOSTROPHES or category(char).startswith("P") or char == "−"
+        for char in text
+    )
 
 
 def _inline(

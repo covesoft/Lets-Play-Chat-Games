@@ -1,9 +1,10 @@
 # Offline text API
 
-The first engine increment provides plain-data contracts, transient text views,
-and three reference predicates. It is not connected to the Discord event handlers.
-Schema 1 and live startup behavior are unchanged. No session engine, scoring,
-playable command, or complete card catalog is supplied by this increment.
+The offline domain package provides plain-data contracts, transient text views,
+and four reference text predicates. It is not connected to Discord event handlers.
+Schema 1 and live startup behavior are unchanged. Candidate event evaluation and
+exact score values are described in [EVALUATION.md](EVALUATION.md); a session engine,
+persistent game ledger, playable commands, and the full card catalog remain absent.
 
 ## Entry points
 
@@ -18,7 +19,8 @@ result = evaluate_text_rule(view, RuleInstance("example-instance", "NR034"))
 
 `RuleEvaluation` returns an instance ID, typed pass/fail/not-applicable outcome,
 and a stable reason code on failure. This predicate layer supports NR034 (ending
-word), NR011 (literal three-period ending), and NR016 (formatting). Other card
+word), NR011 (literal three-period ending), NR016 (formatting), and NR036 (a frozen
+phrase). Other card
 IDs raise `NotImplementedError`; they never receive a default successful result.
 The engine must select the active instances and phase before invoking ordinary
 predicates. No ordinary predicate should run as mode enforcement.
@@ -80,9 +82,36 @@ but not another word, a symbol, or a Discord object.
 
 Empty/absent text is not applicable to these text predicates. Present whitespace,
 punctuation-only, and heading-only text remains applicable and can fail a required
-word/ending. The exact whole-message whisper prefix makes the three reference
-predicates not applicable. The future engine still owns whisper traffic/activity
-accounting and all phase/session gates.
+word/ending. The exact whole-message whisper prefix makes these text predicates
+not applicable. The candidate evaluator accounts for whisper traffic in an active
+position; complete session routing/activity scheduling remains engine work.
+
+## Frozen phrase input
+
+NR036 requires an immutable `RuleInstance.parameters` entry named `phrase`; an
+optional `phrase_revision` records its source revision. For example:
+
+```python
+instance = RuleInstance(
+    "clause-example",
+    "NR036",
+    (("phrase", "red duck"), ("phrase_revision", "example-revision")),
+)
+result = evaluate_text_rule(parse_message("A **RED** duck appeared."), instance)
+```
+
+Matching uses contiguous normalized word identities, not substrings. Spacing,
+quotes, punctuation, and hyphen variants may separate the words; another word,
+visible symbol, emoji, or Discord object interrupts the phrase. Markup wrappers
+are handled by the same logical view as the other predicates. Phrase punctuation
+is not an additional literal-match requirement. Single words obey the same word
+boundaries and apostrophe/case/canonical-Unicode normalization.
+
+Missing, wordless, formatted, object-containing, or unknown parameter inputs raise
+`RuleConfigurationError` even when the message has no text. The parser input limit
+also applies to phrase input. Error messages do not echo the phrase. This is an
+evaluator input contract, not a guild-bank suitability/profanity/length policy or
+a phrase-offer/consumption service. No production word list is used or needed.
 
 ## Bounds and verification
 

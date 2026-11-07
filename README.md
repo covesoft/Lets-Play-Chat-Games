@@ -3,12 +3,13 @@
 Let’s Play is a Discord chat-game bot. Its first game, **New Rules**, is a party
 conversation game where unusual rules accumulate as people chat.
 
-**Current status: v0.2.0, first M1 contracts/parser increment.** The application can validate its
+**Current status: v0.2.1, M1 evaluation/scoring increment.** The application can validate its
 configuration offline, initialize its SQLite database, and log in to Discord.
-Offline domain contracts, text views, and three reference text predicates are
-implemented. Live game commands, scoring, session transitions, and achievements
-are not implemented yet. The owner verified the earlier v0.1.3 shell/database
-startup on Windows. This increment has offline checks; M1 remains in progress.
+Offline domain contracts, text views, six representative rules, and exact score
+arithmetic are implemented. Evaluation produces candidate effects; persistent
+score application, session transitions, live game commands, and achievements are
+not implemented yet. The owner verified the earlier v0.1.3 shell/database startup
+on Windows. This increment has offline checks; M1 remains in progress.
 Public setup and operational documentation is under `docs/`. Private design
 notes are excluded from Git and package distributions.
 
@@ -64,7 +65,8 @@ intents. Message caching and SDK member caching are disabled. Raw reaction
 handling belongs to M2 and must work for uncached/old targets.
 
 The parser API and its tested boundaries are documented in [docs/PARSER.md](docs/PARSER.md).
-The live shell does not yet invoke these offline predicates.
+See [docs/EVALUATION.md](docs/EVALUATION.md) for candidate decisions and score values.
+The live shell does not yet invoke these offline evaluators.
 
 The guild installation uses `bot` and `applications.commands` with permission
 integer **274878024768**: View Channels, Send Messages, Send Messages in Threads,
@@ -111,7 +113,7 @@ update commands.
 | `lets_play/__main__.py` | Standard `python -m lets_play` entry point |
 | `lets_play/config.py` | Explicit, immutable runtime configuration |
 | `lets_play/cli.py`, `lets_play/bot.py` | Offline tools and Discord shell |
-| `lets_play/new_rules/` | Typed domain contracts, transient parser, and offline text predicates |
+| `lets_play/new_rules/` | Typed contracts, transient parser, representative evaluation, and exact scoring |
 | `lets_play/storage/` | WAL bootstrap and ordered migration infrastructure |
 | `tests/` | Configuration, offline startup, SDK boundary, and real SQLite checks |
 | `docs/` | Public configuration, dependency, and storage documentation |

@@ -1,4 +1,4 @@
-# Dependency verification — foundation and first M1 increment
+# Dependency verification — foundation and offline M1 increments
 
 Verified November 6, 2026 against publisher metadata from PyPI and an actual
 installation using **CPython 3.13.17 on Linux**. These are tested pins, not a claim
@@ -9,7 +9,7 @@ supported minor version; the patch release can differ on the owner’s machine.
 | --- | --- | --- |
 | `discord.py` | 2.7.1 | Discord Gateway, interactions, and message metadata |
 | `python-dotenv` | 1.2.4 | Explicit `.env` parsing; import is `dotenv` |
-| `emoji` | 2.16.0 | Unicode emoji sequences; custom Discord emoji parsing remains project code |
+| `emoji` | 2.16.0 | Unicode emoji sequences, including phrase-interrupting punctuation emoji; custom Discord emoji parsing remains project code |
 | `aiosqlite` | 0.22.1 | Async access to the standard SQLite library |
 | `better-profanity` | 0.7.0 | Configured-list matching helper; import is `better_profanity` |
 | `markdown-it-py` | 4.2.0 | Token-based structure for the offline Discord-oriented parser |
@@ -24,6 +24,11 @@ needed for M0. The first M1 parser increment adds `regex` for Unicode word/graph
 and `markdown-it-py` for structured tokenization. Their pins were checked against
 PyPI metadata and installed/tested on CPython 3.13.17. `mdurl` is a transitive
 dependency; no renderer, HTTP parser service, or media downloader is introduced.
+
+The v0.2.1 evaluation/scoring increment adds no dependencies. Its exact arithmetic
+uses standard-library `fractions.Fraction`. The existing pins were reinstalled
+and verified together on Linux/Python 3.13.17 on November 7, 2026; this is separate
+from Windows execution evidence.
 
 | Development/build tool | Pin | Purpose |
 | --- | --- | --- |
