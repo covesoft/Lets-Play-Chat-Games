@@ -257,6 +257,7 @@ class SessionPosition:
     offer_id: str | None = None
     transition_id: str | None = None
     pause_reason: PauseReason | None = None
+    revision: int = 0
 
     def __post_init__(self) -> None:
         if not (
@@ -271,6 +272,8 @@ class SessionPosition:
             raise ValueError("A pause reason belongs only to a paused session.")
         if type(self.ruleset_version) is not int or self.ruleset_version < 0:
             raise ValueError("A ruleset version cannot be negative.")
+        if type(self.revision) is not int or self.revision < 0:
+            raise ValueError("An ownership revision must be a nonnegative integer.")
         if self.lifecycle is Lifecycle.PLAYING and not self.round_id:
             raise ValueError("Playing requires an owner round.")
 

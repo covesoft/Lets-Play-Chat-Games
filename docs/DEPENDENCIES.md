@@ -30,6 +30,10 @@ uses standard-library `fractions.Fraction`. The existing pins were reinstalled
 and verified together on Linux/Python 3.13.17 on November 7, 2026; this is separate
 from Windows execution evidence.
 
+The v0.2.2 SQLite unit of work also adds no dependencies. It uses the pinned
+`aiosqlite` and standard-library SQLite, JSON, and exact fractions. Schema 2 uses
+SQLite STRICT tables (3.37+). Runtime and build pins remain unchanged.
+
 | Development/build tool | Pin | Purpose |
 | --- | --- | --- |
 | `pytest` | 9.2.0 | Offline test runner |

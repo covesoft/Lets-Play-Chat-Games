@@ -4,6 +4,12 @@ from lets_play.new_rules.contracts import Outcome, RuleEvaluation, RuleInstance
 from lets_play.new_rules.parsing import MessageView, is_word_gap, parse_message
 
 SUPPORTED_TEXT_RULES = frozenset({"NR011", "NR016", "NR034", "NR036"})
+TEXT_FAILURE_REASONS = {
+    "NR011": "required_three_periods",
+    "NR016": "formatting_forbidden",
+    "NR034": "required_ending_word",
+    "NR036": "required_phrase",
+}
 
 
 class RuleConfigurationError(ValueError):
@@ -60,15 +66,16 @@ def evaluate_text_rule(view: MessageView, instance: RuleInstance) -> RuleEvaluat
         return RuleEvaluation(instance.instance_id, Outcome.NOT_APPLICABLE)
     match instance.card_id:
         case "NR034":
-            passed, reason = view.ends_with_word("over"), "required_ending_word"
+            passed = view.ends_with_word("over")
         case "NR011":
             ending = view.ending
             passed = ending.endswith("...") and not ending.endswith("....")
-            reason = "required_three_periods"
         case "NR016":
-            passed, reason = not view.formatting, "formatting_forbidden"
+            passed = not view.formatting
         case "NR036":
-            passed, reason = _contains_phrase(view, keys), "required_phrase"
+            passed = _contains_phrase(view, keys)
     return RuleEvaluation(
-        instance.instance_id, Outcome.PASS if passed else Outcome.FAIL, None if passed else reason
+        instance.instance_id,
+        Outcome.PASS if passed else Outcome.FAIL,
+        None if passed else TEXT_FAILURE_REASONS[instance.card_id],
     )

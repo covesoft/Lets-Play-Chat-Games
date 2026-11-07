@@ -2,8 +2,9 @@
 
 These APIs perform no network calls, database writes, enrollment, marker delivery,
 or awards. The Discord shell does not invoke them. A decision is a proposed
-effect that a future transactional store must accept before applying anything.
-Database schema 1 still contains migration bookkeeping only.
+effect that a transactional store must accept before applying anything. Schema 2
+provides the offline [event unit of work](STORAGE.md); the live shell still does
+not invoke it.
 
 ## Representative event evaluation
 
@@ -14,6 +15,9 @@ a derived decision or `None` for an ignored event. They require the exact guild,
 channel/thread, and session route, a playing position, and a human actor. They
 do not decide whether an incoming event is timely, order arrivals, or transition
 the session. Warning/choice/held events retain the supplied round/ruleset owner.
+`SessionPosition.revision` is a nonnegative monotonic ownership revision, distinct
+from the ruleset version. The store increments it for every ownership mutation,
+including changes that later return to the same visible state.
 
 | Card ID | Input and applicability |
 | --- | --- |
@@ -56,8 +60,8 @@ content, authorship, and whisper/media status do not introduce exemptions here.
 Its `dedup_key` is `(session_id, actor_id, target_message_id)`. Emoji, round, and
 rule instance are deliberately absent. Re-adds and later rounds return the same
 candidate key. **The evaluator does not remember or reject duplicate candidates.**
-The future store must insert a unique guard and apply the score, participation,
-and any derived effects in the same transaction. Do not sum repeated candidates
+The schema-2 unit of work inserts a unique guard and applies the score,
+participation, and marker intents in the same transaction. Do not sum repeated candidates
 or send effects before that acceptance. Event `source_key` and reaction
 `dedup_key` serve different purposes; a fresh source event can still target an
 already-counted actor/message pair.
@@ -100,6 +104,6 @@ implemented by this arithmetic module.
 
 Tests cover partial-quality messages, unrated participation, reaction-only
 players, additive round aggregation, ranking, exact boundary comparisons, phase
-gates, whisper exemption, and frozen phrase composition. Persistent exactly-once
-application, concurrency/restart recovery, and live Discord behavior require
-their own integration evidence.
+gates, whisper exemption, and frozen phrase composition. Separate storage tests
+exercise atomic internal effects, duplicate races, cancellation, and reopen.
+Full session recovery and live Discord behavior remain separate work.

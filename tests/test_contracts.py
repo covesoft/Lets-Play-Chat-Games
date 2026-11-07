@@ -110,6 +110,14 @@ def test_deadline_retains_identity_and_uses_inclusive_utc_boundary():
         deadline.is_due(NOW.replace(tzinfo=None))
 
 
+@pytest.mark.parametrize("revision", [-1, True, 0.5])
+def test_ownership_revision_requires_a_nonnegative_integer(revision):
+    with pytest.raises(ValueError, match="revision"):
+        SessionPosition(
+            SessionRoute(1, 2, "session"), Lifecycle.PLAYING, round_id="round", revision=revision
+        )
+
+
 @pytest.mark.parametrize(
     "outcome,reason",
     [

@@ -2,9 +2,10 @@
 
 The offline domain package provides plain-data contracts, transient text views,
 and four reference text predicates. It is not connected to Discord event handlers.
-Schema 1 and live startup behavior are unchanged. Candidate event evaluation and
-exact score values are described in [EVALUATION.md](EVALUATION.md); a session engine,
-persistent game ledger, playable commands, and the full card catalog remain absent.
+Candidate event evaluation and exact score values are described in
+[EVALUATION.md](EVALUATION.md). Schema 2 supplies an offline event unit of work
+([STORAGE.md](STORAGE.md)); a session engine, playable commands, and the full
+card catalog remain absent. The live shell does not invoke game evaluation.
 
 ## Entry points
 

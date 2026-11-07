@@ -34,6 +34,13 @@ For packaging/dependency changes, also run `python -m build` and `python -m pip
 check` (or `uv pip check`). Record actual results and remaining limits in the
 private implementation notes when available. Never report a mock/offline check
 as live Discord or Windows evidence. M1 is authorized in bounded increments.
-The owner verified the earlier v0.1.3 shell live. The source-hygiene test uses
-binary NUL-framed Git input/output to avoid Windows newline translation. Verify
-on Windows/CI before claiming Windows execution evidence for later increments.
+The owner verified the earlier v0.1.3 shell live and v0.2.1 tests on Windows
+(282 passed). The source-hygiene test uses binary NUL-framed Git input/output.
+Later increments still need their own Windows/CI evidence.
+
+Schema 2 is an offline evaluation unit of work, not a transition/admission or
+award service. Keep every guard, aggregate, and marker intent in one transaction;
+ownership updates require monotonic revisions. Never interpret a candidate or
+an uncommitted unit return value as an applied effect. Use bounded store/page
+limits and surface overload/contention explicitly. No network waits inside a
+write unit. Back up an existing database before schema upgrades.

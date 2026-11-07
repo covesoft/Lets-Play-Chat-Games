@@ -1,4 +1,7 @@
-"""SQLite bootstrap; gameplay repositories and unit-of-work contracts start in M1."""
+"""SQLite bootstrap and the offline New Rules event unit of work.
+
+Importing this module does not open a connection or initialize a database.
+"""
 
 from lets_play.storage.bootstrap import DatabaseInfo, initialize_database
 

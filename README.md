@@ -3,13 +3,15 @@
 Let’s Play is a Discord chat-game bot. Its first game, **New Rules**, is a party
 conversation game where unusual rules accumulate as people chat.
 
-**Current status: v0.2.1, M1 evaluation/scoring increment.** The application can validate its
+**Current status: v0.2.2, M1 database unit-of-work increment.** The application can validate its
 configuration offline, initialize its SQLite database, and log in to Discord.
 Offline domain contracts, text views, six representative rules, and exact score
-arithmetic are implemented. Evaluation produces candidate effects; persistent
-score application, session transitions, live game commands, and achievements are
-not implemented yet. The owner verified the earlier v0.1.3 shell/database startup
-on Windows. This increment has offline checks; M1 remains in progress.
+arithmetic are implemented. An offline SQLite unit of work now atomically applies
+those candidates with event/reaction guards, score aggregates, and marker intents.
+The transition engine, live game commands, marker delivery, and achievements are
+not implemented yet. The owner verified the v0.1.3 shell/database startup and the
+v0.2.1 suite (282 tests) on Windows. This increment has local offline checks;
+M1 remains in progress.
 Public setup and operational documentation is under `docs/`. Private design
 notes are excluded from Git and package distributions.
 
@@ -114,13 +116,14 @@ update commands.
 | `lets_play/config.py` | Explicit, immutable runtime configuration |
 | `lets_play/cli.py`, `lets_play/bot.py` | Offline tools and Discord shell |
 | `lets_play/new_rules/` | Typed contracts, transient parser, representative evaluation, and exact scoring |
-| `lets_play/storage/` | WAL bootstrap and ordered migration infrastructure |
+| `lets_play/storage/` | WAL migrations, live-state codecs, and atomic event unit of work |
 | `tests/` | Configuration, offline startup, SDK boundary, and real SQLite checks |
 | `docs/` | Public configuration, dependency, and storage documentation |
 
-Schema **1** creates migration bookkeeping only. Game tables and transactional
-gameplay repositories belong to M1. Read the
-[migration and backup policy](docs/STORAGE.md) before changing persistence.
+Schema **2** adds live evaluation owners, score aggregates, event/reaction guards,
+fault counts, and marker intents. Existing schema-1 databases upgrade in place
+on `--init-db` or startup. Stop the bot and make a verified SQLite backup before
+upgrading. Read the [database API and backup policy](docs/STORAGE.md).
 
 ## Source hygiene and license
 

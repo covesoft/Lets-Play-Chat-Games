@@ -7,6 +7,8 @@ from fractions import Fraction
 
 from lets_play.new_rules.contracts import Outcome, RuleEvaluation
 
+SCORE_VERSION = "normalized-1"
+
 
 def _exact(value: int | Fraction) -> Fraction:
     if type(value) is not int and not isinstance(value, Fraction):

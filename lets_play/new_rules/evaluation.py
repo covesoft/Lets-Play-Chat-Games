@@ -23,12 +23,18 @@ from lets_play.new_rules.parsing import parse_message
 from lets_play.new_rules.scoring import ScoreTotals, ordinary_score, reaction_score, whisper_score
 from lets_play.new_rules.text_rules import (
     SUPPORTED_TEXT_RULES,
+    TEXT_FAILURE_REASONS,
     RuleConfigurationError,
     evaluate_text_rule,
     phrase_keys,
 )
 
 SUPPORTED_RULES = SUPPORTED_TEXT_RULES | {"NR004", "NR006"}
+EVALUATOR_VERSION = "representatives-1"
+FAILURE_REASONS = TEXT_FAILURE_REASONS | {
+    "NR004": "attachments_forbidden",
+    "NR006": "reaction_prohibited",
+}
 
 
 @dataclass(frozen=True, slots=True)
@@ -131,7 +137,7 @@ def evaluate_message(event: MessageEvent, context: EvaluationContext) -> Message
                     result = RuleEvaluation(
                         instance.instance_id,
                         Outcome.FAIL if failed else Outcome.PASS,
-                        "attachments_forbidden" if failed else None,
+                        FAILURE_REASONS[instance.card_id] if failed else None,
                     )
                 case _:
                     result = evaluate_text_rule(view, instance)
@@ -165,6 +171,6 @@ def evaluate_reaction(event: ReactionEvent, context: EvaluationContext) -> React
         event.envelope.source_key,
         event.envelope.actor_id,
         event.offense_key,
-        RuleEvaluation(instance.instance_id, Outcome.FAIL, "reaction_prohibited"),
+        RuleEvaluation(instance.instance_id, Outcome.FAIL, FAILURE_REASONS[instance.card_id]),
         reaction_score(),
     )

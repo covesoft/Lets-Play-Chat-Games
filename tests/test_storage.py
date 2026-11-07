@@ -16,27 +16,68 @@ def scalar(path, sql):
         return conn.execute(sql).fetchone()[0]
 
 
+def schema_one_fixture(path):
+    # The real released schema-1 DDL, independent of today's migration list.
+    with closing(sqlite3.connect(path)) as conn, conn:
+        conn.execute(
+            "CREATE TABLE schema_migrations (version INTEGER PRIMARY KEY, name TEXT NOT NULL)"
+        )
+        conn.execute("INSERT INTO schema_migrations VALUES (1, 'foundation')")
+        conn.execute("PRAGMA user_version=1")
+        conn.execute(f"PRAGMA application_id={APPLICATION_ID}")
+
+
+@pytest.mark.asyncio
+async def test_released_schema_one_upgrades_without_recreating_database(tmp_path):
+    path = tmp_path / "old.sqlite3"
+    schema_one_fixture(path)
+    assert (await initialize_database(path)).schema_version == 2
+    assert scalar(path, "SELECT name FROM schema_migrations WHERE version=1") == "foundation"
+    assert (
+        scalar(path, "SELECT name FROM schema_migrations WHERE version=2")
+        == "new_rules_event_unit_of_work"
+    )
+    assert scalar(path, "SELECT COUNT(*) FROM nr_sessions") == 0
+    assert scalar(path, "PRAGMA integrity_check") == "ok"
+
+
+@pytest.mark.asyncio
+async def test_schema_two_migration_failure_preserves_released_schema_one(tmp_path, monkeypatch):
+    path = tmp_path / "old.sqlite3"
+    schema_one_fixture(path)
+    original = storage.MIGRATIONS
+    failed = Migration(2, original[1].name, (*original[1].statements, "INVALID SQL"))
+    monkeypatch.setattr(storage, "MIGRATIONS", (original[0], failed))
+    with pytest.raises(sqlite3.OperationalError):
+        await initialize_database(path)
+    assert scalar(path, "PRAGMA user_version") == 1
+    assert scalar(path, "SELECT COUNT(*) FROM schema_migrations") == 1
+    assert scalar(path, "SELECT COUNT(*) FROM sqlite_schema WHERE name LIKE 'nr_%'") == 0
+    monkeypatch.setattr(storage, "MIGRATIONS", original)
+    assert (await initialize_database(path)).schema_version == 2
+
+
 @pytest.mark.asyncio
 async def test_fresh_and_repeated_startup_preserve_wal_schema_and_integrity(tmp_path):
     path = tmp_path / "data/game.sqlite3"
     first = await initialize_database(path)
     second = await initialize_database(path)
     assert first == second
-    assert first.schema_version == SCHEMA_VERSION == 1
+    assert first.schema_version == SCHEMA_VERSION == 2
     assert first.journal_mode == "wal"
     assert first.foreign_keys
     assert first.busy_timeout_ms == 10000
     assert scalar(path, "PRAGMA application_id") == APPLICATION_ID
     assert scalar(path, "PRAGMA integrity_check") == "ok"
-    assert scalar(path, "SELECT COUNT(*) FROM schema_migrations") == 1
+    assert scalar(path, "SELECT COUNT(*) FROM schema_migrations") == SCHEMA_VERSION
 
 
 @pytest.mark.asyncio
 async def test_parallel_first_opens_apply_each_migration_once(tmp_path):
     path = tmp_path / "parallel.sqlite3"
     results = await asyncio.gather(*(initialize_database(path) for _ in range(4)))
-    assert all(result.schema_version == 1 for result in results)
-    assert scalar(path, "SELECT COUNT(*) FROM schema_migrations") == 1
+    assert all(result.schema_version == SCHEMA_VERSION for result in results)
+    assert scalar(path, "SELECT COUNT(*) FROM schema_migrations") == SCHEMA_VERSION
     assert scalar(path, "PRAGMA integrity_check") == "ok"
 
 
@@ -63,19 +104,23 @@ async def test_failed_upgrade_rolls_back_ddl_metadata_and_version(tmp_path, monk
     path = tmp_path / "upgrade.sqlite3"
     await initialize_database(path)
     failed = Migration(
-        2, "fault_fixture", ("CREATE TABLE should_rollback (id INTEGER)", "INVALID SQL")
+        SCHEMA_VERSION + 1,
+        "fault_fixture",
+        ("CREATE TABLE should_rollback (id INTEGER)", "INVALID SQL"),
     )
     monkeypatch.setattr(storage, "MIGRATIONS", (*storage.MIGRATIONS, failed))
-    monkeypatch.setattr(storage, "SCHEMA_VERSION", 2)
+    monkeypatch.setattr(storage, "SCHEMA_VERSION", SCHEMA_VERSION + 1)
     with pytest.raises(sqlite3.OperationalError):
         await initialize_database(path)
-    assert scalar(path, "PRAGMA user_version") == 1
-    assert scalar(path, "SELECT COUNT(*) FROM schema_migrations") == 1
+    assert scalar(path, "PRAGMA user_version") == SCHEMA_VERSION
+    assert scalar(path, "SELECT COUNT(*) FROM schema_migrations") == SCHEMA_VERSION
     assert scalar(path, "SELECT COUNT(*) FROM sqlite_schema WHERE name='should_rollback'") == 0
     # Failed startup closed its handle; replacing the bad migration can proceed.
-    successful = Migration(2, "upgrade_fixture", ("CREATE TABLE upgrade_ok (id INTEGER)",))
-    monkeypatch.setattr(storage, "MIGRATIONS", (*storage.MIGRATIONS[:1], successful))
-    assert (await initialize_database(path)).schema_version == 2
+    successful = Migration(
+        SCHEMA_VERSION + 1, "upgrade_fixture", ("CREATE TABLE upgrade_ok (id INTEGER)",)
+    )
+    monkeypatch.setattr(storage, "MIGRATIONS", (*storage.MIGRATIONS[:-1], successful))
+    assert (await initialize_database(path)).schema_version == SCHEMA_VERSION + 1
     assert scalar(path, "PRAGMA integrity_check") == "ok"
 
 
