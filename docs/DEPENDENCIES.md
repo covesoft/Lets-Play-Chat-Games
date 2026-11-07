@@ -1,4 +1,4 @@
-# Dependency verification — M0
+# Dependency verification — foundation and first M1 increment
 
 Verified November 6, 2026 against publisher metadata from PyPI and an actual
 installation using **CPython 3.13.17 on Linux**. These are tested pins, not a claim
@@ -12,14 +12,18 @@ supported minor version; the patch release can differ on the owner’s machine.
 | `emoji` | 2.16.0 | Unicode emoji sequences; custom Discord emoji parsing remains project code |
 | `aiosqlite` | 0.22.1 | Async access to the standard SQLite library |
 | `better-profanity` | 0.7.0 | Configured-list matching helper; import is `better_profanity` |
+| `markdown-it-py` | 4.2.0 | Token-based structure for the offline Discord-oriented parser |
+| `regex` | 2026.11.7 | Unicode word sets, quotation properties, and grapheme clusters |
 
 Python supplies `asyncio`, `sqlite3`, `logging`, `pathlib`, `dataclasses`, and the
 other standard-library modules used here. Do not add those to requirements.
 `discord.py` supplies `aiohttp` and the Python-3.13 `audioop-lts` compatibility
 dependency transitively; the latter is not a request for voice-channel support.
 Pillow, FFmpeg, PyNaCl, davey, a database ORM, and a migration framework are not
-needed for M0. Any extra Unicode token/grapheme library must be justified by the
-M1 parser contracts rather than added speculatively.
+needed for M0. The first M1 parser increment adds `regex` for Unicode word/grapheme properties
+and `markdown-it-py` for structured tokenization. Their pins were checked against
+PyPI metadata and installed/tested on CPython 3.13.17. `mdurl` is a transitive
+dependency; no renderer, HTTP parser service, or media downloader is introduced.
 
 | Development/build tool | Pin | Purpose |
 | --- | --- | --- |

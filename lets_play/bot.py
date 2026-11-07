@@ -42,7 +42,7 @@ class LetsPlayBot(commands.Bot):
         if self.settings.sync_commands and self.tree.get_commands():
             await self.tree.sync()
         elif self.settings.sync_commands:
-            logger.info("Command sync skipped: the M0 scaffold has no registered commands.")
+            logger.info("Command sync skipped: no registered application commands.")
 
     async def on_ready(self) -> None:
         logger.info("Logged in as %s (%s)", self.user, self.user.id if self.user else None)

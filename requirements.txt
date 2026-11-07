@@ -24,6 +24,10 @@ frozenlist==1.8.0
     #   aiosignal
 idna==3.20
     # via yarl
+markdown-it-py==4.2.0
+    # via lets-play-chat-games
+mdurl==0.1.2
+    # via markdown-it-py
 multidict==7.2.1
     # via
     #   aiohttp
@@ -33,6 +37,8 @@ propcache==0.5.4
     #   aiohttp
     #   yarl
 python-dotenv==1.2.4
+    # via lets-play-chat-games
+regex==2026.11.7
     # via lets-play-chat-games
 yarl==1.25.1
     # via aiohttp

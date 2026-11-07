@@ -31,6 +31,10 @@ idna==3.20
     # via yarl
 iniconfig==2.3.1
     # via pytest
+markdown-it-py==4.2.0
+    # via lets-play-chat-games
+mdurl==0.1.2
+    # via markdown-it-py
 multidict==7.2.1
     # via
     #   aiohttp
@@ -53,6 +57,8 @@ pytest==9.2.0
     # via pytest-asyncio
 pytest-asyncio==1.4.1.post1
 python-dotenv==1.2.4
+    # via lets-play-chat-games
+regex==2026.11.7
     # via lets-play-chat-games
 ruff==0.17.4
 yarl==1.25.1

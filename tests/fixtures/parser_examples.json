@@ -1,0 +1,1085 @@
+[
+  {
+    "id": "missing-text",
+    "content": null,
+    "words": [],
+    "formatting": [],
+    "whisper": false,
+    "outcomes": {
+      "NR034": "not_applicable",
+      "NR011": "not_applicable",
+      "NR016": "not_applicable"
+    }
+  },
+  {
+    "id": "empty-text",
+    "content": "",
+    "words": [],
+    "formatting": [],
+    "whisper": false,
+    "outcomes": {
+      "NR034": "not_applicable",
+      "NR011": "not_applicable",
+      "NR016": "not_applicable"
+    }
+  },
+  {
+    "id": "whitespace-is-not-absent",
+    "content": "   ",
+    "words": [],
+    "formatting": [],
+    "whisper": false,
+    "outcomes": {
+      "NR034": "fail",
+      "NR011": "fail",
+      "NR016": "pass"
+    }
+  },
+  {
+    "id": "punctuation-has-no-required-word",
+    "content": "...",
+    "words": [],
+    "formatting": [],
+    "whisper": false,
+    "outcomes": {
+      "NR034": "fail",
+      "NR011": "pass",
+      "NR016": "pass"
+    }
+  },
+  {
+    "id": "plain",
+    "content": "over...",
+    "words": [
+      "over"
+    ],
+    "formatting": [],
+    "whisper": false,
+    "outcomes": {
+      "NR034": "pass",
+      "NR011": "pass",
+      "NR016": "pass"
+    }
+  },
+  {
+    "id": "casefold-ending",
+    "content": "OVER...",
+    "words": [
+      "over"
+    ],
+    "formatting": [],
+    "whisper": false,
+    "outcomes": {
+      "NR034": "pass",
+      "NR011": "pass",
+      "NR016": "pass"
+    }
+  },
+  {
+    "id": "trailing-spaces",
+    "content": "over...   ",
+    "words": [
+      "over"
+    ],
+    "formatting": [],
+    "whisper": false,
+    "outcomes": {
+      "NR034": "pass",
+      "NR011": "pass",
+      "NR016": "pass"
+    }
+  },
+  {
+    "id": "trailing-newlines",
+    "content": "over...\n\n",
+    "words": [
+      "over"
+    ],
+    "formatting": [],
+    "whisper": false,
+    "outcomes": {
+      "NR034": "pass",
+      "NR011": "pass",
+      "NR016": "pass"
+    }
+  },
+  {
+    "id": "four-periods",
+    "content": "over....",
+    "words": [
+      "over"
+    ],
+    "formatting": [],
+    "whisper": false,
+    "outcomes": {
+      "NR034": "pass",
+      "NR011": "fail",
+      "NR016": "pass"
+    }
+  },
+  {
+    "id": "unicode-ellipsis",
+    "content": "over…",
+    "words": [
+      "over"
+    ],
+    "formatting": [],
+    "whisper": false,
+    "outcomes": {
+      "NR034": "pass",
+      "NR011": "fail",
+      "NR016": "pass"
+    }
+  },
+  {
+    "id": "word-without-periods",
+    "content": "over",
+    "words": [
+      "over"
+    ],
+    "formatting": [],
+    "whisper": false,
+    "outcomes": {
+      "NR034": "pass",
+      "NR011": "fail",
+      "NR016": "pass"
+    }
+  },
+  {
+    "id": "substring-not-word",
+    "content": "turnover...",
+    "words": [
+      "turnover"
+    ],
+    "formatting": [],
+    "whisper": false,
+    "outcomes": {
+      "NR034": "fail",
+      "NR011": "pass",
+      "NR016": "pass"
+    }
+  },
+  {
+    "id": "word-followed-by-text",
+    "content": "over... later",
+    "words": [
+      "over",
+      "later"
+    ],
+    "formatting": [],
+    "whisper": false,
+    "outcomes": {
+      "NR034": "fail",
+      "NR011": "fail",
+      "NR016": "pass"
+    }
+  },
+  {
+    "id": "word-followed-by-emoji",
+    "content": "over... 🙂",
+    "words": [
+      "over"
+    ],
+    "formatting": [],
+    "whisper": false,
+    "outcomes": {
+      "NR034": "fail",
+      "NR011": "fail",
+      "NR016": "pass"
+    }
+  },
+  {
+    "id": "word-followed-by-symbol",
+    "content": "over... +",
+    "words": [
+      "over"
+    ],
+    "formatting": [],
+    "whisper": false,
+    "outcomes": {
+      "NR034": "fail",
+      "NR011": "fail",
+      "NR016": "pass"
+    }
+  },
+  {
+    "id": "exclamation-after-periods",
+    "content": "over...!",
+    "words": [
+      "over"
+    ],
+    "formatting": [],
+    "whisper": false,
+    "outcomes": {
+      "NR034": "pass",
+      "NR011": "fail",
+      "NR016": "pass"
+    }
+  },
+  {
+    "id": "straight-double",
+    "content": "\"over...\"",
+    "words": [
+      "over"
+    ],
+    "formatting": [],
+    "whisper": false,
+    "outcomes": {
+      "NR034": "pass",
+      "NR011": "pass",
+      "NR016": "pass"
+    }
+  },
+  {
+    "id": "straight-single",
+    "content": "'over...'",
+    "words": [
+      "over"
+    ],
+    "formatting": [],
+    "whisper": false,
+    "outcomes": {
+      "NR034": "pass",
+      "NR011": "pass",
+      "NR016": "pass"
+    }
+  },
+  {
+    "id": "curly-double",
+    "content": "“over...”",
+    "words": [
+      "over"
+    ],
+    "formatting": [],
+    "whisper": false,
+    "outcomes": {
+      "NR034": "pass",
+      "NR011": "pass",
+      "NR016": "pass"
+    }
+  },
+  {
+    "id": "curly-single",
+    "content": "‘over...’",
+    "words": [
+      "over"
+    ],
+    "formatting": [],
+    "whisper": false,
+    "outcomes": {
+      "NR034": "pass",
+      "NR011": "pass",
+      "NR016": "pass"
+    }
+  },
+  {
+    "id": "guillemets",
+    "content": "«over...»",
+    "words": [
+      "over"
+    ],
+    "formatting": [],
+    "whisper": false,
+    "outcomes": {
+      "NR034": "pass",
+      "NR011": "pass",
+      "NR016": "pass"
+    }
+  },
+  {
+    "id": "single-guillemets",
+    "content": "‹over...›",
+    "words": [
+      "over"
+    ],
+    "formatting": [],
+    "whisper": false,
+    "outcomes": {
+      "NR034": "pass",
+      "NR011": "pass",
+      "NR016": "pass"
+    }
+  },
+  {
+    "id": "cjk-corner",
+    "content": "「over...」",
+    "words": [
+      "over"
+    ],
+    "formatting": [],
+    "whisper": false,
+    "outcomes": {
+      "NR034": "pass",
+      "NR011": "pass",
+      "NR016": "pass"
+    }
+  },
+  {
+    "id": "cjk-double-corner",
+    "content": "『over...』",
+    "words": [
+      "over"
+    ],
+    "formatting": [],
+    "whisper": false,
+    "outcomes": {
+      "NR034": "pass",
+      "NR011": "pass",
+      "NR016": "pass"
+    }
+  },
+  {
+    "id": "german-quotes",
+    "content": "„over...“",
+    "words": [
+      "over"
+    ],
+    "formatting": [],
+    "whisper": false,
+    "outcomes": {
+      "NR034": "pass",
+      "NR011": "pass",
+      "NR016": "pass"
+    }
+  },
+  {
+    "id": "modifier-apostrophe",
+    "content": "ʼover...ʼ",
+    "words": [
+      "over"
+    ],
+    "formatting": [],
+    "whisper": false,
+    "outcomes": {
+      "NR034": "pass",
+      "NR011": "pass",
+      "NR016": "pass"
+    }
+  },
+  {
+    "id": "fullwidth-apostrophe",
+    "content": "＇over...＇",
+    "words": [
+      "over"
+    ],
+    "formatting": [],
+    "whisper": false,
+    "outcomes": {
+      "NR034": "pass",
+      "NR011": "pass",
+      "NR016": "pass"
+    }
+  },
+  {
+    "id": "bold",
+    "content": "**over...**",
+    "words": [
+      "over"
+    ],
+    "formatting": [
+      "bold"
+    ],
+    "whisper": false,
+    "outcomes": {
+      "NR034": "pass",
+      "NR011": "pass",
+      "NR016": "fail"
+    }
+  },
+  {
+    "id": "italic",
+    "content": "*over...*",
+    "words": [
+      "over"
+    ],
+    "formatting": [
+      "italic"
+    ],
+    "whisper": false,
+    "outcomes": {
+      "NR034": "pass",
+      "NR011": "pass",
+      "NR016": "fail"
+    }
+  },
+  {
+    "id": "underscore-italic",
+    "content": "_over..._",
+    "words": [
+      "over"
+    ],
+    "formatting": [
+      "italic"
+    ],
+    "whisper": false,
+    "outcomes": {
+      "NR034": "pass",
+      "NR011": "pass",
+      "NR016": "fail"
+    }
+  },
+  {
+    "id": "underline",
+    "content": "__over...__",
+    "words": [
+      "over"
+    ],
+    "formatting": [
+      "underline"
+    ],
+    "whisper": false,
+    "outcomes": {
+      "NR034": "pass",
+      "NR011": "pass",
+      "NR016": "fail"
+    }
+  },
+  {
+    "id": "strike",
+    "content": "~~over...~~",
+    "words": [
+      "over"
+    ],
+    "formatting": [
+      "strikethrough"
+    ],
+    "whisper": false,
+    "outcomes": {
+      "NR034": "pass",
+      "NR011": "pass",
+      "NR016": "fail"
+    }
+  },
+  {
+    "id": "spoiler",
+    "content": "||over...||",
+    "words": [
+      "over"
+    ],
+    "formatting": [
+      "spoiler"
+    ],
+    "whisper": false,
+    "outcomes": {
+      "NR034": "pass",
+      "NR011": "pass",
+      "NR016": "fail"
+    }
+  },
+  {
+    "id": "spaced-spoiler",
+    "content": "|| over... ||",
+    "words": [
+      "over"
+    ],
+    "formatting": [
+      "spoiler"
+    ],
+    "whisper": false,
+    "outcomes": {
+      "NR034": "pass",
+      "NR011": "pass",
+      "NR016": "fail"
+    }
+  },
+  {
+    "id": "bold-italic",
+    "content": "***over...***",
+    "words": [
+      "over"
+    ],
+    "formatting": [
+      "bold",
+      "italic"
+    ],
+    "whisper": false,
+    "outcomes": {
+      "NR034": "pass",
+      "NR011": "pass",
+      "NR016": "fail"
+    }
+  },
+  {
+    "id": "nested-underline-bold",
+    "content": "__**over...**__",
+    "words": [
+      "over"
+    ],
+    "formatting": [
+      "underline",
+      "bold"
+    ],
+    "whisper": false,
+    "outcomes": {
+      "NR034": "pass",
+      "NR011": "pass",
+      "NR016": "fail"
+    }
+  },
+  {
+    "id": "spoiler-bold",
+    "content": "||**over...**||",
+    "words": [
+      "over"
+    ],
+    "formatting": [
+      "spoiler",
+      "bold"
+    ],
+    "whisper": false,
+    "outcomes": {
+      "NR034": "pass",
+      "NR011": "pass",
+      "NR016": "fail"
+    }
+  },
+  {
+    "id": "bold-spoiler",
+    "content": "**||over...||**",
+    "words": [
+      "over"
+    ],
+    "formatting": [
+      "bold",
+      "spoiler"
+    ],
+    "whisper": false,
+    "outcomes": {
+      "NR034": "pass",
+      "NR011": "pass",
+      "NR016": "fail"
+    }
+  },
+  {
+    "id": "inline-code",
+    "content": "`over...`",
+    "words": [
+      "over"
+    ],
+    "formatting": [
+      "inline_code"
+    ],
+    "whisper": false,
+    "outcomes": {
+      "NR034": "pass",
+      "NR011": "pass",
+      "NR016": "fail"
+    }
+  },
+  {
+    "id": "fenced-code",
+    "content": "```text\nover...\n```",
+    "words": [
+      "over"
+    ],
+    "formatting": [
+      "code_block"
+    ],
+    "whisper": false,
+    "outcomes": {
+      "NR034": "pass",
+      "NR011": "pass",
+      "NR016": "fail"
+    }
+  },
+  {
+    "id": "unterminated-fence",
+    "content": "```text\nover...",
+    "words": [
+      "over"
+    ],
+    "formatting": [
+      "code_block"
+    ],
+    "whisper": false,
+    "outcomes": {
+      "NR034": "pass",
+      "NR011": "pass",
+      "NR016": "fail"
+    }
+  },
+  {
+    "id": "heading-one",
+    "content": "# over...",
+    "words": [
+      "over"
+    ],
+    "formatting": [
+      "heading"
+    ],
+    "whisper": false,
+    "outcomes": {
+      "NR034": "pass",
+      "NR011": "pass",
+      "NR016": "fail"
+    }
+  },
+  {
+    "id": "heading-three",
+    "content": "### over...",
+    "words": [
+      "over"
+    ],
+    "formatting": [
+      "heading"
+    ],
+    "whisper": false,
+    "outcomes": {
+      "NR034": "pass",
+      "NR011": "pass",
+      "NR016": "fail"
+    }
+  },
+  {
+    "id": "blockquote",
+    "content": "> over...",
+    "words": [
+      "over"
+    ],
+    "formatting": [
+      "blockquote"
+    ],
+    "whisper": false,
+    "outcomes": {
+      "NR034": "pass",
+      "NR011": "pass",
+      "NR016": "fail"
+    }
+  },
+  {
+    "id": "multi-quote",
+    "content": ">>> over...",
+    "words": [
+      "over"
+    ],
+    "formatting": [
+      "blockquote"
+    ],
+    "whisper": false,
+    "outcomes": {
+      "NR034": "pass",
+      "NR011": "pass",
+      "NR016": "fail"
+    }
+  },
+  {
+    "id": "bullet-list",
+    "content": "- over...",
+    "words": [
+      "over"
+    ],
+    "formatting": [
+      "list"
+    ],
+    "whisper": false,
+    "outcomes": {
+      "NR034": "pass",
+      "NR011": "pass",
+      "NR016": "fail"
+    }
+  },
+  {
+    "id": "numbered-list",
+    "content": "1. over...",
+    "words": [
+      "over"
+    ],
+    "formatting": [
+      "list"
+    ],
+    "whisper": false,
+    "outcomes": {
+      "NR034": "pass",
+      "NR011": "pass",
+      "NR016": "fail"
+    }
+  },
+  {
+    "id": "masked-link",
+    "content": "[over...](https://example.invalid/target)",
+    "words": [
+      "over"
+    ],
+    "formatting": [
+      "masked_link"
+    ],
+    "whisper": false,
+    "outcomes": {
+      "NR034": "pass",
+      "NR011": "pass",
+      "NR016": "fail"
+    }
+  },
+  {
+    "id": "formatted-link-label",
+    "content": "[**over...**](https://example.invalid/target)",
+    "words": [
+      "over"
+    ],
+    "formatting": [
+      "bold",
+      "masked_link"
+    ],
+    "whisper": false,
+    "outcomes": {
+      "NR034": "pass",
+      "NR011": "pass",
+      "NR016": "fail"
+    }
+  },
+  {
+    "id": "heading-only",
+    "content": "### ",
+    "words": [],
+    "formatting": [
+      "heading"
+    ],
+    "whisper": false,
+    "outcomes": {
+      "NR034": "fail",
+      "NR011": "fail",
+      "NR016": "fail"
+    }
+  },
+  {
+    "id": "unsupported-heading-four",
+    "content": "#### over...",
+    "words": [
+      "over"
+    ],
+    "formatting": [],
+    "whisper": false,
+    "outcomes": {
+      "NR034": "pass",
+      "NR011": "pass",
+      "NR016": "pass"
+    }
+  },
+  {
+    "id": "unsupported-setext",
+    "content": "over...\n---",
+    "words": [
+      "over"
+    ],
+    "formatting": [],
+    "whisper": false,
+    "outcomes": {
+      "NR034": "pass",
+      "NR011": "fail",
+      "NR016": "pass"
+    }
+  },
+  {
+    "id": "heading-missing-space",
+    "content": "#hello over...",
+    "words": [
+      "hello",
+      "over"
+    ],
+    "formatting": [],
+    "whisper": false,
+    "outcomes": {
+      "NR034": "pass",
+      "NR011": "pass",
+      "NR016": "pass"
+    }
+  },
+  {
+    "id": "literal-html",
+    "content": "<b>over...</b>",
+    "words": [
+      "b",
+      "over",
+      "b"
+    ],
+    "formatting": [],
+    "whisper": false,
+    "outcomes": {
+      "NR034": "fail",
+      "NR011": "fail",
+      "NR016": "pass"
+    }
+  },
+  {
+    "id": "entities-not-decoded",
+    "content": "over&hellip;",
+    "words": [
+      "over",
+      "hellip"
+    ],
+    "formatting": [],
+    "whisper": false,
+    "outcomes": {
+      "NR034": "fail",
+      "NR011": "fail",
+      "NR016": "pass"
+    }
+  },
+  {
+    "id": "unmatched-bold-preserved",
+    "content": "**over...",
+    "words": [
+      "over"
+    ],
+    "formatting": [],
+    "whisper": false,
+    "outcomes": {
+      "NR034": "pass",
+      "NR011": "pass",
+      "NR016": "pass"
+    }
+  },
+  {
+    "id": "escaped-literal-stars",
+    "content": "\\*\\*over...\\*\\*",
+    "words": [
+      "over"
+    ],
+    "formatting": [],
+    "whisper": false,
+    "outcomes": {
+      "NR034": "pass",
+      "NR011": "fail",
+      "NR016": "pass"
+    }
+  },
+  {
+    "id": "escaped-periods",
+    "content": "over\\.\\.\\.",
+    "words": [
+      "over"
+    ],
+    "formatting": [],
+    "whisper": false,
+    "outcomes": {
+      "NR034": "pass",
+      "NR011": "pass",
+      "NR016": "pass"
+    }
+  },
+  {
+    "id": "unmatched-spoiler-preserved",
+    "content": "||over...",
+    "words": [
+      "over"
+    ],
+    "formatting": [],
+    "whisper": false,
+    "outcomes": {
+      "NR034": "pass",
+      "NR011": "pass",
+      "NR016": "pass"
+    }
+  },
+  {
+    "id": "formatting-does-not-split-words",
+    "content": "turn**over**...",
+    "words": [
+      "turnover"
+    ],
+    "formatting": [
+      "bold"
+    ],
+    "whisper": false,
+    "outcomes": {
+      "NR034": "fail",
+      "NR011": "pass",
+      "NR016": "fail"
+    }
+  },
+  {
+    "id": "formatted-word-followed-by-punctuation",
+    "content": "**over**...",
+    "words": [
+      "over"
+    ],
+    "formatting": [
+      "bold"
+    ],
+    "whisper": false,
+    "outcomes": {
+      "NR034": "pass",
+      "NR011": "pass",
+      "NR016": "fail"
+    }
+  },
+  {
+    "id": "code-literal-markdown",
+    "content": "`**over...**`",
+    "words": [
+      "over"
+    ],
+    "formatting": [
+      "inline_code"
+    ],
+    "whisper": false,
+    "outcomes": {
+      "NR034": "pass",
+      "NR011": "fail",
+      "NR016": "fail"
+    }
+  },
+  {
+    "id": "destination-does-not-supply-word",
+    "content": "[turnip](https://example.invalid/over...)",
+    "words": [
+      "turnip"
+    ],
+    "formatting": [
+      "masked_link"
+    ],
+    "whisper": false,
+    "outcomes": {
+      "NR034": "fail",
+      "NR011": "fail",
+      "NR016": "fail"
+    }
+  },
+  {
+    "id": "opaque-custom-emoji",
+    "content": "<a:oh_no:123456>",
+    "words": [],
+    "formatting": [],
+    "whisper": false,
+    "outcomes": {
+      "NR034": "fail",
+      "NR011": "fail",
+      "NR016": "pass"
+    }
+  },
+  {
+    "id": "opaque-mentions",
+    "content": "<@123456> <@&234567> <#345678> <t:123456:R>",
+    "words": [],
+    "formatting": [],
+    "whisper": false,
+    "outcomes": {
+      "NR034": "fail",
+      "NR011": "fail",
+      "NR016": "pass"
+    }
+  },
+  {
+    "id": "emoji-with-separating-text",
+    "content": "<:turnip:123456> over...",
+    "words": [
+      "over"
+    ],
+    "formatting": [],
+    "whisper": false,
+    "outcomes": {
+      "NR034": "pass",
+      "NR011": "pass",
+      "NR016": "pass"
+    }
+  },
+  {
+    "id": "unicode-words",
+    "content": "日本語 over...",
+    "words": [
+      "日本語",
+      "over"
+    ],
+    "formatting": [],
+    "whisper": false,
+    "outcomes": {
+      "NR034": "pass",
+      "NR011": "pass",
+      "NR016": "pass"
+    }
+  },
+  {
+    "id": "unicode-casefold",
+    "content": "Straße over...",
+    "words": [
+      "strasse",
+      "over"
+    ],
+    "formatting": [],
+    "whisper": false,
+    "outcomes": {
+      "NR034": "pass",
+      "NR011": "pass",
+      "NR016": "pass"
+    }
+  },
+  {
+    "id": "unicode-digits",
+    "content": "１２３ over...",
+    "words": [
+      "１２３",
+      "over"
+    ],
+    "formatting": [],
+    "whisper": false,
+    "outcomes": {
+      "NR034": "pass",
+      "NR011": "pass",
+      "NR016": "pass"
+    }
+  },
+  {
+    "id": "crlf-content",
+    "content": "first\r\nover...",
+    "words": [
+      "first",
+      "over"
+    ],
+    "formatting": [],
+    "whisper": false,
+    "outcomes": {
+      "NR034": "pass",
+      "NR011": "pass",
+      "NR016": "pass"
+    }
+  },
+  {
+    "id": "nested-subtext-not-whisper",
+    "content": "first\n-# over...",
+    "words": [
+      "first",
+      "over"
+    ],
+    "formatting": [
+      "subtext"
+    ],
+    "whisper": false,
+    "outcomes": {
+      "NR034": "pass",
+      "NR011": "pass",
+      "NR016": "fail"
+    }
+  },
+  {
+    "id": "whole-message-whisper",
+    "content": "-# **over...**",
+    "words": [
+      "over"
+    ],
+    "formatting": [
+      "subtext",
+      "bold"
+    ],
+    "whisper": true,
+    "outcomes": {
+      "NR034": "not_applicable",
+      "NR011": "not_applicable",
+      "NR016": "not_applicable"
+    }
+  },
+  {
+    "id": "whisper-prefix-needs-space",
+    "content": "-#hello over...",
+    "words": [
+      "hello",
+      "over"
+    ],
+    "formatting": [],
+    "whisper": false,
+    "outcomes": {
+      "NR034": "pass",
+      "NR011": "pass",
+      "NR016": "pass"
+    }
+  }
+]

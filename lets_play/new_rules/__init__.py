@@ -1,7 +1,7 @@
-"""New Rules domain boundary; engine and validator contracts begin in M1.
+"""New Rules offline domain contracts and first text-parser predicates.
 
-Keep this package independent of Discord and storage. No gameplay is implemented
-by the M0 scaffold.
+This package is independent of Discord and storage. Session transitions, scoring,
+and live gameplay are not implemented by the first M1 parser increment.
 """
 
 GAME_KEY = "new-rules"

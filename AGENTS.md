@@ -12,8 +12,8 @@ or the installed `lets-play` command. Use `CHATGAMES_*` configuration names; the
 are no legacy launcher/configuration aliases. No token or external private list
 is required for offline tests.
 
-Keep the New Rules domain independent of Discord and storage. Do not treat M0’s
-empty domain package or migration bookkeeping as implemented gameplay. Finish M1
+Keep the New Rules domain independent of Discord and storage. Do not treat the
+offline parser/contracts or migration bookkeeping as implemented gameplay. Finish M1
 interfaces, parser examples, and persistent transaction boundaries before wiring
 playable commands. Resolve the relevant open contracts at their designated gates.
 
@@ -33,5 +33,6 @@ python -m lets_play --check-config
 For packaging/dependency changes, also run `python -m build` and `python -m pip
 check` (or `uv pip check`). Record actual results and remaining limits in the
 private implementation notes when available. Never report a mock/offline check
-as live Discord or Windows evidence. Stay in M0 until scaffolding adjustments
-and the owner's configuration, venv, login, and database checks are finished.
+as live Discord or Windows evidence. M1 is authorized in bounded increments.
+The owner verified the earlier v0.1.3 shell live; a known Windows Git stdin
+newline defect in the source-hygiene test remains deferred by owner request.
