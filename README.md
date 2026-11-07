@@ -3,16 +3,18 @@
 Let’s Play is a Discord chat-game bot. Its first game, **New Rules**, is a party
 conversation game where unusual rules accumulate as people chat.
 
-**Current status: v0.2.3, M1 legal-hand increment.** The application can validate its
+**Current status: v0.2.4, M1 durable ordinary-offer increment.** The application can validate its
 configuration offline, initialize its SQLite database, and log in to Discord.
 Offline domain contracts, text views, seventeen ordinary rules, and exact score
 arithmetic are implemented. An offline SQLite unit of work now atomically applies
 those candidates with event/reaction guards, score aggregates, and marker intents.
 The ordinary subset also has bounded witness checks, legal replacements, frozen
-three-template offers, and pure choice revalidation. The transition engine, live
-game commands, marker delivery, and achievements are not implemented yet. The
-owner verified the earlier live shell and v0.2.2 tests/bootstrap on Windows
-(325 tests; schema 2, WAL, foreign keys). This increment has local offline checks;
+three-template offers, and pure choice revalidation. A durable later-round flow
+now records publication, fixed deadlines, selection and announced activation,
+with ordered ingress and once-only closure boundaries. The full pacing/picker/
+admission/recovery engine, live commands, delivery workers and achievements are
+not implemented yet. The owner verified the earlier live shell, schema-2 bootstrap,
+and v0.2.3 tests on Windows (655 passed). This increment has local offline checks;
 M1 remains in progress.
 Public setup and operational documentation is under `docs/`. Private design
 notes are excluded from Git and package distributions.
@@ -71,6 +73,7 @@ handling belongs to M2 and must work for uncached/old targets.
 The parser API and its tested boundaries are documented in [docs/PARSER.md](docs/PARSER.md).
 See [docs/EVALUATION.md](docs/EVALUATION.md) for candidate decisions and score values.
 See [docs/HANDS.md](docs/HANDS.md) for the implemented ordinary subset and offer API.
+See [docs/ORDINARY_FLOW.md](docs/ORDINARY_FLOW.md) for durable publication/cutover boundaries.
 The live shell does not yet invoke these offline evaluators.
 
 The guild installation uses `bot` and `applications.commands` with permission
@@ -123,8 +126,9 @@ update commands.
 | `tests/` | Configuration, offline startup, SDK boundary, and real SQLite checks |
 | `docs/` | Public configuration, dependency, and storage documentation |
 
-Schema **2** adds live evaluation owners, score aggregates, event/reaction guards,
-fault counts, and marker intents. Existing schema-1 databases upgrade in place
+Schema **3** adds durable ordinary offers, outputs, ordered receipt watermarks,
+phrase usage and round-closure records to the schema-2 score foundation.
+Existing schema-1/2 databases upgrade in place
 on `--init-db` or startup. Stop the bot and make a verified SQLite backup before
 upgrading. Read the [database API and backup policy](docs/STORAGE.md).
 

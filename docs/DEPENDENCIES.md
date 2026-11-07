@@ -38,6 +38,9 @@ The v0.2.3 ordinary compatibility/hand increment adds no dependencies. It uses
 the existing parser, immutable domain values, and injected randomness. Schema 2
 and the dependency pins remain unchanged.
 
+The v0.2.4 durable ordinary-flow increment adds no dependencies. Schema 3 uses the
+existing SQLite/aiosqlite stack and exact UTC microsecond timestamps.
+
 | Development/build tool | Pin | Purpose |
 | --- | --- | --- |
 | `pytest` | 9.2.0 | Offline test runner |

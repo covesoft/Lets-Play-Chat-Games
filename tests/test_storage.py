@@ -31,7 +31,7 @@ def schema_one_fixture(path):
 async def test_released_schema_one_upgrades_without_recreating_database(tmp_path):
     path = tmp_path / "old.sqlite3"
     schema_one_fixture(path)
-    assert (await initialize_database(path)).schema_version == 2
+    assert (await initialize_database(path)).schema_version == SCHEMA_VERSION
     assert scalar(path, "SELECT name FROM schema_migrations WHERE version=1") == "foundation"
     assert (
         scalar(path, "SELECT name FROM schema_migrations WHERE version=2")
@@ -54,7 +54,7 @@ async def test_schema_two_migration_failure_preserves_released_schema_one(tmp_pa
     assert scalar(path, "SELECT COUNT(*) FROM schema_migrations") == 1
     assert scalar(path, "SELECT COUNT(*) FROM sqlite_schema WHERE name LIKE 'nr_%'") == 0
     monkeypatch.setattr(storage, "MIGRATIONS", original)
-    assert (await initialize_database(path)).schema_version == 2
+    assert (await initialize_database(path)).schema_version == SCHEMA_VERSION
 
 
 @pytest.mark.asyncio
@@ -63,7 +63,7 @@ async def test_fresh_and_repeated_startup_preserve_wal_schema_and_integrity(tmp_
     first = await initialize_database(path)
     second = await initialize_database(path)
     assert first == second
-    assert first.schema_version == SCHEMA_VERSION == 2
+    assert first.schema_version == SCHEMA_VERSION == 3
     assert first.journal_mode == "wal"
     assert first.foreign_keys
     assert first.busy_timeout_ms == 10000

@@ -79,6 +79,12 @@ class EventKind(StrEnum):
     TIMER = "timer"
     MANAGER_END = "manager_end"
     CAPABILITY_CHANGED = "capability_changed"
+    OFFER_PREPARE = "offer_prepare"
+    OFFER_PUBLISHED = "offer_published"
+    CHOICE_SUBMIT = "choice_submit"
+    CHOICE_TIMEOUT = "choice_timeout"
+    ACTIVATION_PUBLISHED = "activation_published"
+    RECOVERY_PUBLISHED = "recovery_published"
 
 
 @dataclass(frozen=True, slots=True)

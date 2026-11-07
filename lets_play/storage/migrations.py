@@ -132,5 +132,76 @@ MIGRATIONS = (
             ) STRICT""",
         ),
     ),
+    Migration(
+        version=3,
+        name="ordinary_offer_publication_and_cutover",
+        statements=(
+            "ALTER TABLE nr_rounds ADD COLUMN started_at_utc INTEGER",
+            """CREATE TABLE nr_flow_watermarks (
+                session_id TEXT PRIMARY KEY REFERENCES nr_sessions ON DELETE CASCADE,
+                last_sequence INTEGER NOT NULL CHECK(last_sequence > 0),
+                observed_at_utc INTEGER NOT NULL
+            ) STRICT""",
+            """CREATE TABLE nr_offers (
+                session_id TEXT NOT NULL REFERENCES nr_sessions ON DELETE CASCADE,
+                offer_id TEXT NOT NULL,
+                hand_json TEXT NOT NULL,
+                prepared_at_utc INTEGER NOT NULL,
+                published_at_utc INTEGER,
+                selected_at_utc INTEGER,
+                selected_incoming TEXT,
+                selected_outgoing TEXT,
+                chosen_by_picker INTEGER NOT NULL DEFAULT 0 CHECK(chosen_by_picker IN (0,1)),
+                completed_by_timeout INTEGER NOT NULL DEFAULT 0 CHECK(completed_by_timeout IN (0,1)),
+                stage TEXT NOT NULL CHECK(stage IN
+                    ('prepared','published','selected','activated','recovery','cancelled')),
+                PRIMARY KEY(session_id,offer_id)
+            ) STRICT""",
+            """CREATE UNIQUE INDEX nr_one_open_offer ON nr_offers(session_id)
+                WHERE stage IN ('prepared','published','selected')""",
+            """CREATE TABLE nr_activations (
+                session_id TEXT NOT NULL,
+                offer_id TEXT NOT NULL,
+                owner_revision INTEGER NOT NULL,
+                next_round_id TEXT NOT NULL,
+                effective_at_utc INTEGER NOT NULL,
+                announced_at_utc INTEGER,
+                stage TEXT NOT NULL CHECK(stage IN ('prepared','announced','activated','recovery')),
+                PRIMARY KEY(session_id,offer_id),
+                UNIQUE(session_id,next_round_id),
+                FOREIGN KEY(session_id,offer_id) REFERENCES nr_offers ON DELETE CASCADE
+            ) STRICT""",
+            """CREATE INDEX nr_pending_activation ON nr_activations(session_id,effective_at_utc)
+                WHERE stage IN ('prepared','announced')""",
+            """CREATE TABLE nr_ordinary_outputs (
+                output_id INTEGER PRIMARY KEY AUTOINCREMENT,
+                session_id TEXT NOT NULL,
+                offer_id TEXT NOT NULL,
+                kind TEXT NOT NULL CHECK(kind IN ('offer','activation','recovery')),
+                message_id INTEGER CHECK(message_id > 0),
+                acknowledged_at_utc INTEGER,
+                retired_at_utc INTEGER,
+                UNIQUE(session_id,offer_id,kind),
+                FOREIGN KEY(session_id,offer_id) REFERENCES nr_offers ON DELETE CASCADE
+            ) STRICT""",
+            """CREATE INDEX nr_pending_ordinary_output ON nr_ordinary_outputs(output_id)
+                WHERE acknowledged_at_utc IS NULL AND retired_at_utc IS NULL""",
+            """CREATE TABLE nr_used_phrases (
+                session_id TEXT NOT NULL REFERENCES nr_sessions ON DELETE CASCADE,
+                phrase_key TEXT NOT NULL,
+                PRIMARY KEY(session_id,phrase_key)
+            ) STRICT""",
+            """CREATE TABLE nr_round_closures (
+                session_id TEXT NOT NULL,
+                round_id TEXT NOT NULL,
+                offer_id TEXT NOT NULL,
+                closed_at_utc INTEGER NOT NULL,
+                PRIMARY KEY(session_id,round_id),
+                UNIQUE(session_id,offer_id),
+                FOREIGN KEY(session_id,round_id) REFERENCES nr_rounds ON DELETE CASCADE,
+                FOREIGN KEY(session_id,offer_id) REFERENCES nr_offers ON DELETE CASCADE
+            ) STRICT""",
+        ),
+    ),
 )
 SCHEMA_VERSION = MIGRATIONS[-1].version

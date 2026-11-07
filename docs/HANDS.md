@@ -131,9 +131,10 @@ select a substitute. Search-budget changes require a fresh proof.
 Picker eligibility/rotation is not calculated here; the future engine must supply
 the authorized picker ID. The pure helper does not bypass application authorization.
 
-`READY` contains a prepared `LegalCompletion`. Repeating preparation has no
-effects. A future transaction service must atomically check/consume the offer,
-apply replacement/phrase usage/version changes, resolve the old round once and
-coordinate publication before activation. Offers/deadlines are not persisted or
-scheduled here. Mode dealing, held/revival timing, complete recovery, round/game
-credit, and Discord UI remain outside this increment. Schema stays 2.
+`READY` contains a prepared `LegalCompletion`. Repeating pure preparation has no
+effects. The schema-3 [ordinary flow](ORDINARY_FLOW.md) can persist later-round
+offers and compose selection, publication acknowledgement, replacement, phrase
+usage and a once-only old-round closure boundary. Closures retain evidence for
+future award resolution. This pure module does not persist or schedule anything.
+Mode dealing, complete refresh/held/revival and startup recovery, round/game
+credit, and Discord UI remain outside the current implementation.

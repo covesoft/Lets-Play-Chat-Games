@@ -221,6 +221,7 @@ class GameUnitOfWork:
         self._write = write
         self._active = True
         self._rollback_only = False
+        self._ordered_flow = False
         self._task = asyncio.current_task()
 
     def _check(self, *, write: bool = False) -> None:
@@ -384,6 +385,12 @@ class GameUnitOfWork:
         self._check(write=True)
         if not isinstance(decision, (MessageDecision, ReactionDecision)):
             raise TypeError("Only derived representative decisions may enter the store.")
+        if not self._ordered_flow and await _row(
+            self._conn,
+            "SELECT 1 FROM nr_flow_watermarks WHERE session_id=?",
+            (decision.position.route.session_id,),
+        ):
+            raise RuntimeError("This session requires ordered ordinary-flow ingress.")
         p = decision.position
         session_id, kind, source_id = decision.source_key
         is_message = isinstance(decision, MessageDecision)

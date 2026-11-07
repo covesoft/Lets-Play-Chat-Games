@@ -3,7 +3,7 @@ include .gitignore .gitattributes .python-version
 include requirements.txt requirements-dev.txt uv.lock
 recursive-include docs *.md
 recursive-include lets_play *.py
-recursive-include tests/fixtures *.json
+recursive-include tests/fixtures *.json *.sql
 global-exclude *.py[cod] *.db *.sqlite *.sqlite3 *-wal *-shm *-journal *.log .env .env.*
 global-exclude *PROJECT_BIBLE* *COLLABORATOR_BRIEF*
 prune private
