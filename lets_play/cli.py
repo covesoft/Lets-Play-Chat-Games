@@ -53,7 +53,7 @@ def main(argv: list[str] | None = None, *, base_dir: Path | None = None) -> int:
         from lets_play.bot import run_bot
 
         logging.basicConfig(level=logging.INFO, format="%(levelname)s:%(name)s:%(message)s")
-        logging.getLogger(__name__).info("="*50)
+        logging.getLogger(__name__).info("="*55)
         logging.getLogger(__name__).info("-"*5 + " Launching Let's Play Chat Games Discord bot " + "-"*5)
 
         asyncio.run(run_bot(settings))
