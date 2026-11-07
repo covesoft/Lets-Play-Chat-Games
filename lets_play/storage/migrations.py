@@ -506,5 +506,33 @@ MIGRATIONS = (
             ) STRICT""",
         ),
     ),
+    Migration(
+        version=8,
+        name="explicit_startup_recovery_barrier",
+        statements=(
+            """CREATE TABLE nr_recoveries (
+                session_id TEXT NOT NULL REFERENCES nr_admissions ON DELETE CASCADE,
+                recovery_id TEXT NOT NULL,version TEXT NOT NULL DEFAULT 'startup-recovery-1',
+                stage TEXT NOT NULL CHECK(stage IN ('paused','ready','reading','resumed','closed','superseded')),
+                original_stage TEXT NOT NULL,original_lifecycle TEXT,original_pause TEXT,
+                original_round TEXT,owner_revision INTEGER NOT NULL,
+                began_at_utc INTEGER NOT NULL,plan TEXT CHECK(plan IN ('continue','hold')),
+                templates_json TEXT,notice_message_id INTEGER CHECK(notice_message_id>0),
+                notice_published_at_utc INTEGER,resume_at_utc INTEGER,notice_prepared_at_utc INTEGER,resumed_at_utc INTEGER,
+                PRIMARY KEY(session_id,recovery_id)
+            ) STRICT""",
+            "CREATE UNIQUE INDEX nr_one_recovery ON nr_recoveries(session_id) WHERE stage IN ('paused','ready','reading')",
+            "CREATE INDEX nr_recovery_resume_boundary ON nr_recoveries(session_id,resumed_at_utc DESC) WHERE resumed_at_utc IS NOT NULL",
+            """CREATE TABLE nr_recovery_work (
+                session_id TEXT NOT NULL,recovery_id TEXT NOT NULL,
+                family TEXT NOT NULL CHECK(family IN ('opening','ordinary','pacing','evolution')),
+                output_id INTEGER NOT NULL CHECK(output_id>0),kind TEXT NOT NULL,
+                status TEXT NOT NULL DEFAULT 'unknown' CHECK(status IN ('unknown','unsent','found')),
+                message_id INTEGER CHECK(message_id>0),published_at_utc INTEGER,
+                PRIMARY KEY(session_id,recovery_id,family,output_id),
+                FOREIGN KEY(session_id,recovery_id) REFERENCES nr_recoveries ON DELETE CASCADE
+            ) STRICT""",
+        ),
+    ),
 )
 SCHEMA_VERSION = MIGRATIONS[-1].version

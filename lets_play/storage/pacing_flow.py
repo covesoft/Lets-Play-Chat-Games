@@ -131,6 +131,7 @@ class RoundPacing:
             JOIN nr_sessions AS s USING(session_id)
             JOIN nr_round_pacing AS p ON p.session_id=o.session_id AND p.round_id=o.round_id
             WHERE o.acknowledged_at_utc IS NULL AND o.retired_at_utc IS NULL
+            AND NOT EXISTS(SELECT 1 FROM nr_recoveries r WHERE r.session_id=s.session_id AND r.stage IN ('paused','ready','reading'))
             AND s.round_id=o.round_id AND p.attempt=o.attempt AND (
                 (o.kind='warning' AND p.stage='warning_queued' AND s.lifecycle='playing'
                     AND s.phase='ordinary' AND s.advancement='warning'

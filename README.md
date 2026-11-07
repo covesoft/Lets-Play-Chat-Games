@@ -3,7 +3,7 @@
 Let’s Play is a Discord chat-game bot. Its first game, **New Rules**, is a party
 conversation game where unusual rules accumulate as people chat.
 
-**Current status: v0.2.8, M1 held play and revival increment.** The application can
+**Current status: v0.2.9, M1 explicit disruption recovery increment.** The application can
 validate its configuration offline, initialize SQLite, and log in to Discord.
 The offline engine includes seventeen ordinary rules, exact scoring, bounded legal
 three-template offers/replacements, ordered publication and activation, New Rules
@@ -12,10 +12,13 @@ reservations, three-human opening quorum, warning clocks, exact picker snapshots
 and shuffled rotation. Schema 7 adds held play, full-hand refresh under the original
 choice deadline, and publication-started revival with three distinct returners.
 These preserve the same open round until actual activation or ending.
-Full startup recovery, theme/mode achievements, live commands, publishers,
-schedulers and cleanup remain unfinished. M1 is still in progress.
-The owner verified the earlier live shell and v0.2.7 on Windows 11:
-881 tests passed; schema=6, journal=wal, foreign_keys=on.
+Schema 8 adds an explicit disruption barrier, delivery-evidence reconciliation,
+publication-started recovery read-in and guarded resumption of known ordinary and
+opening states. Actual startup/dispatcher wiring, specialized mode/failure recovery,
+theme/mode achievements, live commands, publishers, schedulers and cleanup remain
+unfinished. M1 is still in progress.
+The owner verified the earlier live shell and v0.2.8 on Windows 11:
+944 tests passed; schema=7, journal=wal, foreign_keys=on.
 This increment has local offline checks; its Windows evidence is still pending.
 Public setup and operational documentation is under `docs/`. Private design
 notes are excluded from Git and package distributions.

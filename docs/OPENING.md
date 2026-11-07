@@ -126,5 +126,9 @@ Active-slot linkage uses FK cleanup, leaving global profiles and guild entitleme
 facts independent. This is not a purge/24-hour final-output-retention or user
 erasure service; those must cover the new lobby/guard/output rows as well. Schema 7 hands ordinary held/refresh/revival to [EvolutionFlow](EVOLUTION.md),
 using the actual frozen opening configuration and session phrase window. Real
-commands/permissions, delivery and disruptive-startup recovery remain unfinished. M1 has not become a playable Discord loop merely by adding
+commands/permissions, delivery and actual startup integration remain unfinished. M1 has not become a playable Discord loop merely by adding
 these offline transactions.
+
+Schema 8 [RecoveryFlow](RECOVERY.md) provides an explicit disruption barrier and
+evidence-based ordinary/opening continuation. Normal APIs are fenced until its
+notice/read-in completes; the actual startup adapter remains integration work.

@@ -106,7 +106,11 @@ The known pacing pin upgrades to `ordinary-pacing-2`; unknown pins still refuse.
 No missing legacy publication time is invented. A schema-6 revival handoff has
 no original durable invitation deadline and needs explicit startup reconciliation;
 this migration does not guess one or resume it. Reopening a database handle is
-not evidence of safe bot/Gateway restart. Full startup recovery, real publishers,
+not evidence of safe bot/Gateway restart. Actual startup integration, real publishers,
 schedulers, mode/theme resolution, retention and erasure services remain separate
 work. Foreign-key cascades are a cleanup foundation, not a purge service. The
 suite tests offline correctness, not production capacity or live Discord delivery.
+
+Schema 8 [RecoveryFlow](RECOVERY.md) provides an explicit disruption barrier and
+evidence-based ordinary/opening continuation. Normal APIs are fenced until its
+notice/read-in completes; the actual startup adapter remains integration work.

@@ -117,3 +117,7 @@ Unknown external send outcomes still require publisher reconciliation; a local
 intent/ACK fixture is not a real Discord delivery or exactly-once visible post.
 No startup resume policy, retries/leases, summary sender or retention service is
 supplied by this module.
+
+Schema 8 [RecoveryFlow](RECOVERY.md) provides an explicit disruption barrier and
+evidence-based ordinary/opening continuation. Normal APIs are fenced until its
+notice/read-in completes; the actual startup adapter remains integration work.

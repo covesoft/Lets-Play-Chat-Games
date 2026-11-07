@@ -97,6 +97,10 @@ class EventKind(StrEnum):
     REVIVAL_JOIN = "revival_join"
     HELD_PUBLISHED = "held_published"
     SILENT_END_PUBLISHED = "silent_end_published"
+    RECOVERY_BEGIN = "recovery_begin"
+    RECOVERY_RECONCILE = "recovery_reconcile"
+    RECOVERY_APPROVE = "recovery_approve"
+    RECOVERY_NOTICE_PUBLISHED = "recovery_notice_published"
 
 
 @dataclass(frozen=True, slots=True)

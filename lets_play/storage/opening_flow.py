@@ -169,7 +169,7 @@ class OpeningFlow:
         async with self.conn.execute(
             """SELECT o.output_id,o.session_id,o.kind FROM nr_opening_outputs AS o
             JOIN nr_admissions AS a USING(session_id) WHERE o.acknowledged_at_utc IS NULL
-            AND o.retired_at_utc IS NULL AND ((o.kind='lobby' AND a.stage='lobby_prepared')
+            AND o.retired_at_utc IS NULL AND NOT EXISTS(SELECT 1 FROM nr_recoveries r WHERE r.session_id=a.session_id AND r.stage IN ('paused','ready','reading')) AND ((o.kind='lobby' AND a.stage='lobby_prepared')
             OR (o.kind='offer' AND a.stage='opening_prepared') OR (o.kind='activation' AND a.stage='selected')
             OR (o.kind='recovery' AND a.stage='recovery') OR (o.kind='closed' AND a.stage='ended'))
             ORDER BY o.output_id LIMIT ?""",
@@ -328,6 +328,9 @@ class OpeningFlow:
             frame.route.channel_id,
         ):
             raise FlowOrderError("An exact existing admission route is required.")
+        from lets_play.storage.recovery_flow import require_dispatchable
+
+        await require_dispatchable(self.unit, frame.route.session_id)
         if row["playing_session_id"] is not None:
             return await OrdinaryFlow(self.unit)._enter(frame, kind, available_templates)
         if frame.sequence <= row["last_sequence"]:
@@ -342,6 +345,10 @@ class OpeningFlow:
             "UPDATE nr_admissions SET last_sequence=?,observed_at_utc=? WHERE session_id=?",
             (frame.sequence, observed, frame.route.session_id),
         )
+        return await self._advance_entered(frame, row, available_templates, capabilities)
+
+    async def _advance_entered(self, frame, row, available_templates=None, capabilities=None):
+        observed = utc_int(frame.received_at)
         if row["stage"] == "lobby_published" and observed >= row["lobby_deadline_utc"]:
             await self._end(row, frame, "expired")
         if row["stage"] == "selected" and observed >= row["effective_at_utc"]:
@@ -354,7 +361,9 @@ class OpeningFlow:
                 else:
                     await self._activate(row, frame, completion)
                     # Handover owns the SAME receipt; its body has not been scored.
-                    return await OrdinaryFlow(self.unit)._enter(frame, kind, available_templates)
+                    return await OrdinaryFlow(self.unit)._enter(
+                        frame, frame.kind, available_templates
+                    )
         return True
 
     @staticmethod

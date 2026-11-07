@@ -197,7 +197,7 @@ cascades. They are offline correctness checks, not host throughput measurements.
 The live shell still only bootstraps the database and logs in. Schema 3 persists
 later ordinary offers, publication clocks and ordered activation; use OrdinaryFlow
 ingress once a session has a receipt watermark. Low-level `apply()` then refuses
-to bypass its ordering boundary. Complete mode and startup-recovery services, theme/mode
+to bypass its ordering boundary. Complete mode and specialized failure-recovery services, theme/mode
 resolution, delivery workers and safe ended-session purge remain unimplemented.
 Schema 4 adds atomic ordinary game credit and once-only general resolution.
 Round-closure rows alone do not certify resolved progress; consult
@@ -211,6 +211,8 @@ remain integration work. Internal legacy seeds are not an admission bypass for a
 public command.
 Schema 7 adds held/refresh/revival and paused-source guards over the shared lane;
 see [EVOLUTION.md](EVOLUTION.md). Released migrations 1–6 remain unchanged.
+Schema 8 adds the explicit [disruption coordinator](RECOVERY.md). It is invoked
+before overdue timers; handle reopen/bootstrap does not automatically run it.
 Foreign-key cascades provide a cleanup foundation, not an implemented retention
 service. Do not delete live evidence before future finalization commits.
 

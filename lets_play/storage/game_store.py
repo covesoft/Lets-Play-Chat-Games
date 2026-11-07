@@ -446,6 +446,9 @@ class GameUnitOfWork:
         required_kind = EventKind.MESSAGE_CREATE if is_message else EventKind.REACTION_ADD
         if session_id != p.route.session_id or kind is not required_kind or not source_id:
             raise ValueError("The decision source key must match its owner and event kind.")
+        from lets_play.storage.recovery_flow import require_dispatchable
+
+        await require_dispatchable(self, session_id)
         current = await self.get_context(session_id)
         if current is None:
             return ApplyStatus.UNKNOWN_SESSION

@@ -68,6 +68,10 @@ class EvolutionFlow:
         if context is None or row is None:
             return None
         p = context.position
+        from lets_play.storage.recovery_flow import active_recovery
+
+        if await active_recovery(self.unit, session_id):
+            return None
         revival = await _row(
             self.conn,
             "SELECT * FROM nr_revivals WHERE session_id=? AND stage IN ('prepared','published')",
@@ -722,7 +726,8 @@ class EvolutionFlow:
         async with self.conn.execute(
             """SELECT o.output_id,o.session_id,o.token,o.kind FROM nr_evolution_outputs o
             JOIN nr_sessions s USING(session_id) JOIN nr_evolution e USING(session_id)
-            WHERE o.acknowledged_at_utc IS NULL AND o.retired_at_utc IS NULL AND
+            WHERE o.acknowledged_at_utc IS NULL AND o.retired_at_utc IS NULL
+            AND NOT EXISTS(SELECT 1 FROM nr_recoveries r WHERE r.session_id=s.session_id AND r.stage IN ('paused','ready','reading')) AND
             ((o.kind='held' AND s.lifecycle='playing' AND s.advancement='held' AND e.phase='held' AND e.held_token=o.token)
             OR (o.kind='closed_silent' AND s.lifecycle='ended')) ORDER BY o.output_id LIMIT ?""",
             (limit,),

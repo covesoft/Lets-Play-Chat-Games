@@ -170,7 +170,7 @@ class OrdinaryFlow:
             FROM nr_ordinary_outputs x JOIN nr_offers o USING(session_id,offer_id)
             JOIN nr_sessions s USING(session_id)
             WHERE x.acknowledged_at_utc IS NULL AND x.retired_at_utc IS NULL
-            AND s.lifecycle<>'ended' AND
+            AND s.lifecycle<>'ended' AND NOT EXISTS(SELECT 1 FROM nr_recoveries r WHERE r.session_id=s.session_id AND r.stage IN ('paused','ready','reading')) AND
             ((x.kind='offer' AND o.stage='prepared') OR
              (x.kind='activation' AND o.stage='selected') OR
              (x.kind='recovery' AND o.stage='recovery'))
@@ -198,6 +198,9 @@ class OrdinaryFlow:
         return row[0] if row is not None else None
 
     async def _enter(self, frame: EventEnvelope, kind: EventKind, available) -> bool:
+        from lets_play.storage.recovery_flow import require_dispatchable
+
+        await require_dispatchable(self.unit, frame.route.session_id)
         if frame.kind is not kind or frame.sequence < 1:
             raise FlowOrderError("A positive ordered envelope of the correct kind is required.")
         context = await self.unit.get_context(frame.route.session_id)
@@ -715,6 +718,24 @@ class OrdinaryFlow:
         """Evaluate an already-ordered receipt, including an opening handover."""
         frame = event.envelope
         context = await self.unit.get_context(frame.route.session_id)
+        boundary = await _row(
+            self.conn,
+            "SELECT resumed_at_utc FROM nr_recoveries WHERE session_id=? AND resumed_at_utc IS NOT NULL ORDER BY resumed_at_utc DESC LIMIT 1",
+            (frame.route.session_id,),
+        )
+        if (
+            context.position.lifecycle is not Lifecycle.ENDED
+            and boundary is not None
+            and utc_int(frame.created_at) < boundary[0]
+        ):
+            human = event.is_human if isinstance(event, MessageEvent) else not event.is_bot
+            if human:
+                await _execute(
+                    self.conn,
+                    "INSERT INTO nr_paused_sources VALUES (?,?,?) ON CONFLICT DO NOTHING",
+                    frame.source_key,
+                )
+            return FlowResult(FlowStatus.IGNORED)
         if context.position.lifecycle is Lifecycle.PAUSED:
             human = event.is_human if isinstance(event, MessageEvent) else not event.is_bot
             if human:

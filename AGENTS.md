@@ -34,8 +34,8 @@ For packaging/dependency changes, also run `python -m build` and `python -m pip
 check` (or `uv pip check`). Record actual results and remaining limits in the
 private implementation notes when available. Never report a mock/offline check
 as live Discord or Windows evidence. M1 is authorized in bounded increments.
-The owner verified the earlier v0.1.3 shell live, schema-6/WAL/FK bootstrap, and v0.2.7
-tests on Windows 11 (881 passed in 51.02s). Source hygiene uses NUL-framed Git I/O.
+The owner verified the earlier v0.1.3 shell live, schema-7/WAL/FK bootstrap, and v0.2.8
+tests on Windows 11 (944 passed in 70.72s). Source hygiene uses NUL-framed Git I/O.
 Later increments still need their own Windows/CI evidence.
 
 Schema 2 is an offline evaluation unit of work, not a transition/admission or
@@ -57,8 +57,8 @@ contiguous server receipt sequence for every flow action, chat/reaction, and tim
 Never skip a sequence gap or backdate a timer over queued chat. Publication ACKs
 are external facts, not output preparation. Old rules apply until the announced
 whole-second cutover; missing/late ACK requests explicit recovery. Closures retain
-closure evidence; only nr_round_resolutions certifies general progression. Actual delivery, full startup
-recovery remain unfinished; schema 7 composes ordinary refresh/held/revival.
+closure evidence; only nr_round_resolutions certifies general progression. Actual delivery and startup
+adapter remain unfinished; schema 7 composes ordinary refresh/held/revival.
 
 Schema 4 progression is New Rules only. Score qualification, live credit flag,
 global increment and Familiar Face commit together. Resolve actual closures in
@@ -100,5 +100,17 @@ credit. Quorum preserves the open round; actual activation or ending resolves it
 Held idle counts only new human messages (including whispers); settings-only
 restoration does not reset it. Silent expiry releases capacity/general finalization
 atomically and requests only an existing-panel update. O-03 final delivery remains
-M2. Reopening handles is tested; full disruptive-startup reconciliation is next.
-Do not infer missing legacy revival publication times or resume any old pause.
+M2. Reopening handles is tested; the explicit schema-8 barrier still needs a live startup adapter.
+Do not infer missing legacy revival publication times or waive old failure pauses.
+
+Schema 8 RecoveryFlow is an explicit offline disruption coordinator. Stop dispatch,
+page live routes and enter each barrier BEFORE running overdue timers. Normal flow
+APIs and output reads fence active recoveries. Resolve uncertain publication using
+actual message/time proof or a conclusive never-sent fact; a missing ACK is neither.
+Only a successfully published recovery notice starts the 30-second read-in. Resume
+rebinds ownership without resetting original clocks, partial choices or scores.
+Known lobby/revival expiry still wins while paused. Ignore/guard historical sources
+created before actual resumption; do not backfill missing chat or mode success.
+Old capability/dependency/recovery pauses, legacy clockless revival and unsupported
+modes require specialized policy or explicit authorized ending. Startup adapter,
+send reconciliation/leases, real announcements and cleanup remain M2/later work.

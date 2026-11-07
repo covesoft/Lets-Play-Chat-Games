@@ -6,7 +6,7 @@ selection, announced cutover, phrase usage, and old-round closure boundaries.
 It performs no Discord I/O. The live shell still does not invoke gameplay.
 
 This is a later-round foundation. Schema 7 [EvolutionFlow](EVOLUTION.md) composes
-ordinary refresh/held/revival. Mode flow, startup recovery, theme/mode resolution,
+ordinary refresh/held/revival. Mode flow, specialized failure recovery, theme/mode resolution,
 cleanup and delivery workers remain separate work.
 Schema 4 [general progression](PROGRESSION.md) is composed with successful cutover.
 Schema 5 [ordinary pacing](PACING.md) shares ingress and cutover: registered rounds
@@ -137,7 +137,7 @@ purge evidence until all required finalization/delivery is complete.
 No per-game history service is created.
 
 Reopening a database handle is tested. A disruptive bot/Gateway restart is a
-different event: the future startup coordinator must enter explicit recovery,
+different event: the startup adapter must invoke explicit recovery,
 announce it and apply its resume policy before dispatching ordinary receipts.
 Loading these records alone does not authorize silent resume or prove observed
 mode survival. Opening choices and modes are intentionally outside this facade.
@@ -152,3 +152,7 @@ its own output ACK records the replacement message without restarting the clock.
 Human sources ignored while paused receive compact ID-only guards so redelivery
 after resume cannot gain points or consume a new reaction offense. New accepted
 human messages update held-idle activity; duplicates/reactions/bots do not.
+
+Schema 8 [RecoveryFlow](RECOVERY.md) provides an explicit disruption barrier and
+evidence-based ordinary/opening continuation. Normal APIs are fenced until its
+notice/read-in completes; the actual startup adapter remains integration work.
