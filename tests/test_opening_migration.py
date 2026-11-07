@@ -43,10 +43,15 @@ async def test_schema_five_upgrade_registers_legacy_capacity_without_guessing_st
         "nr_rotation",
         "nr_picker_candidates",
     )
-    before = {t: rows(path, f"SELECT * FROM {t}") for t in tables}
-    assert (await bootstrap.initialize_database(path)).schema_version == SCHEMA_VERSION == 6
+    columns = {t: ",".join(r[1] for r in rows(path, f"PRAGMA table_info({t})")) for t in tables}
+    before = {t: rows(path, f"SELECT {columns[t]} FROM {t}") for t in tables}
+    assert (await bootstrap.initialize_database(path)).schema_version == SCHEMA_VERSION == 7
     for table, value in before.items():
-        assert rows(path, f"SELECT * FROM {table}") == value
+        actual = rows(path, f"SELECT {columns[table]} FROM {table}")
+        if table == "nr_sessions":
+            pin = columns[table].split(",").index("pacing_version")
+            value = [(*r[:pin], "ordinary-pacing-2", *r[pin + 1 :]) for r in value]
+        assert actual == value
     assert rows(
         path,
         "SELECT session_id,stage,playing_session_id,phrase_draw_limit,prepared_at_utc FROM nr_admissions",

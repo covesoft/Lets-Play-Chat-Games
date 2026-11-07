@@ -72,7 +72,7 @@ class OfferRecord:
 
     @property
     def choice_deadline(self):
-        """Preparation has no running public clock; ACK establishes it once."""
+        """First ACK establishes the clock; a refreshed hand can inherit it."""
         return self.hand.deadline if self.published_at is not None else None
 
 
@@ -227,12 +227,18 @@ class OrdinaryFlow:
         from lets_play.storage.pacing_flow import RoundPacing
 
         await RoundPacing(self.unit)._advance_due(frame)
+        from lets_play.storage.evolution_flow import EvolutionFlow
+
+        await EvolutionFlow(self.unit)._advance_due(frame)
         return True
 
     @_write
     async def prepare_offer(self, frame: EventEnvelope, hand: OrdinaryHand) -> FlowResult:
         if not await self._enter(frame, EventKind.OFFER_PREPARE, None):
             return FlowResult(FlowStatus.REPLAY)
+        return await self._prepare_entered(frame, hand)
+
+    async def _prepare_entered(self, frame, hand):
         session = frame.route.session_id
         existing = await self.get_offer(session, hand.offer_id)
         if existing:
@@ -322,15 +328,24 @@ class OrdinaryFlow:
         await self._ack(
             frame.route.session_id, offer_id, "offer", message_id, utc_int(frame.received_at)
         )
-        deadline = replace(
-            record.hand.deadline,
-            expires_at=frame.received_at + timedelta(seconds=CHATGAMES_CHOICE_SECONDS),
+        deadline = (
+            record.hand.deadline
+            if record.published_at is not None
+            else replace(
+                record.hand.deadline,
+                expires_at=frame.received_at + timedelta(seconds=CHATGAMES_CHOICE_SECONDS),
+            )
         )
         hand = replace(record.hand, deadline=deadline)
         await _execute(
             self.conn,
             "UPDATE nr_offers SET hand_json=?,published_at_utc=?,stage='published' WHERE session_id=? AND offer_id=?",
-            (encode_hand(hand), utc_int(frame.received_at), frame.route.session_id, offer_id),
+            (
+                encode_hand(hand),
+                utc_int(record.published_at or frame.received_at),
+                frame.route.session_id,
+                offer_id,
+            ),
         )
         return FlowResult(FlowStatus.PUBLISHED)
 
@@ -445,8 +460,8 @@ class OrdinaryFlow:
             if completions:
                 options.append((option, completions))
         if not options:
-            # No invented fallback/partial hand or unrelated removal. A future
-            # complete refresh/held service must handle this explicit refusal.
+            # Refuse a fabricated fallback. Configured callers route relevant
+            # capability/configuration changes through EvolutionFlow.recheck.
             return FlowResult(FlowStatus.UNAVAILABLE)
         option, completions = (
             options[rng.randrange(len(options))] if len(options) > 1 else options[0]
@@ -642,6 +657,9 @@ class OrdinaryFlow:
         await RoundPacing(self.unit)._activated(
             frame.route.session_id, old.round_id, record.hand.picker_id, row["effective_at_utc"]
         )
+        from lets_play.storage.evolution_flow import EvolutionFlow
+
+        await EvolutionFlow(self.unit)._after_activation(frame)
         return FlowStatus.ACTIVATED
 
     @_write
@@ -697,6 +715,15 @@ class OrdinaryFlow:
         """Evaluate an already-ordered receipt, including an opening handover."""
         frame = event.envelope
         context = await self.unit.get_context(frame.route.session_id)
+        if context.position.lifecycle is Lifecycle.PAUSED:
+            human = event.is_human if isinstance(event, MessageEvent) else not event.is_bot
+            if human:
+                await _execute(
+                    self.conn,
+                    "INSERT INTO nr_paused_sources VALUES (?,?,?) ON CONFLICT DO NOTHING",
+                    (frame.route.session_id, frame.kind, frame.source_id),
+                )
+            return FlowResult(FlowStatus.IGNORED)
         decision = (
             evaluate_message(event, context)
             if isinstance(event, MessageEvent)
@@ -709,6 +736,12 @@ class OrdinaryFlow:
             status = await self.unit.apply(decision)
         finally:
             self.unit._ordered_flow = False
+        if isinstance(event, MessageEvent) and event.is_human and status is ApplyStatus.APPLIED:
+            await _execute(
+                self.conn,
+                "INSERT INTO nr_session_activity VALUES (?,?) ON CONFLICT(session_id) DO UPDATE SET last_human_at_utc=excluded.last_human_at_utc",
+                (frame.route.session_id, utc_int(frame.received_at)),
+            )
         from lets_play.storage.pacing_flow import RoundPacing
 
         await RoundPacing(self.unit)._advance_due(frame)

@@ -5,8 +5,9 @@ already-playing ordinary sessions. It persists frozen offers, publication facts,
 selection, announced cutover, phrase usage, and old-round closure boundaries.
 It performs no Discord I/O. The live shell still does not invoke gameplay.
 
-This is a later-round foundation: full refresh/held/revival, mode flow, startup recovery,
-theme/mode resolution, cleanup, and delivery workers remain separate work.
+This is a later-round foundation. Schema 7 [EvolutionFlow](EVOLUTION.md) composes
+ordinary refresh/held/revival. Mode flow, startup recovery, theme/mode resolution,
+cleanup and delivery workers remain separate work.
 Schema 4 [general progression](PROGRESSION.md) is composed with successful cutover.
 Schema 5 [ordinary pacing](PACING.md) shares ingress and cutover: registered rounds
 must obtain their frozen picker before an offer can be prepared. At activation,
@@ -65,7 +66,8 @@ Use the corresponding typed envelope kinds (`OFFER_PREPARE`, `OFFER_PUBLISHED`,
 acknowledgements are server-observed delivery facts. Preparing a row, reading an
 output intent, or obtaining a mock send result is not actual publication evidence.
 
-`OfferRecord.choice_deadline` is `None` before publication. Its frozen hand still
+`OfferRecord.choice_deadline` is `None` until the first actual publication. A
+refreshed prepared offer can inherit that earlier publication/deadline. Its frozen hand still
 contains a proposal deadline for the pure hand API; do not schedule that proposal
 as a public timeout. On acknowledgement it becomes exactly publication time plus
 60 seconds, retaining its token. Repeated acknowledgements cannot change the
@@ -142,3 +144,11 @@ mode survival. Opening choices and modes are intentionally outside this facade.
 
 Migration 3 appends these records to schema 2 and preserves old score rows/unknown
 start times. Stop the bot and make a verified SQLite backup before upgrading.
+
+Schema 7 adds [EvolutionFlow](EVOLUTION.md). `_prepare_entered` composes an already
+ordered revival quorum or refresh without allocating a second receipt. A refreshed
+prepared offer can inherit an earlier successful publication and its deadline;
+its own output ACK records the replacement message without restarting the clock.
+Human sources ignored while paused receive compact ID-only guards so redelivery
+after resume cannot gain points or consume a new reaction offense. New accepted
+human messages update held-idle activity; duplicates/reactions/bots do not.

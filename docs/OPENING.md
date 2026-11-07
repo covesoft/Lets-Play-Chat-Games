@@ -124,7 +124,7 @@ an actual lobby reservation; it is not entitlement-authorized public admission.
 
 Active-slot linkage uses FK cleanup, leaving global profiles and guild entitlement
 facts independent. This is not a purge/24-hour final-output-retention or user
-erasure service; those must cover the new lobby/guard/output rows as well. Full
-held/revival/refresh, real commands/permissions, delivery and restart recovery
-remain unfinished. M1 has not become a playable Discord loop merely by adding
+erasure service; those must cover the new lobby/guard/output rows as well. Schema 7 hands ordinary held/refresh/revival to [EvolutionFlow](EVOLUTION.md),
+using the actual frozen opening configuration and session phrase window. Real
+commands/permissions, delivery and disruptive-startup recovery remain unfinished. M1 has not become a playable Discord loop merely by adding
 these offline transactions.

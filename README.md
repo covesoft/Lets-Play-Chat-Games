@@ -3,25 +3,20 @@
 Let’s Play is a Discord chat-game bot. Its first game, **New Rules**, is a party
 conversation game where unusual rules accumulate as people chat.
 
-**Current status: v0.2.7, M1 opening and admission increment.** The application can validate its
-configuration offline, initialize its SQLite database, and log in to Discord.
-Offline domain contracts, text views, seventeen ordinary rules, and exact score
-arithmetic are implemented. An offline SQLite unit of work now atomically applies
-those candidates with event/reaction guards, score aggregates, and marker intents.
-The ordinary subset also has bounded witness checks, legal replacements, frozen
-three-template offers, and pure choice revalidation. A durable later-round flow
-now records publication, fixed deadlines, selection and announced activation,
-with ordered ingress and once-only closure boundaries. Schema 4 adds atomic
-New Rules game credit, profiles, five general badge predicates, ordinary round
-resolution and streak-notice intents. Schema 5 adds ordinary warning publication
-clocks, immutable exact-score picker snapshots and persistent shuffled rotation.
-Schema 6 adds atomic guild/channel lobby reservations, three-human quorum,
-publication-started lobby/choice clocks, first activation and ordered handover.
-Full held/revival/recovery, theme/mode achievements,
-live commands and delivery workers remain unfinished.
-The owner verified the earlier live shell, schema-5/WAL/FK bootstrap,
-and v0.2.6 tests on Windows 11 (813 passed). This increment has local offline checks;
-M1 remains in progress.
+**Current status: v0.2.8, M1 held play and revival increment.** The application can
+validate its configuration offline, initialize SQLite, and log in to Discord.
+The offline engine includes seventeen ordinary rules, exact scoring, bounded legal
+three-template offers/replacements, ordered publication and activation, New Rules
+game credit and five general badge predicates. It persists guild/channel lobby
+reservations, three-human opening quorum, warning clocks, exact picker snapshots,
+and shuffled rotation. Schema 7 adds held play, full-hand refresh under the original
+choice deadline, and publication-started revival with three distinct returners.
+These preserve the same open round until actual activation or ending.
+Full startup recovery, theme/mode achievements, live commands, publishers,
+schedulers and cleanup remain unfinished. M1 is still in progress.
+The owner verified the earlier live shell and v0.2.7 on Windows 11:
+881 tests passed; schema=6, journal=wal, foreign_keys=on.
+This increment has local offline checks; its Windows evidence is still pending.
 Public setup and operational documentation is under `docs/`. Private design
 notes are excluded from Git and package distributions.
 

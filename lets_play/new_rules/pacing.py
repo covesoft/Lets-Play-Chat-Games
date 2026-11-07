@@ -5,7 +5,7 @@ from fractions import Fraction
 
 from lets_play.new_rules.scoring import ScoreTotals
 
-PACING_VERSION = "ordinary-pacing-1"
+PACING_VERSION = "ordinary-pacing-2"
 MIN_WARNING_SECONDS = 270
 FALLBACK_WARNING_SECONDS = 870
 WARNING_SECONDS = 30

@@ -32,6 +32,7 @@ class PacingRecord:
     warning_published_at: datetime | None
     selection_due_at: datetime | None
     picker_id: int | None
+    attempt: int = 1
 
     @property
     def next_deadline(self) -> datetime | None:
@@ -52,6 +53,7 @@ class PacingOutput:
     session_id: str
     round_id: str
     kind: str
+    attempt: int = 1
 
 
 @dataclass(frozen=True, slots=True)
@@ -66,6 +68,11 @@ class PickerCandidate:
 def _page(limit):
     if type(limit) is not int or not 1 <= limit <= 100:
         raise ValueError("Page limit must be an integer in [1, 100].")
+
+
+def _attempt(value):
+    if type(value) is not int or not 1 <= value < (1 << 63):
+        raise ValueError("A positive SQLite attempt identity is required.")
 
 
 class RoundPacing:
@@ -113,17 +120,18 @@ class RoundPacing:
             date("warning_published_at_utc"),
             date("selection_due_at_utc"),
             row["picker_id"],
+            row["attempt"],
         )
 
     async def pending_outputs(self, *, limit=100) -> tuple[PacingOutput, ...]:
         self.unit._check()
         _page(limit)
         async with self.conn.execute(
-            """SELECT o.output_id,o.session_id,o.round_id,o.kind FROM nr_pacing_outputs AS o
+            """SELECT o.output_id,o.session_id,o.round_id,o.kind,o.attempt FROM nr_pacing_outputs AS o
             JOIN nr_sessions AS s USING(session_id)
             JOIN nr_round_pacing AS p ON p.session_id=o.session_id AND p.round_id=o.round_id
             WHERE o.acknowledged_at_utc IS NULL AND o.retired_at_utc IS NULL
-            AND s.round_id=o.round_id AND (
+            AND s.round_id=o.round_id AND p.attempt=o.attempt AND (
                 (o.kind='warning' AND p.stage='warning_queued' AND s.lifecycle='playing'
                     AND s.phase='ordinary' AND s.advancement='warning'
                     AND s.revision=p.owner_revision AND s.ruleset_version=p.ruleset_version)
@@ -134,27 +142,34 @@ class RoundPacing:
         ) as cursor:
             return tuple(PacingOutput(*r) for r in await cursor.fetchall())
 
-    async def known_warning_message_id(self, session_id: str, round_id: str) -> int | None:
+    async def known_warning_message_id(
+        self, session_id: str, round_id: str, *, attempt=1
+    ) -> int | None:
         self.unit._check()
+        _attempt(attempt)
         row = await _row(
             self.conn,
-            "SELECT message_id FROM nr_pacing_outputs WHERE session_id=? AND round_id=? AND kind='warning'",
-            (session_id, round_id),
+            "SELECT message_id FROM nr_pacing_outputs WHERE session_id=? AND round_id=? AND attempt=? AND kind='warning'",
+            (session_id, round_id, attempt),
         )
         return row[0] if row is not None else None
 
     async def candidates(
-        self, session_id, round_id, *, after_actor=0, limit=100
+        self, session_id, round_id, *, after_actor=0, limit=100, attempt=None
     ) -> tuple[PickerCandidate, ...]:
         self.unit._check()
         _page(limit)
         if type(after_actor) is not int or not 0 <= after_actor < (1 << 63):
             raise ValueError("A nonnegative SQLite actor cursor is required.")
+        if attempt is None:
+            row = await self._record(session_id, round_id)
+            attempt = row["attempt"] if row else 1
+        _attempt(attempt)
         async with self.conn.execute(
             """SELECT actor_id,ordinary_posts,actual_n,actual_d,raw_faults,excluded
-            FROM nr_picker_candidates WHERE session_id=? AND round_id=? AND actor_id>?
+            FROM nr_picker_candidates WHERE session_id=? AND round_id=? AND attempt=? AND actor_id>?
             ORDER BY actor_id LIMIT ?""",
-            (session_id, round_id, after_actor, limit),
+            (session_id, round_id, attempt, after_actor, limit),
         ) as cursor:
             return tuple(
                 PickerCandidate(
@@ -168,10 +183,11 @@ class RoundPacing:
             )
 
     async def _output(self, session, round_id, kind):
+        row = await self._record(session, round_id)
         await _execute(
             self.conn,
-            "INSERT INTO nr_pacing_outputs(session_id,round_id,kind) VALUES (?,?,?) ON CONFLICT(session_id,round_id,kind) DO NOTHING",
-            (session, round_id, kind),
+            "INSERT INTO nr_pacing_outputs(session_id,round_id,kind,attempt) VALUES (?,?,?,?) ON CONFLICT(session_id,round_id,attempt,kind) DO NOTHING",
+            (session, round_id, kind, row["attempt"]),
         )
 
     @_write
@@ -290,20 +306,21 @@ class RoundPacing:
         return record.stage if record else "unregistered"
 
     @_write
-    async def publish_warning(self, frame, round_id, *, message_id):
+    async def publish_warning(self, frame, round_id, *, message_id, attempt=1):
         from lets_play.storage.ordinary_flow import OrdinaryFlow
 
         if not await OrdinaryFlow(self.unit)._enter(frame, EventKind.WARNING_PUBLISHED, None):
             return "replay"
+        _attempt(attempt)
         if type(message_id) is not int or not 1 <= message_id < (1 << 63):
             raise ValueError("A positive known warning message ID is required.")
         row = await self._record(frame.route.session_id, round_id)
         output = await _row(
             self.conn,
-            "SELECT * FROM nr_pacing_outputs WHERE session_id=? AND round_id=? AND kind='warning'",
-            (frame.route.session_id, round_id),
+            "SELECT * FROM nr_pacing_outputs WHERE session_id=? AND round_id=? AND attempt=? AND kind='warning'",
+            (frame.route.session_id, round_id, attempt),
         )
-        if row is None or output is None:
+        if row is None or output is None or row["attempt"] != attempt:
             return "stale"
         if output["message_id"] is not None:
             if output["message_id"] != message_id:
@@ -371,7 +388,7 @@ class RoundPacing:
             row["stage"] == "warning_published"
             and utc_int(frame.received_at) >= row["selection_due_at_utc"]
         ):
-            await self._snapshot(row, context)
+            await self._snapshot(row, context, frame)
 
     async def _cancel(self, frame, row, context):
         p = context.position
@@ -400,7 +417,15 @@ class RoundPacing:
             )
             await self._output(p.route.session_id, row["round_id"], "recovery")
 
-    async def _snapshot(self, row, context):
+    async def _snapshot(self, row, context, frame):
+        from lets_play.storage.evolution_flow import EvolutionFlow
+
+        evolution = EvolutionFlow(self.unit)
+        if await evolution._configured(context.position.route.session_id):
+            hand = await evolution._build(frame, context, 1, "capacity-probe")
+            if hand is None:
+                await evolution._hold(frame, context)
+                return
         p = context.position
         summary = WorstResults()
         async with self.conn.execute(
@@ -417,6 +442,7 @@ class RoundPacing:
                         (
                             p.route.session_id,
                             p.round_id,
+                            row["attempt"],
                             candidate["actor_id"],
                             score.ordinary_posts,
                             str(actual.numerator) if actual is not None else None,
@@ -425,32 +451,20 @@ class RoundPacing:
                         )
                     )
                 await self.conn.executemany(
-                    "INSERT INTO nr_picker_candidates(session_id,round_id,actor_id,ordinary_posts,actual_n,actual_d,raw_faults) VALUES (?,?,?,?,?,?,?)",
+                    "INSERT INTO nr_picker_candidates(session_id,round_id,attempt,actor_id,ordinary_posts,actual_n,actual_d,raw_faults) VALUES (?,?,?,?,?,?,?,?)",
                     values,
                 )
         if not summary.eligible:
-            new = replace(
-                p,
-                lifecycle=Lifecycle.PAUSED,
-                pause_reason=PauseReason.REVIVAL,
-                advancement=Advancement.IDLE,
-                revision=p.revision + 1,
-            )
-            await self.unit.set_owner(p, replace(context, position=new))
-            await _execute(
-                self.conn,
-                "UPDATE nr_round_pacing SET stage='revival',owner_revision=? WHERE session_id=? AND round_id=?",
-                (new.revision, p.route.session_id, p.round_id),
-            )
-            await self._output(p.route.session_id, p.round_id, "revival")
+            await evolution._begin_revival(frame, context)
             return
         if summary.exclude_worst:
             await _execute(
                 self.conn,
-                "UPDATE nr_picker_candidates SET excluded=1 WHERE session_id=? AND round_id=? AND actual_n=? AND actual_d=?",
+                "UPDATE nr_picker_candidates SET excluded=1 WHERE session_id=? AND round_id=? AND attempt=? AND actual_n=? AND actual_d=?",
                 (
                     p.route.session_id,
                     p.round_id,
+                    row["attempt"],
                     str(summary.worst.numerator),
                     str(summary.worst.denominator),
                 ),
@@ -458,20 +472,20 @@ class RoundPacing:
         await _execute(
             self.conn,
             """INSERT INTO nr_rotation_members(session_id,actor_id)
-            SELECT session_id,actor_id FROM nr_picker_candidates WHERE session_id=? AND round_id=?
+            SELECT session_id,actor_id FROM nr_picker_candidates WHERE session_id=? AND round_id=? AND attempt=?
             ON CONFLICT(session_id,actor_id) DO NOTHING""",
-            (p.route.session_id, p.round_id),
+            (p.route.session_id, p.round_id, row["attempt"]),
         )
         rotation = await _row(
             self.conn, "SELECT * FROM nr_rotation WHERE session_id=?", (p.route.session_id,)
         )
         count = await _row(
             self.conn,
-            "SELECT COUNT(*) FROM nr_picker_candidates WHERE session_id=? AND round_id=? AND excluded=0",
-            (p.route.session_id, p.round_id),
+            "SELECT COUNT(*) FROM nr_picker_candidates WHERE session_id=? AND round_id=? AND attempt=? AND excluded=0",
+            (p.route.session_id, p.round_id, row["attempt"]),
         )
-        where = "c.session_id=? AND c.round_id=? AND c.excluded=0"
-        values = (p.route.session_id, p.round_id)
+        where = "c.session_id=? AND c.round_id=? AND c.attempt=? AND c.excluded=0"
+        values = (p.route.session_id, p.round_id, row["attempt"])
         if count[0] > 1 and rotation["previous_picker"] is not None:
             where += " AND c.actor_id<>?"
             values += (rotation["previous_picker"],)
@@ -534,4 +548,5 @@ class RoundPacing:
             )
             >> 1
         )
-        await self._insert(context, effective_at, estimate[0], message_target(estimate[0]), seed)
+        estimate = row["next_estimate"] if row["next_estimate"] is not None else estimate[0]
+        await self._insert(context, effective_at, estimate, message_target(estimate), seed)

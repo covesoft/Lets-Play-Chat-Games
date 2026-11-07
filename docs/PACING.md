@@ -83,23 +83,29 @@ effect is separate from Rulemaker's deliberate-choice predicate.
 
 Activation composes closure, general resolution, rule/phrase changes, rotation
 service and the next ordinary pacing record in one write unit. The new clock is
-the announced effective time, including after a late timer. Its frozen estimate
+the announced effective time, including after a late timer. Its normal frozen estimate
 is the final old round's five-post count, including players qualifying during
 choice after the picker snapshot. No completed-round evidence is discarded.
 
 An empty five-post pool enters a revival pause and queues one invitation intent,
-preserving the open round/rules/scores. The 300-second invitation clock, three-click
-quorum, expiry/resume and held restoration still need their own workflow. A stale
+preserving the open round/rules/scores. Schema 7 EvolutionFlow owns the invitation
+clock, quorum, expiry and held restoration; see [EVOLUTION.md](EVOLUTION.md). A stale
 playing warning owner requests recovery; an existing pause reason is preserved
-and an ended owner never reopens. There is no automatic resume from these states.
+and an ended owner never reopens. Recovery/capability pauses never resume automatically.
 
 ## Persistence and limits
 
 Migration 5 appends to released schema 4, backfills ordinary round counts from
 retained scores, and leaves legacy starts/profiles/scores/choice clocks unchanged.
-It does not register or resume old sessions. `ordinary-pacing-1` pins live semantics.
-One warning/snapshot per ordinary round is supported; a future held refresh needs
-explicit fresh attempt identities, not resetting this publication's old deadline.
+It does not register or resume old sessions. Migration 7 upgrades the known
+`ordinary-pacing-1` pin to `ordinary-pacing-2` and adds per-round attempts. Old output
+IDs, publication times and candidate evidence become attempt 1. Fresh attempts
+archive the retired pacing projection; candidate pages default to the current
+attempt, with explicit `attempt=` for retained evidence. `PacingRecord` and pending
+outputs expose the exact attempt. `publish_warning(..., attempt=...)` must name it;
+its default is **1**, never an alias for the latest attempt. An old ACK therefore
+cannot start or extend a restored warning. Successful explicit revival freezes
+the next-round estimate at its three returners rather than cumulative old traffic.
 
 Candidate processing uses pages of at most 100 and exact fractions; global/member/
 message object caches are not introduced. SQLite still has one writer, and the

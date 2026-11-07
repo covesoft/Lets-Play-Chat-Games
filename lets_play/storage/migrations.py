@@ -412,5 +412,99 @@ MIGRATIONS = (
             ) STRICT""",
         ),
     ),
+    Migration(
+        version=7,
+        name="ordinary_attempts_held_and_revival",
+        statements=(
+            "ALTER TABLE nr_round_pacing ADD COLUMN attempt INTEGER NOT NULL DEFAULT 1 CHECK(attempt>0)",
+            "ALTER TABLE nr_round_pacing ADD COLUMN next_estimate INTEGER CHECK(next_estimate>=0)",
+            "ALTER TABLE nr_round_pacing ADD COLUMN revival_id TEXT",
+            "UPDATE nr_sessions SET pacing_version='ordinary-pacing-2' WHERE pacing_version='ordinary-pacing-1'",
+            "CREATE TEMP TABLE m7_sequences AS SELECT name,seq FROM sqlite_sequence WHERE name='nr_pacing_outputs'",
+            "DROP INDEX nr_pending_pacing_outputs",
+            "ALTER TABLE nr_pacing_outputs RENAME TO nr_pacing_outputs_v5",
+            """CREATE TABLE nr_pacing_outputs (
+                output_id INTEGER PRIMARY KEY AUTOINCREMENT,
+                session_id TEXT NOT NULL,round_id TEXT NOT NULL,
+                kind TEXT NOT NULL CHECK(kind IN ('warning','revival','recovery')),
+                message_id INTEGER CHECK(message_id>0),acknowledged_at_utc INTEGER,retired_at_utc INTEGER,
+                attempt INTEGER NOT NULL DEFAULT 1 CHECK(attempt>0),
+                UNIQUE(session_id,round_id,attempt,kind),
+                FOREIGN KEY(session_id,round_id) REFERENCES nr_round_pacing ON DELETE CASCADE
+            ) STRICT""",
+            """INSERT INTO nr_pacing_outputs(output_id,session_id,round_id,kind,message_id,acknowledged_at_utc,retired_at_utc)
+                SELECT output_id,session_id,round_id,kind,message_id,acknowledged_at_utc,retired_at_utc FROM nr_pacing_outputs_v5""",
+            "UPDATE sqlite_sequence SET seq=MAX(seq,COALESCE((SELECT seq FROM m7_sequences),0)) WHERE name='nr_pacing_outputs'",
+            "INSERT INTO sqlite_sequence(name,seq) SELECT name,seq FROM m7_sequences WHERE NOT EXISTS(SELECT 1 FROM sqlite_sequence WHERE name='nr_pacing_outputs')",
+            "DROP TABLE nr_pacing_outputs_v5",
+            "DROP TABLE m7_sequences",
+            """CREATE INDEX nr_pending_pacing_outputs ON nr_pacing_outputs(output_id)
+                WHERE acknowledged_at_utc IS NULL AND retired_at_utc IS NULL""",
+            "ALTER TABLE nr_picker_candidates RENAME TO nr_picker_candidates_v5",
+            """CREATE TABLE nr_picker_candidates (
+                session_id TEXT NOT NULL,round_id TEXT NOT NULL,actor_id INTEGER NOT NULL CHECK(actor_id>0),
+                ordinary_posts INTEGER NOT NULL CHECK(ordinary_posts>=5),actual_n TEXT,actual_d TEXT,
+                raw_faults INTEGER NOT NULL CHECK(raw_faults>=0),excluded INTEGER NOT NULL DEFAULT 0 CHECK(excluded IN (0,1)),
+                attempt INTEGER NOT NULL DEFAULT 1 CHECK(attempt>0),
+                CHECK((actual_n IS NULL)=(actual_d IS NULL)),
+                PRIMARY KEY(session_id,round_id,attempt,actor_id),
+                FOREIGN KEY(session_id,round_id) REFERENCES nr_round_pacing ON DELETE CASCADE
+            ) STRICT""",
+            """INSERT INTO nr_picker_candidates(session_id,round_id,actor_id,ordinary_posts,actual_n,actual_d,raw_faults,excluded)
+                SELECT session_id,round_id,actor_id,ordinary_posts,actual_n,actual_d,raw_faults,excluded FROM nr_picker_candidates_v5""",
+            "DROP TABLE nr_picker_candidates_v5",
+            """CREATE TABLE nr_pacing_history (
+                session_id TEXT NOT NULL,round_id TEXT NOT NULL,attempt INTEGER NOT NULL CHECK(attempt>0),
+                snapshot_json TEXT NOT NULL,retired_at_utc INTEGER NOT NULL,
+                PRIMARY KEY(session_id,round_id,attempt),
+                FOREIGN KEY(session_id,round_id) REFERENCES nr_rounds ON DELETE CASCADE
+            ) STRICT""",
+            """CREATE TABLE nr_session_activity (
+                session_id TEXT PRIMARY KEY REFERENCES nr_sessions ON DELETE CASCADE,
+                last_human_at_utc INTEGER NOT NULL
+            ) STRICT""",
+            """CREATE TABLE nr_paused_sources (
+                session_id TEXT NOT NULL REFERENCES nr_sessions ON DELETE CASCADE,
+                event_kind TEXT NOT NULL CHECK(event_kind IN ('message_create','reaction_add')),
+                source_id TEXT NOT NULL,PRIMARY KEY(session_id,event_kind,source_id)
+            ) STRICT""",
+            """CREATE TABLE nr_evolution (
+                session_id TEXT PRIMARY KEY REFERENCES nr_sessions ON DELETE CASCADE,round_id TEXT NOT NULL,
+                version TEXT NOT NULL DEFAULT 'ordinary-evolution-1',config_json TEXT NOT NULL,
+                phrase_draw_limit INTEGER CHECK(phrase_draw_limit IN (5,15)),
+                phase TEXT NOT NULL CHECK(phase IN ('normal','held','restoring','choosing','revival','ended')),
+                idle_anchor_at_utc INTEGER,held_token TEXT,
+                FOREIGN KEY(session_id,round_id) REFERENCES nr_rounds ON DELETE CASCADE
+            ) STRICT""",
+            """CREATE TABLE nr_revivals (
+                session_id TEXT NOT NULL,revival_id TEXT NOT NULL,round_id TEXT NOT NULL,
+                attempt INTEGER NOT NULL CHECK(attempt>0),owner_revision INTEGER NOT NULL,
+                prepared_at_utc INTEGER NOT NULL,published_at_utc INTEGER,deadline_utc INTEGER,
+                random_seed INTEGER NOT NULL CHECK(random_seed>=0),picker_id INTEGER CHECK(picker_id>0),
+                stage TEXT NOT NULL CHECK(stage IN ('prepared','published','quorum','expired','cancelled')),
+                PRIMARY KEY(session_id,revival_id),UNIQUE(session_id,round_id,attempt),
+                FOREIGN KEY(session_id,round_id) REFERENCES nr_rounds ON DELETE CASCADE
+            ) STRICT""",
+            "CREATE UNIQUE INDEX nr_one_revival ON nr_revivals(session_id) WHERE stage IN ('prepared','published')",
+            """CREATE TABLE nr_revival_members (
+                session_id TEXT NOT NULL,revival_id TEXT NOT NULL,actor_id INTEGER NOT NULL CHECK(actor_id>0),
+                PRIMARY KEY(session_id,revival_id,actor_id),
+                FOREIGN KEY(session_id,revival_id) REFERENCES nr_revivals ON DELETE CASCADE
+            ) STRICT""",
+            """CREATE TABLE nr_evolution_outputs (
+                output_id INTEGER PRIMARY KEY AUTOINCREMENT,session_id TEXT NOT NULL REFERENCES nr_sessions ON DELETE CASCADE,
+                token TEXT NOT NULL,kind TEXT NOT NULL CHECK(kind IN ('held','closed_silent')),
+                message_id INTEGER CHECK(message_id>0),acknowledged_at_utc INTEGER,retired_at_utc INTEGER,
+                UNIQUE(session_id,token,kind)
+            ) STRICT""",
+            "CREATE INDEX nr_pending_evolution_outputs ON nr_evolution_outputs(output_id) WHERE acknowledged_at_utc IS NULL AND retired_at_utc IS NULL",
+            """CREATE TABLE nr_offer_refreshes (
+                session_id TEXT NOT NULL,old_offer_id TEXT NOT NULL,new_offer_id TEXT NOT NULL,
+                PRIMARY KEY(session_id,old_offer_id),UNIQUE(session_id,new_offer_id),
+                FOREIGN KEY(session_id,old_offer_id) REFERENCES nr_offers ON DELETE CASCADE,
+                FOREIGN KEY(session_id,new_offer_id) REFERENCES nr_offers ON DELETE CASCADE
+            ) STRICT""",
+        ),
+    ),
 )
 SCHEMA_VERSION = MIGRATIONS[-1].version

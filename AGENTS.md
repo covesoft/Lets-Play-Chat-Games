@@ -34,8 +34,8 @@ For packaging/dependency changes, also run `python -m build` and `python -m pip
 check` (or `uv pip check`). Record actual results and remaining limits in the
 private implementation notes when available. Never report a mock/offline check
 as live Discord or Windows evidence. M1 is authorized in bounded increments.
-The owner verified the earlier v0.1.3 shell live, schema-5/WAL/FK bootstrap, and v0.2.6
-tests on Windows 11 (813 passed in 45.09s). Source hygiene uses NUL-framed Git I/O.
+The owner verified the earlier v0.1.3 shell live, schema-6/WAL/FK bootstrap, and v0.2.7
+tests on Windows 11 (881 passed in 51.02s). Source hygiene uses NUL-framed Git I/O.
 Later increments still need their own Windows/CI evidence.
 
 Schema 2 is an offline evaluation unit of work, not a transition/admission or
@@ -58,7 +58,7 @@ Never skip a sequence gap or backdate a timer over queued chat. Publication ACKs
 are external facts, not output preparation. Old rules apply until the announced
 whole-second cutover; missing/late ACK requests explicit recovery. Closures retain
 closure evidence; only nr_round_resolutions certifies general progression. Actual delivery, full startup
-recovery and refresh/held remain unfinished.
+recovery remain unfinished; schema 7 composes ordinary refresh/held/revival.
 
 Schema 4 progression is New Rules only. Score qualification, live credit flag,
 global increment and Familiar Face commit together. Resolve actual closures in
@@ -75,7 +75,7 @@ does not start its 30 seconds: only a successful publication ACK does. Snapshot
 before the first at/after-cutoff receipt is scored; later events remain old-round
 until activation. Preserve exact-score candidate evidence and unrated eligibility.
 Rotation service commits only at valid activation, together with general resolution
-and next-round pacing. Single ordinary advancement only: full held refresh/revival,
+and next-round pacing. Compose ordinary held/refresh/revival through schema 7;
 scheduler/publisher/reconciliation and startup recovery remain.
 
 Schema 6 OpeningFlow reserves real guild/channel capacity before publishing a lobby.
@@ -89,3 +89,16 @@ releases the reservation with general finalization; final delivery remains separ
 Persisted entitlement facts are trusted server state, not client-supplied capacity.
 Grant authorization/full promotion/settings UI remain M5 work. Legacy slots retain
 unknown phrase allowance rather than guessing a downgrade; frozen offers survive.
+
+Schema 7 EvolutionFlow composes held play, complete refresh and revival over that
+same receipt lane. Configure only trusted phrase-window/template facts. Recheck
+relevant changes before dispatching subsequent choices. Fresh warning/revival
+attempts preserve prior snapshots/ACKs; pass the exact attempt to publish_warning.
+Refreshed offers inherit a running original deadline. Held scoring continues;
+revival pauses scoring and needs three distinct returners, never automatic starter
+credit. Quorum preserves the open round; actual activation or ending resolves it.
+Held idle counts only new human messages (including whispers); settings-only
+restoration does not reset it. Silent expiry releases capacity/general finalization
+atomically and requests only an existing-panel update. O-03 final delivery remains
+M2. Reopening handles is tested; full disruptive-startup reconciliation is next.
+Do not infer missing legacy revival publication times or resume any old pause.

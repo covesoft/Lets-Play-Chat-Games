@@ -91,6 +91,12 @@ class EventKind(StrEnum):
     LOBBY_PUBLISHED = "lobby_published"
     LOBBY_JOIN = "lobby_join"
     END_PUBLISHED = "end_published"
+    ADVANCEMENT_RECHECK = "advancement_recheck"
+    OFFER_REFRESH = "offer_refresh"
+    REVIVAL_PUBLISHED = "revival_published"
+    REVIVAL_JOIN = "revival_join"
+    HELD_PUBLISHED = "held_published"
+    SILENT_END_PUBLISHED = "silent_end_published"
 
 
 @dataclass(frozen=True, slots=True)

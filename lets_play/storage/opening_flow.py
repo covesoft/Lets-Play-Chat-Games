@@ -743,6 +743,15 @@ class OpeningFlow:
         await RoundPacing(self.unit)._initialize(
             context, row["effective_at_utc"], len(joined), row["random_seed"], row["picker_id"]
         )
+        from lets_play.storage.evolution_flow import EvolutionFlow
+
+        phrases, templates = decode_config(row["config_json"])
+        await EvolutionFlow(self.unit)._configure(
+            context,
+            phrase_bank=phrases,
+            available_templates=templates,
+            phrase_draw_limit=row["phrase_draw_limit"],
+        )
         await _execute(
             self.conn,
             "INSERT INTO nr_flow_watermarks VALUES (?,?,?)",

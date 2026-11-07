@@ -25,6 +25,7 @@ from lets_play.new_rules.evaluation import (
     MessageDecision,
     ReactionDecision,
 )
+from lets_play.new_rules.pacing import PACING_VERSION
 from lets_play.new_rules.parsing import PARSER_VERSION
 from lets_play.new_rules.scoring import (
     SCORE_VERSION,
@@ -272,8 +273,8 @@ class GameUnitOfWork:
             """INSERT INTO nr_sessions (
                 session_id,guild_id,channel_id,lifecycle,phase,advancement,round_id,
                 ruleset_version,revision,offer_id,transition_id,pause_reason,
-                context_json,parser_version,evaluator_version,score_version
-            ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+                context_json,parser_version,evaluator_version,score_version,pacing_version
+            ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
             (
                 p.route.session_id,
                 p.route.guild_id,
@@ -291,6 +292,7 @@ class GameUnitOfWork:
                 PARSER_VERSION,
                 EVALUATOR_VERSION,
                 SCORE_VERSION,
+                PACING_VERSION,
             ),
         )
         await _execute(
@@ -450,6 +452,12 @@ class GameUnitOfWork:
         if await _row(
             self._conn,
             "SELECT 1 FROM nr_preplay_sources WHERE session_id=? AND event_kind=? AND source_id=?",
+            decision.source_key,
+        ):
+            return ApplyStatus.DUPLICATE_EVENT
+        if await _row(
+            self._conn,
+            "SELECT 1 FROM nr_paused_sources WHERE session_id=? AND event_kind=? AND source_id=?",
             decision.source_key,
         ):
             return ApplyStatus.DUPLICATE_EVENT
