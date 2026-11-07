@@ -85,6 +85,8 @@ class EventKind(StrEnum):
     CHOICE_TIMEOUT = "choice_timeout"
     ACTIVATION_PUBLISHED = "activation_published"
     RECOVERY_PUBLISHED = "recovery_published"
+    PACING_REGISTER = "pacing_register"
+    WARNING_PUBLISHED = "warning_published"
 
 
 @dataclass(frozen=True, slots=True)

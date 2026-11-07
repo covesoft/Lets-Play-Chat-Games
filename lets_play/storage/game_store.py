@@ -466,6 +466,11 @@ class GameUnitOfWork:
                     "INSERT INTO nr_marker_intents(session_id,source_id,actor_id) VALUES (?,?,?)",
                     (session_id, source_id, decision.actor_id),
                 )
+            await _execute(
+                self._conn,
+                "UPDATE nr_rounds SET ordinary_posts=ordinary_posts+? WHERE session_id=? AND round_id=?",
+                (decision.score.ordinary_posts, session_id, p.round_id),
+            )
         else:
             await _execute(
                 self._conn,

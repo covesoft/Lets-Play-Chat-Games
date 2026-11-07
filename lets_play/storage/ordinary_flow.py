@@ -224,6 +224,9 @@ class OrdinaryFlow:
             (frame.route.session_id, frame.sequence, observed),
         )
         await self._advance_due(frame, available)
+        from lets_play.storage.pacing_flow import RoundPacing
+
+        await RoundPacing(self.unit)._advance_due(frame)
         return True
 
     @_write
@@ -247,6 +250,14 @@ class OrdinaryFlow:
             or p.transition_id is not None
         ):
             return FlowResult(FlowStatus.STALE)
+        from lets_play.storage.pacing_flow import RoundPacing
+
+        pacing = await RoundPacing(self.unit).record(session)
+        if pacing is not None:
+            if pacing.stage != "selected":
+                return FlowResult(FlowStatus.STALE)
+            if pacing.picker_id != hand.picker_id:
+                return FlowResult(FlowStatus.UNAUTHORIZED)
         # Recheck all three saved options; persist only frozen config/target IDs.
         decode_hand(encode_hand(hand))
         new = replace(
@@ -626,6 +637,11 @@ class OrdinaryFlow:
         from lets_play.storage.progression import Progression
 
         await Progression(self.unit).resolve_round(frame.route.session_id, old.round_id)
+        from lets_play.storage.pacing_flow import RoundPacing
+
+        await RoundPacing(self.unit)._activated(
+            frame.route.session_id, old.round_id, record.hand.picker_id, row["effective_at_utc"]
+        )
         return FlowStatus.ACTIVATED
 
     @_write
@@ -688,4 +704,7 @@ class OrdinaryFlow:
             status = await self.unit.apply(decision)
         finally:
             self.unit._ordered_flow = False
+        from lets_play.storage.pacing_flow import RoundPacing
+
+        await RoundPacing(self.unit)._advance_due(frame)
         return FlowResult(FlowStatus.INGESTED, status)

@@ -38,7 +38,7 @@ async def test_schema_three_upgrade_preserves_scores_offers_watermark_and_unknow
             "nr_flow_watermarks",
         )
     }
-    assert (await bootstrap.initialize_database(path)).schema_version == 4
+    assert (await bootstrap.initialize_database(path)).schema_version == bootstrap.SCHEMA_VERSION
     for table, before in snapshots.items():
         assert rows(path, f"SELECT * FROM {table}") == before
     assert rows(path, "SELECT round_id,round_number FROM nr_rounds ORDER BY round_number") == [
@@ -75,7 +75,7 @@ async def test_migration_four_failure_restores_schema_three_ddl_metadata_and_rea
     assert "round_number" not in {r[1] for r in rows(path, "PRAGMA table_info(nr_rounds)")}
     assert "progression_version" not in {r[1] for r in rows(path, "PRAGMA table_info(nr_sessions)")}
     monkeypatch.setattr(bootstrap, "MIGRATIONS", original)
-    assert (await bootstrap.initialize_database(path)).schema_version == 4
+    assert (await bootstrap.initialize_database(path)).schema_version == bootstrap.SCHEMA_VERSION
 
 
 @pytest.mark.asyncio

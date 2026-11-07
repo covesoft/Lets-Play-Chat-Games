@@ -3,7 +3,7 @@
 Let’s Play is a Discord chat-game bot. Its first game, **New Rules**, is a party
 conversation game where unusual rules accumulate as people chat.
 
-**Current status: v0.2.5, M1 general progression increment.** The application can validate its
+**Current status: v0.2.6, M1 ordinary pacing and succession increment.** The application can validate its
 configuration offline, initialize its SQLite database, and log in to Discord.
 Offline domain contracts, text views, seventeen ordinary rules, and exact score
 arithmetic are implemented. An offline SQLite unit of work now atomically applies
@@ -13,10 +13,12 @@ three-template offers, and pure choice revalidation. A durable later-round flow
 now records publication, fixed deadlines, selection and announced activation,
 with ordered ingress and once-only closure boundaries. Schema 4 adds atomic
 New Rules game credit, profiles, five general badge predicates, ordinary round
-resolution and streak-notice intents. Theme/mode achievements and the full pacing/
-picker/admission/recovery engine, live commands and delivery workers remain unfinished.
-The owner verified the earlier live shell, schema-2 bootstrap,
-and v0.2.4 tests on Windows 11 (690 passed). This increment has local offline checks;
+resolution and streak-notice intents. Schema 5 adds ordinary warning publication
+clocks, immutable exact-score picker snapshots and persistent shuffled rotation.
+Opening/admission, full held/revival/recovery, theme/mode achievements,
+live commands and delivery workers remain unfinished.
+The owner verified the earlier live shell, schema-4/WAL/FK bootstrap,
+and v0.2.5 tests on Windows 11 (753 passed). This increment has local offline checks;
 M1 remains in progress.
 Public setup and operational documentation is under `docs/`. Private design
 notes are excluded from Git and package distributions.
@@ -77,6 +79,7 @@ See [docs/EVALUATION.md](docs/EVALUATION.md) for candidate decisions and score v
 See [docs/HANDS.md](docs/HANDS.md) for the implemented ordinary subset and offer API.
 See [docs/ORDINARY_FLOW.md](docs/ORDINARY_FLOW.md) for durable publication/cutover boundaries.
 See [docs/PROGRESSION.md](docs/PROGRESSION.md) for New Rules credit and general resolution APIs.
+See [docs/PACING.md](docs/PACING.md) for ordinary warning and succession APIs.
 The live shell does not yet invoke these offline evaluators.
 
 The guild installation uses `bot` and `applications.commands` with permission

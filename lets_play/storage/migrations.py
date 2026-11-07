@@ -274,5 +274,71 @@ MIGRATIONS = (
                 WHERE acknowledged=0""",
         ),
     ),
+    Migration(
+        version=5,
+        name="ordinary_warning_and_picker_rotation",
+        statements=(
+            "ALTER TABLE nr_sessions ADD COLUMN pacing_version TEXT NOT NULL DEFAULT 'ordinary-pacing-1'",
+            "ALTER TABLE nr_rounds ADD COLUMN ordinary_posts INTEGER NOT NULL DEFAULT 0 CHECK(ordinary_posts>=0)",
+            """UPDATE nr_rounds AS r SET ordinary_posts=COALESCE((SELECT SUM(s.ordinary_posts)
+                FROM nr_round_scores AS s WHERE s.session_id=r.session_id AND s.round_id=r.round_id),0)""",
+            """CREATE TABLE nr_round_pacing (
+                session_id TEXT NOT NULL,
+                round_id TEXT NOT NULL,
+                ruleset_version INTEGER NOT NULL CHECK(ruleset_version>=0),
+                owner_revision INTEGER NOT NULL CHECK(owner_revision>=0),
+                started_at_utc INTEGER NOT NULL,
+                estimated_players INTEGER NOT NULL CHECK(estimated_players>=0),
+                message_target INTEGER NOT NULL CHECK(message_target>=15),
+                random_seed INTEGER NOT NULL CHECK(random_seed>=0),
+                target_reached_at_utc INTEGER,
+                warning_published_at_utc INTEGER,
+                selection_due_at_utc INTEGER,
+                picker_id INTEGER CHECK(picker_id>0),
+                picker_cycle INTEGER CHECK(picker_cycle>=0),
+                stage TEXT NOT NULL CHECK(stage IN
+                    ('waiting','warning_queued','warning_published','selected','revival','completed','cancelled')),
+                PRIMARY KEY(session_id,round_id),
+                FOREIGN KEY(session_id,round_id) REFERENCES nr_rounds ON DELETE CASCADE
+            ) STRICT""",
+            """CREATE TABLE nr_pacing_outputs (
+                output_id INTEGER PRIMARY KEY AUTOINCREMENT,
+                session_id TEXT NOT NULL,
+                round_id TEXT NOT NULL,
+                kind TEXT NOT NULL CHECK(kind IN ('warning','revival','recovery')),
+                message_id INTEGER CHECK(message_id>0),
+                acknowledged_at_utc INTEGER,
+                retired_at_utc INTEGER,
+                UNIQUE(session_id,round_id,kind),
+                FOREIGN KEY(session_id,round_id) REFERENCES nr_round_pacing ON DELETE CASCADE
+            ) STRICT""",
+            """CREATE INDEX nr_pending_pacing_outputs ON nr_pacing_outputs(output_id)
+                WHERE acknowledged_at_utc IS NULL AND retired_at_utc IS NULL""",
+            """CREATE TABLE nr_rotation (
+                session_id TEXT PRIMARY KEY REFERENCES nr_sessions ON DELETE CASCADE,
+                cycle INTEGER NOT NULL DEFAULT 0 CHECK(cycle>=0),
+                previous_picker INTEGER CHECK(previous_picker>0)
+            ) STRICT""",
+            """CREATE TABLE nr_rotation_members (
+                session_id TEXT NOT NULL REFERENCES nr_sessions ON DELETE CASCADE,
+                actor_id INTEGER NOT NULL CHECK(actor_id>0),
+                served_cycle INTEGER NOT NULL DEFAULT -1 CHECK(served_cycle>=-1),
+                PRIMARY KEY(session_id,actor_id)
+            ) STRICT""",
+            """CREATE TABLE nr_picker_candidates (
+                session_id TEXT NOT NULL,
+                round_id TEXT NOT NULL,
+                actor_id INTEGER NOT NULL CHECK(actor_id>0),
+                ordinary_posts INTEGER NOT NULL CHECK(ordinary_posts>=5),
+                actual_n TEXT,
+                actual_d TEXT,
+                raw_faults INTEGER NOT NULL CHECK(raw_faults>=0),
+                excluded INTEGER NOT NULL DEFAULT 0 CHECK(excluded IN (0,1)),
+                CHECK((actual_n IS NULL)=(actual_d IS NULL)),
+                PRIMARY KEY(session_id,round_id,actor_id),
+                FOREIGN KEY(session_id,round_id) REFERENCES nr_round_pacing ON DELETE CASCADE
+            ) STRICT""",
+        ),
+    ),
 )
 SCHEMA_VERSION = MIGRATIONS[-1].version

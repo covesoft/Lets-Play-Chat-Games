@@ -45,6 +45,10 @@ The v0.2.5 New Rules general-progression increment also adds no dependencies.
 Schema 4 uses the existing SQLite STRICT/transaction support and window functions.
 The supported SQLite floor remains 3.37; dependency pins and environment keys are unchanged.
 
+The v0.2.6 ordinary warning/succession increment adds no dependencies. Schema 5
+uses exact fractions, a saved injected random seed and standard-library Random/SHA-256
+for deterministic replay. There is no claim of cryptographic game randomness.
+
 | Development/build tool | Pin | Purpose |
 | --- | --- | --- |
 | `pytest` | 9.2.0 | Offline test runner |
