@@ -1,88 +1,81 @@
-# Requested summaries — v0.3.7 / schema 11 unchanged
+# Requested summaries — v0.3.8 / schema 11 unchanged
 
-Once actual play starts, Summary is available on the phase panel and inside
-`/rules`. Any human in the exact game channel can inspect five-player pages,
-choose Current round or Whole game. The first click from a public phase panel
-opens a private reply. From an ephemeral `/rules` response or summary page, scope
-and page buttons edit that same private panel. Each scope click re-reads scores,
-including repeated clicks on the selected scope; there is no Refresh button. No new slash command or command sync is required. Preplay `/rules` keeps
-its explanation without unusable copies of Play/picker controls.
+During play, Summary is available on the rules disclosure panel and inside
+`/rules`. Choice and replacement-target menus show only their choice controls.
+Any human in the exact saved game channel can inspect private five-player pages
+and choose Current round or Whole game. A public entry opens a private reply;
+scope/page buttons then edit that same private panel. Repeated scope clicks read
+fresh committed scores. There is no Refresh button or additional slash command.
+Preplay `/rules` omits unusable game controls.
 
-Pages show clickable non-pinging identities, actual compliance/unrated, adjusted
-score, raw faults, opportunities, ordinary posts and reaction faults. Traffic and
-whispers are separate from score opportunities. Player order is by ID, matching
-the existing summary policy; richer rule/streak breakdowns
-remain future increments. Use `/rules` for complete current requirements.
-All text/colors use the existing presentation catalog, including reused result
-body templates. These private views have no footer.
+Live pages show clickable, non-pinging identities, actual compliance/unrated,
+adjusted scores, raw faults, opportunities, ordinary posts and reaction faults.
+Traffic/whispers are distinct from score opportunities. Players stay ID-ordered;
+final standings separately use exact adjusted-score order. Interim views have
+no footer. All text and colors use the presentation catalog. Use `/rules` for
+complete current instructions; richer fault/streak details remain future work.
 
-These are live reads of committed state, not frozen public captures. The shown update
-time follows the ordered receipt watermark. Scores can change between page or
-scope requests. Actor keysets keep reads bounded (six rows for a five-player
-page) without an all-player cache or an unbounded OFFSET. Round-page navigation
-keeps its recorded round number after cutover and identifies a completed round. Current round deliberately opens
-the current round; Whole game reads current session totals. Previous recorded
-round scores remain inspectable while the session data exists.
+Actor-keyset navigation reads at most six rows for five visible players. Values
+can change between clicks. Round-page navigation retains its round number after
+cutover; Current round deliberately follows the current owner. Paused/ended
+views identify their state and never resume play. Exact saved session and
+guild/channel checks apply, including to old controls. Scope/page reads allocate
+no game receipt, advance no timer, and change no public baseline. Overlong copy
+fails privately rather than sending an invalid embed.
 
-Live scope/page controls never allocate a game receipt, advance an overdue timer, score
-an event, update activity or resume enforcement. Paused views identify the pause;
-ended games remain read-only through old controls until their data is purged.
-The saved session's exact guild/channel is checked before reading scores. Unknown,
-expired, wrong-surface and oversized controls get a private unavailable reply.
-Overlong custom copy is rejected before sending a malformed embed.
+## Public reports and current scores
 
-`SummaryStore.live_page` is a read-only projection. It never invokes the schema-11
-public capture/claim/ACK methods and never changes their traffic/time baseline or
-uncertain-send state. Automatic/round-end summary publishing,
-proof reconciliation, full restart resume and modes
-remain separate work. This UI does not claim M2 complete or alter the existing
-quiet inactivity ending/final-result path. Schema remains 11; no migration needed.
+**Post summary to channel** in the live private menu explicitly requests a public
+report. Any human in that channel may use it. Its private acknowledgement edits
+the current menu. Scope/page buttons never publish. There is no manager-only
+restriction on score access or reporting.
 
-## Explicit public reports
+A first report is allowed without a previous report. Later requests require
+**both 30 seconds since the last successful public delivery and at least one new
+non-whisper human message beyond that report's captured totals**. The constant
+`REQUEST_COALESCE_SECONDS` is near the top of `storage/summary_store.py`. Pending
+requests coalesce. Whisper-only traffic, reactions, controls and private reads
+do not unlock a repost. A blocked request does not reset the cooldown or consume
+traffic. New non-whisper traffic arriving during a send remains eligible after
+the cooldown. This is separate from the future automatic 60-second/25-message
+gate, which still includes whispers.
 
-During play, the live private menu offers **Post summary to channel**. Only this
-separate control requests a public report. Its private acknowledgement edits the
-current menu. Any human in the exact saved game channel may request it; it does
-not require server-manager permissions. Saved and paused/ended pages do not
-offer the control. It registers no new command and needs no command sync.
+SDK dispatch captures a public request before HTTP defer, in the existing
+bounded ordered lane. Due engine boundaries run first, then one consistent
+round/session/rule/traffic/score capture is committed. An ended game cannot
+prepare a report. The public report shows five ID-ordered round scores, active
+rule names and aggregate round/game traffic, with mentions suppressed and no
+footer. **Check current scores** opens the normal live private menu, giving
+access to all current players and both scopes. Older `nrf` saved-score controls
+also redirect to current scores; no historical browsing service remains.
 
-The SDK captures this request before HTTP defer, in the same bounded ordered lane
-as game events. Due phase boundaries run first, then the schema-11 store freezes
-round identity, active rule names, aggregate round/game traffic and exact scores.
-A request that observes an ended game cannot create a new report. The public
-report shows five ID-ordered round scores and has no footer. **View saved scores**
-opens private round/game pages with bounded forward/back actor cursors. Scope and
-page clicks edit that private menu; the public message stays unchanged. Captured
-membership, rules and scores remain frozen after later play, cutover or ending,
-while retained session data exists. The separate Summary button returns to live
-scores. All mentions suppress notifications; new copy uses the editable catalog.
+## Delivery state and retention
 
-Concurrent requests share one prepared/sending report. Requests within **15 seconds
-of the last successful public report** receive a private recent-report reply;
-this noise-control cooldown is independent of the automatic 60-second/25-message
-gate. The same interaction cannot create a second capture when replayed. Pending
-and recent replies do not reset either public baseline. No user-message text or
-per-request cache is retained.
+Only unresolved output retains copied player scores and rule configuration.
+The serial publisher commits a unique sending claim before HTTP and ACKs only
+an actual returned Discord message ID through the lane. ACK advances the public
+baseline through the captured human counter and actual ACK time, preserving
+arrivals during delivery. In that same transaction, copied scores/rules are
+removed and obsolete completed receipts are discarded. At most one completed
+receipt per retained game remains for cooldown, traffic watermark, latest ACK
+identity and old-interaction replay checks, alongside any unresolved send.
+The SDK interaction ID in a request key provides a bounded replay watermark.
+No growing request cache is added. Discord history retains the public report.
 
-The serial publisher commits a unique sending claim before network I/O. Only an
-actual returned Discord message ID is ACKed through the lane. ACK advances the
-public baseline through the captured message watermark, preserving arrivals
-during delivery. A known success remains recordable during a concurrent pause or
-manager end without resuming play. Timeout/unknown delivery preserves the old
-baseline and enters recovery; restart/shutdown retain the durable sending fence.
-Neither path blindly retries. Evidence reconciliation and explicit resume remain
-later work; managers can currently end paused games. Prepared requests are not
-sent after ending or through a recovery barrier. Automatic/round-end publishers
-remain disabled in this release; ordinary inactivity closure stays quiet.
+Startup also compacts earlier delivered archives, including ended games, in
+receipt-keyset pages. It preserves pending/sending/uncertain output and its
+proof. Cleanup never changes actual game/round scores, rules, activity,
+progression or the acknowledged baseline. It uses schema 11 without a migration.
+Same-message ACK replay of the retained receipt is a no-op; conflicting identity
+rejects. Obsolete completed capture keys are not a historical API.
 
-Final played-game results use a separate display order: exact adjusted score,
-highest first, unrated last and actor ID for exact ties. Ten-player result pages
-scan keyset batches of 64 while retaining at most eleven candidates in RAM; each
-page is O(players), not an indexed-leaderboard or throughput claim. Final scores
-are immutable, so rank anchors give stable forward/back navigation. Final-result
-paging opens privately from a public result and then edits that private menu.
-Old ID-offset buttons reopen ranked page one and replace themselves with rank
-cursor controls. This changes display order only, not scores or awards.
+Known success can still commit during a concurrent pause/end without resuming
+play. Unknown delivery enters recovery and preserves unsummarized traffic;
+shutdown/restart retain the sending fence. No blind retries are introduced.
+Managers can currently end paused games; evidence reconciliation and explicit
+resume remain later work. Prepared reports are withheld after ending or through
+recovery. Inactivity closure edits only its known panel. Automatic/round-end
+publishers, richer details and modes remain separate work; M2 is incomplete.
 
-SDK interaction edit/defer behavior was rechecked against the official
-[discord.py interaction API](https://discordpy.readthedocs.io/en/stable/interactions/api.html#discord.Interaction.edit_original_response).
+SDK interaction edit/defer behavior follows the pinned discord.py API:
+https://discordpy.readthedocs.io/en/stable/interactions/api.html#discord.Interaction.edit_original_response

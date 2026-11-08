@@ -4,7 +4,7 @@ This increment supplies persisted summary capture and delivery bookkeeping only.
 At v0.3.4 the live Discord adapter did not invoke its capture/ACK writes. v0.3.5 added a
 read-only `live_page` method and private buttons/rendering described in
 [REQUESTED_SUMMARY.md](REQUESTED_SUMMARY.md). v0.3.7 integrates explicit public
-requests, saved pages and claim/ACK delivery. Automatic/round-end delivery remains
+requests and claim/ACK delivery; v0.3.8 replaces saved browsing with live current-score access and discards delivered copies. Automatic/round-end delivery remains
 unwired. No new command is registered. Schema remains 11.
 
 `storage.summary_store.SummaryStore` uses an existing game unit of work. Compose
@@ -39,7 +39,8 @@ No method performs network I/O.
   reconciliation is separate work; do not reset this state or invent a new key
   to force another send. Ordinary scoring is not modified by this bookkeeping.
 - `snapshot(...)` and `scores(..., scope='game'|'round', after_actor=..., limit=...)`
-  expose frozen values. Pages use indexed actor keysets, accept 1–100 rows and
+  expose temporary unresolved capture values. Delivered copies are discarded.
+  Pages use indexed actor keysets, accept 1–100 rows and
   never collect the complete roster in RAM. This API orders by ID, not ranking;
   future ranking/presentation must preserve exact Fraction comparisons.
 
@@ -47,7 +48,9 @@ Engine human-traffic counters include ordinary/media/whisper messages, excluding
 reactions, nonhumans and controls. Future mode integration must feed that same
 ledger. The service stores derived IDs/counters and intentional active-rule
 configuration only, never message bodies, media or SDK/member objects. No runtime
-cache is introduced. New rows cascade with live session deletion; the complete
+cache is introduced. v0.3.8 keeps only the latest completed receipt per game,
+removes delivered player-score copies/rules and compacts legacy completed
+archives at startup without changing schema 11. Pending/uncertain proof remains. New rows cascade with live session deletion; the complete
 ended-data retry/absolute 24-hour cleanup service is still unfinished.
 
 Migration 11 only appends three tables and an in-flight uniqueness index. Released

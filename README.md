@@ -3,7 +3,7 @@
 Let’s Play is a Discord chat-game bot. Its first game, **New Rules**, is a party
 conversation game where unusual rules accumulate as people chat.
 
-**Current status: v0.3.7 — development-only ordinary-round preview (M2 in progress).**
+**Current status: v0.3.8 — development-only ordinary-round preview (M2 in progress).**
 M1 is accepted and closed at v0.2.9/schema 8. The Discord adapter connects a
 persisted three-human opening, message/raw-reaction scoring, markers, timed
 warnings, picker succession, three-card choices, replacements, and announced
@@ -13,10 +13,11 @@ three-person revival preserve the open round. Manager ending posts final results
 ordered by exact adjusted score, highest first, with unrated players last;
 inactivity ending only edits an existing panel.
 
-A private Summary button on the phase panel and `/rules` now shows paged round
-and game scores. Scope/page buttons update the same private menu. An explicit
-Post summary to channel button publishes a saved report; its saved round/game
-pages open privately. Repeated requests share pending output or a recent report.
+A private Summary button on the rules disclosure panel and `/rules` shows paged
+round/game scores, with scope/page buttons updating the same private menu.
+Post summary to channel publishes a brief report; Check current scores opens
+the live private menu. Repeat reports require 30 seconds and new non-whisper
+chat. Delivered score copies are discarded; Discord history keeps the report.
 Automatic/round-end summaries, modes, settings, automatic restart resume,
 output retry/retention cleanup and public-release checks remain unfinished.
 Restart and uncertain publication enter a durable pause; a manager can close the
@@ -138,8 +139,8 @@ update commands.
 
 Schema **11** supplies the summary capture/acknowledgement foundation.
 Existing clocks, scores and delivery claims are preserved. The Discord preview
-continues to use the v0.3.3 ordinary loop, with v0.3.7 private live and saved public score
-pages and explicit requested posting. Automatic/round-end summary posting remains separate.
+continues to use the v0.3.3 ordinary loop, with v0.3.8 live private score
+pages and quiet, explicitly requested public reports. Automatic/round-end summary posting remains separate.
 See [the summary API](docs/SUMMARY_FOUNDATION.md).
 Existing recognized databases upgrade in place
 on `--init-db` or startup. Stop the bot and make a verified SQLite backup before

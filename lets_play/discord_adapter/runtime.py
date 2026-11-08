@@ -8,7 +8,6 @@ remain separate integration work.
 import asyncio
 import logging
 from dataclasses import replace
-from hashlib import sha256
 from random import Random
 from uuid import uuid4
 
@@ -98,6 +97,12 @@ class OpeningRuntime:
                 await self._barrier(route, new_disruption=True)
                 self.routes[(route.guild_id, route.channel_id)] = route
             cursor = page[-1].session_id
+        cursor = 0
+        while True:
+            async with self.store.transaction() as unit:
+                cursor = await SummaryStore(unit).compact_delivered(after_summary=cursor)
+            if cursor is None:
+                break
         self.ready = True
         # No automatic resume or blind re-send. Managers can end saved games.
         for route in tuple(self.routes.values()):
@@ -339,7 +344,7 @@ class OpeningRuntime:
         if action == "summary_request":
             # Observe due phase boundaries before capturing, in the same receipt.
             await opening.tick(frame)
-            key = "request:" + sha256(frame.source_id.encode()).hexdigest()
+            key = "request:" + frame.source_id
             return await SummaryStore(unit).request(route.session_id, key, now=frame.received_at)
         raise ValueError("Unknown runtime action.")
 
@@ -482,7 +487,7 @@ class OpeningRuntime:
             summary = await SummaryStore(unit).pending(route.session_id)
             if summary is None or summary.kind != "requested":
                 return False
-            page = await SummaryStore(unit).captured_page(summary)
+            page = await SummaryStore(unit).preview(summary)
         if summary.state != "prepared":
             await self._fault(route, "uncertain_summary_delivery")
             return False

@@ -1,4 +1,4 @@
-"""Live private views and bounded saved public-summary presentation."""
+"""Live private views and a temporary consistent public-summary preview."""
 
 import re
 
@@ -13,12 +13,8 @@ SAVED_CONTROL = re.compile(r"nrf:([a-f0-9]{32}):([0-9]{1,19}):(round|game):([0-9
 PAGE_SIZE = 5
 
 
-def add_button(view, copy, session):
-    view.add_item(
-        discord.ui.Button(
-            label=copy.text("buttons.summary"), custom_id=f"nrs:{session}:round:0:0:n"
-        )
-    )
+def add_button(view, copy, session, *, label="buttons.summary"):
+    view.add_item(discord.ui.Button(label=copy.text(label), custom_id=f"nrs:{session}:round:0:0:n"))
 
 
 def render(page, copy, *, snapshot=None, public=False):
@@ -113,16 +109,12 @@ def render(page, copy, *, snapshot=None, public=False):
         view.add_item(
             discord.ui.Button(
                 label=copy.text(label),
-                custom_id=(
-                    f"nrf:{page.session_id}:{snapshot.summary_id}:{scope}:{actor}:{direction}"
-                    if snapshot
-                    else f"nrs:{page.session_id}:{scope}:{round_number}:{actor}:{direction}"
-                ),
+                custom_id=f"nrs:{page.session_id}:{scope}:{round_number}:{actor}:{direction}",
             )
         )
 
     if public:
-        button("buttons.summary_saved", "round")
+        add_button(view, copy, page.session_id, label="buttons.summary_current")
     else:
         button("buttons.summary_round", "round")
         button("buttons.summary_game", "game")
@@ -132,9 +124,7 @@ def render(page, copy, *, snapshot=None, public=False):
             )
         if page.following and page.players:
             button("buttons.results_next", page.scope, page.round_number, page.players[-1][0])
-        if snapshot:
-            add_button(view, copy, page.session_id)
-        elif page.lifecycle == "playing":
+        if page.lifecycle == "playing":
             view.add_item(
                 discord.ui.Button(
                     label=copy.text("buttons.summary_post"), custom_id=f"nrp:{page.session_id}"

@@ -130,3 +130,12 @@ v0.3.7 adds `buttons.summary_post`, `buttons.summary_saved`, `summary.captured`,
 The public report and saved private pages reuse the `summary` color and existing
 score templates, with no footer. `session` is a short game identifier, not a
 Discord Gateway session. Captured rule names follow your `cards.*.name` overrides.
+
+
+v0.3.8 uses `buttons.summary_current` for **Check current scores** and
+`summary.post_no_new_posts` for a repost blocked by lack of non-whisper traffic.
+`summary.captured`, `summary.capture_heading` and public-request replies now
+refer to a posted report rather than a browsable archive. Existing field
+placeholders are unchanged. `buttons.summary_saved` remains accepted solely for
+older private override compatibility; it is not rendered. All current-score
+navigation stays live and private.

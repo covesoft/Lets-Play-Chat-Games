@@ -119,7 +119,11 @@ def render(state, *, kind=None, page=0, presentation=None):
     a = state.admission
     if state.context is not None and a.stage != "ended":
         embed, view = render_ordinary(state, copy, button, kind=kind)
-        requested_summary.add_button(view, copy, a.session_id)
+        if not any(
+            (match := CONTROL.fullmatch(item.custom_id or "")) and match[2] in {"pick", "target"}
+            for item in view.children
+        ):
+            requested_summary.add_button(view, copy, a.session_id)
         return embed, view
     session = a.session_id
     view = discord.ui.View(timeout=None)
@@ -507,7 +511,14 @@ class DiscordGame:
             (interaction.data or {}).get("custom_id", "")
         )
         if saved:
-            await self.saved_summary(interaction, saved)
+            # Older public messages survive in Discord history. Their retired
+            # saved-page controls now open current scores, never archived rows.
+            session, summary_id, _, actor, _ = saved.groups()
+            invalid = not (0 < int(summary_id) < 2**63 and 0 <= int(actor) < 2**63)
+            current = requested_summary.CONTROL.fullmatch(
+                f"nrs:{session}:round:{2**63 if invalid else 0}:0:n"
+            )
+            await self.private_summary(interaction, current)
             return
         summary = requested_summary.CONTROL.fullmatch((interaction.data or {}).get("custom_id", ""))
         if summary:
@@ -618,6 +629,7 @@ class DiscordGame:
                     "queued": "summary.post_queued",
                     "shared": "summary.post_shared",
                     "recent": "summary.post_recent",
+                    "no_new_posts": "summary.post_no_new_posts",
                     "uncertain": "summary.post_uncertain",
                     "paused": "control.paused",
                 }.get(status, "summary.unavailable")
@@ -645,42 +657,6 @@ class DiscordGame:
         await requested_summary.reply_private(
             interaction, editing, content=self.copy.text(reply), embed=embed, view=view
         )
-
-    async def saved_summary(self, interaction, match):
-        editing = await requested_summary.begin_private(interaction)
-        session, summary_id, scope, actor, direction = match.groups()
-        page = snapshot = None
-        if self.runtime and self.runtime.ready and interaction.guild and not interaction.user.bot:
-            try:
-                async with self.runtime.store.transaction(write=False) as unit:
-                    route = await DiscordStore(unit).route(session)
-                    if route and (route.guild_id, route.channel_id) == (
-                        interaction.guild_id,
-                        interaction.channel_id,
-                    ):
-                        summaries = SummaryStore(unit)
-                        snapshot = await summaries.delivered_snapshot(session, int(summary_id))
-                        if snapshot:
-                            page = await summaries.captured_page(
-                                snapshot,
-                                scope=scope,
-                                actor=int(actor),
-                                backwards=direction == "p",
-                                limit=requested_summary.PAGE_SIZE,
-                            )
-            except StoreOverloaded:
-                pass
-        if page:
-            try:
-                embed, view = requested_summary.render(page, self.copy, snapshot=snapshot)
-            except PresentationError:
-                page = None
-        if page is None:
-            await requested_summary.reply_private(
-                interaction, editing, content=self.copy.text("summary.unavailable")
-            )
-        else:
-            await requested_summary.reply_private(interaction, editing, embed=embed, view=view)
 
     async def private_summary(self, interaction, match):
         editing = await requested_summary.begin_private(interaction)

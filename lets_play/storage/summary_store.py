@@ -19,7 +19,7 @@ from lets_play.storage.recovery_flow import active_recovery, require_dispatchabl
 
 AUTO_SECONDS = 60
 AUTO_MESSAGES = 25
-REQUEST_COALESCE_SECONDS = 15
+REQUEST_COALESCE_SECONDS = 30
 _COLUMNS = ",".join(SCORE_COLUMNS)
 
 
@@ -78,63 +78,84 @@ class SummaryStore:
     async def request(self, session, output_key, *, now):
         """Coalesce explicit public requests without advancing the delivery baseline."""
         _key(output_key)
+        context = await self.unit.get_context(session)
+        if context is None or context.position.lifecycle == "ended":
+            return "unavailable"
         existing = await self.snapshot(session, output_key) or await self.pending(session)
         if existing:
             return "uncertain" if existing.state == "uncertain" else "shared"
-        recent = await _row(
+        previous = await _row(
             self.conn,
-            "SELECT 1 FROM nr_summary_outputs WHERE session_id=? AND state='delivered' AND delivered_at_utc>? LIMIT 1",
-            (session, utc_int(now - timedelta(seconds=REQUEST_COALESCE_SECONDS))),
+            "SELECT output_key,delivered_at_utc,human_messages-whispers FROM nr_summary_outputs WHERE session_id=? AND state='delivered' ORDER BY summary_id DESC LIMIT 1",
+            (session,),
         )
-        if recent:
-            return "recent"
+        if previous:
+            # SDK request keys contain increasing interaction IDs. A replay of an
+            # older interaction stays harmless after its obsolete receipt is pruned.
+            prior_id = previous["output_key"].removeprefix("request:")
+            current_id = output_key.removeprefix("request:")
+            if prior_id.isdecimal() and current_id.isdecimal() and int(current_id) <= int(prior_id):
+                return "shared"
+            if utc_int(now - timedelta(seconds=REQUEST_COALESCE_SECONDS)) < previous[1]:
+                return "recent"
+            traffic = await self.unit.get_traffic(session)
+            if traffic.human_messages - traffic.whispers <= previous[2]:
+                return "no_new_posts"
         snapshot = await self.prepare(session, output_key, now=now, kind="requested")
         return "queued" if snapshot else "unavailable"
 
-    async def delivered_snapshot(self, session, summary_id):
-        self.unit._check()
-        if type(summary_id) is not int or not 0 < summary_id < 2**63:
-            return None
-        row = await _row(
+    async def _compact_session(self, session):
+        # Only unresolved output keeps copied player scores/rules. One final
+        # receipt supplies time, traffic and replay protection for the next send.
+        await _execute(
             self.conn,
-            "SELECT output_key FROM nr_summary_outputs WHERE session_id=? AND summary_id=? AND state='delivered'",
-            (session, summary_id),
+            "DELETE FROM nr_summary_scores WHERE summary_id IN (SELECT summary_id FROM nr_summary_outputs WHERE session_id=? AND state='delivered')",
+            (session,),
         )
-        return await self.snapshot(session, row[0]) if row else None
+        await _execute(
+            self.conn,
+            "UPDATE nr_summary_outputs SET rules_json='[]' WHERE session_id=? AND state='delivered' AND rules_json!='[]'",
+            (session,),
+        )
+        await _execute(
+            self.conn,
+            "DELETE FROM nr_summary_outputs WHERE session_id=? AND state='delivered' AND summary_id!=(SELECT MAX(summary_id) FROM nr_summary_outputs WHERE session_id=? AND state='delivered')",
+            (session, session),
+        )
 
-    async def captured_page(self, snapshot, *, scope="round", actor=0, backwards=False, limit=5):
-        """Bounded frozen pages; no live counters or membership enter this read."""
-        self.unit._check()
+    @_write
+    async def compact_delivered(self, *, after_summary=0, limit=100):
+        """Page legacy receipts at startup, including ended games; keep pending proof."""
         if (
-            scope not in {"round", "game"}
-            or type(actor) is not int
-            or not 0 <= actor < 2**63
-            or type(backwards) is not bool
+            type(after_summary) is not int
+            or not 0 <= after_summary < 2**63
             or type(limit) is not int
             or not 1 <= limit <= 100
         ):
-            return None
-        comparison, order = ("<", "DESC") if backwards else (">", "ASC")
+            raise ValueError("Invalid bounded summary cleanup page.")
         async with self.conn.execute(
-            f"SELECT * FROM nr_summary_scores WHERE summary_id=? AND scope=? AND actor_id{comparison}? ORDER BY actor_id {order} LIMIT ?",
-            (snapshot.summary_id, scope, actor, limit + 1),
+            "SELECT summary_id,session_id FROM nr_summary_outputs WHERE state='delivered' AND summary_id>? ORDER BY summary_id LIMIT ?",
+            (after_summary, limit),
         ) as cursor:
             rows = await cursor.fetchall()
-        more, selected = len(rows) > limit, rows[:limit]
-        if backwards:
-            selected.reverse()
+        for session in {r["session_id"] for r in rows}:
+            await self._compact_session(session)
+        return rows[-1]["summary_id"] if rows else None
+
+    async def preview(self, snapshot):
+        """One consistent public preview while sending; no historical page service."""
         return LiveSummaryPage(
             snapshot.session_id,
-            scope,
+            "round",
             snapshot.round_number,
             "captured",
             False,
             snapshot.captured_at,
-            snapshot.round_messages if scope == "round" else snapshot.human_messages,
-            snapshot.round_whispers if scope == "round" else snapshot.whispers,
-            tuple((r["actor_id"], decode_score(r)) for r in selected),
-            more if backwards else bool(actor),
-            bool(actor) if backwards else more,
+            snapshot.round_messages,
+            snapshot.round_whispers,
+            await self.scores(snapshot.session_id, snapshot.output_key, scope="round", limit=5),
+            False,
+            False,
         )
 
     @_write
@@ -344,6 +365,7 @@ class SummaryStore:
             "UPDATE nr_summary_baselines SET public_at_utc=MAX(public_at_utc,?),ack_messages=MAX(ack_messages,?) WHERE session_id=?",
             (delivered, row.human_messages, session),
         )
+        await self._compact_session(session)
         return True
 
     async def scores(self, session, output_key, *, scope="game", after_actor=0, limit=20):

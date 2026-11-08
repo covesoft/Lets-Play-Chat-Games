@@ -341,6 +341,7 @@ async def test_partial_replacement_retains_incoming_and_original_deadline(
         embed, view = render(state, kind="ordinary_offer")
         targets = [b for b in view.children if ":target:" in b.custom_id]
         assert len(targets) == 2 and len(embed.fields) == 1
+        assert len(view.children) == 2
         assert all(len(b.custom_id) <= 100 for b in view.children)
         assert (
             await runtime.submit(

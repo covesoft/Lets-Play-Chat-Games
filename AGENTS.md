@@ -192,7 +192,7 @@ carry rank anchors/page labels; legacy ID-offset controls reopen ranked page one
 Result paging also edits an existing private response. Scores, progression,
 public-summary baselines and schema remain unchanged.
 
-v0.3.7 integrates an explicit Post summary to channel control in live private
+v0.3.7 introduced an explicit Post summary to channel control in live private
 menus. Capture its receipt before HTTP defer, observe due engine boundaries and
 freeze the report in that same write unit. Scope/page reads remain quiet and
 read-only. Coalesce pending requests and the 15 seconds after actual public
@@ -205,6 +205,22 @@ recovery. Saved round/game pages use frozen membership/scores/rules and bounded
 actor cursors; they open privately and then edit that menu. All summaries remain
 ID-ordered, mention-safe and footer-free. Automatic/round-end posting, evidence
 reconciliation, resume and richer details remain separate work. Schema stays 11.
+
+v0.3.8 supersedes the saved-report UI/retention policy. Public reports offer Check
+current scores, opening the normal live ephemeral menu. Legacy nrf controls also
+redirect there; remove historical score browsing, not access to current totals.
+Choice and replacement-target menus omit Summary; rules disclosure and /rules
+retain it. After a first report, public requests require BOTH 30 seconds since
+successful delivery AND new non-whisper human traffic beyond its captured totals.
+Whispers, controls and reactions alone cannot unlock a repost. Keep automatic
+60-second/25-human-message gates separate; their sender is still unfinished.
+On successful ACK, discard copied player scores/rules and older completed summary
+receipts atomically with the baseline update. Keep one latest receipt per game
+plus any unresolved send. SDK interaction IDs in request keys provide a bounded
+replay watermark; no growing request cache. Startup compacts v0.3.7 delivered
+archives, including ended games, without touching pending/sending/uncertain proof
+or actual game data. Schema remains 11; no migration is needed. Copy stays editable
+and newer owner wording must be preserved. See docs/REQUESTED_SUMMARY.md.
 
 Patch handoffs must include copy-paste Windows commands from the repository root:
 `git apply --check`, `git apply`, the editable reinstall when needed, the relevant

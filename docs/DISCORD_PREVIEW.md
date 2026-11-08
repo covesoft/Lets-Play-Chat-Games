@@ -1,4 +1,4 @@
-# New Rules ordinary-round preview — v0.3.7 / schema 11
+# New Rules ordinary-round preview — v0.3.8 / schema 11
 
 This development build connects the existing ordinary engine to Discord. Run one
 bot process against a database. Full summaries, modes and automatic restart
@@ -132,7 +132,7 @@ Official platform references rechecked for this increment:
 - [discord.py buttons and views](https://discordpy.readthedocs.io/en/stable/interactions/api.html#discord.ui.Button)
 - [Discord reactions](https://docs.discord.com/developers/resources/message#create-reaction)
 
-After play starts, press Summary on the phase panel or inside `/rules` for private
+After play starts, press Summary on the rules disclosure panel or inside `/rules` for private
 round/game totals and five-player ID-ordered pages. Scope/page buttons edit the
 existing private response and read updated scores; there is no Refresh button. Round paging retains
 its round number through cutover; Current round opens the new round. Scores are
@@ -140,8 +140,12 @@ live reads and can change between requests. These controls neither resume paused
 play nor change public summary baselines. See [REQUESTED_SUMMARY.md](REQUESTED_SUMMARY.md).
 
 For a public report, choose **Post summary to channel** in that private menu.
-Verify one saved report appears, its saved round/game pages open privately and
-keep their captured scores after more chat. Rapid repeat clicks should share a
-pending report or receive a private recent-report reply. The live scope buttons
-remain quiet. Automated/round-end summaries are not enabled yet. This increment
-uses the installed schema 11 and needs no migration or command sync.
+Verify one report appears and **Check current scores** opens private live totals.
+After 30 seconds with only whispers or no new chat, a repeat request should stay
+private and decline to post. Add a non-whisper post, then request again. Scope
+and page clicks must remain quiet. Choice/target menus should contain only their
+choice controls; the disclosure panel and `/rules` retain Summary. Earlier saved
+report buttons now open current scores. Delivered copies are removed at ACK and
+older delivered archives are compacted on startup; unresolved send evidence is
+preserved. Automatic/round-end summaries remain disabled. Schema stays 11, with
+no migration or command sync required.

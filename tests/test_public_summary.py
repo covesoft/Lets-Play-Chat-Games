@@ -42,7 +42,11 @@ class PublicTransport(Transport):
 
 
 async def request(runtime, route, source="public-one"):
-    return await runtime.submit(route, "summary_request", actor=303, source=source)
+    ids = getattr(runtime, "test_request_ids", None)
+    if ids is None:
+        ids = runtime.test_request_ids = {}
+    ids.setdefault(source, str(100000 + len(ids)))
+    return await runtime.submit(route, "summary_request", actor=303, source=ids[source])
 
 
 async def latest(runtime, route):
@@ -68,11 +72,6 @@ async def test_public_request_coalesces_pending_and_recent_success_then_allows_n
         await asyncio.wait_for(transport.summary_entered.wait(), 5)
         sending = await latest(runtime, route)
         assert sending.state == "sending"
-        async with runtime.store.transaction(write=False) as unit:
-            assert (
-                await SummaryStore(unit).delivered_snapshot(route.session_id, sending.summary_id)
-                is None
-            )
         assert await baseline(runtime, route) == (
             int(runtime.clock.now().timestamp() * 1_000_000),
             0,
@@ -85,7 +84,10 @@ async def test_public_request_coalesces_pending_and_recent_success_then_allows_n
         snapshot = await latest(runtime, route)
         assert snapshot.state == "delivered" and snapshot.message_id == 9001
         assert await request(runtime, route, "public-two") == "recent"
-        runtime.clock.at += timedelta(seconds=15)
+        runtime.clock.at += timedelta(seconds=29)
+        await runtime.submit(route, "event", event=event(runtime, route, 70999, "over"))
+        assert await request(runtime, route, "public-two") == "recent"
+        runtime.clock.at += timedelta(seconds=1)
         assert await request(runtime, route, "public-two") == "queued"
         await settle(runtime)
         assert len(transport.summaries) == 2
@@ -118,10 +120,10 @@ async def test_public_snapshot_and_ack_keep_arrivals_during_send_pending(tmp_pat
             assert await summaries.next_deadline(
                 route.session_id
             ) == runtime.clock.now() + timedelta(seconds=60)
-            saved = await summaries.captured_page(frozen, scope="game")
             live = await summaries.live_page(route.session_id, scope="game")
-        assert saved.human_messages == 1 and live.human_messages == 26
-        assert dict(saved.players)[606].ordinary_faults == 1
+        assert frozen.human_messages == 1 and live.human_messages == 26
+        assert dict(transport.summaries[0][2].players)[606].ordinary_faults == 1
+        assert rows(tmp_path / "game.sqlite3", "SELECT COUNT(*) FROM nr_summary_scores") == [(0,)]
         assert live.whispers == 25
         # This release does not activate the automatic sender, even once due.
         runtime.clock.at += timedelta(seconds=61)
@@ -197,48 +199,6 @@ async def test_shutdown_retains_claim_and_restart_does_not_repost(tmp_path, monk
 
 
 @pytest.mark.asyncio
-async def test_frozen_both_scope_pages_retain_membership_and_reverse_navigation(
-    tmp_path, monkeypatch
-):
-    transport = PublicTransport()
-    async with service(tmp_path, monkeypatch, transport=transport) as runtime:
-        route = await opened(runtime)
-        await activated(runtime, route)
-        for actor in range(600, 613):
-            await runtime.submit(
-                route, "event", event=event(runtime, route, 73000 + actor, "over", actor)
-            )
-        await request(runtime, route)
-        await settle(runtime)
-        snapshot = await latest(runtime, route)
-        await runtime.submit(route, "event", event=event(runtime, route, 74000, "over", 999))
-        await settle(runtime)
-        before = rows(tmp_path / "game.sqlite3", "SELECT COUNT(*) FROM nr_summary_outputs")
-        async with runtime.store.transaction(write=False) as unit:
-            summaries = SummaryStore(unit)
-            assert await summaries.delivered_snapshot("wrong", snapshot.summary_id) is None
-            for scope in ("round", "game"):
-                first = page = await summaries.captured_page(snapshot, scope=scope)
-                actors = []
-                while True:
-                    actors.extend(a for a, _ in page.players)
-                    if not page.following:
-                        break
-                    page = await summaries.captured_page(
-                        snapshot, scope=scope, actor=page.players[-1][0]
-                    )
-                assert actors == sorted(set(actors)) and 612 in actors and 999 not in actors
-                second = await summaries.captured_page(
-                    snapshot, scope=scope, actor=first.players[-1][0]
-                )
-                back = await summaries.captured_page(
-                    snapshot, scope=scope, actor=second.players[0][0], backwards=True
-                )
-                assert back.players == first.players
-        assert rows(tmp_path / "game.sqlite3", "SELECT COUNT(*) FROM nr_summary_outputs") == before
-
-
-@pytest.mark.asyncio
 async def test_sdk_post_captures_before_defer_and_edits_current_private_panel(
     tmp_path, monkeypatch
 ):
@@ -271,7 +231,7 @@ async def test_sdk_post_captures_before_defer_and_edits_current_private_panel(
 
 @pytest.mark.asyncio
 @pytest.mark.parametrize("surface", ["public", "private", "wrong", "bot", "oversized"])
-async def test_saved_sdk_pages_are_private_exact_surface_and_nonpinging(
+async def test_legacy_saved_buttons_open_current_private_scores_on_exact_surface(
     tmp_path, monkeypatch, surface
 ):
     transport = PublicTransport()
@@ -281,6 +241,8 @@ async def test_saved_sdk_pages_are_private_exact_surface_and_nonpinging(
         await request(runtime, route)
         await settle(runtime)
         snapshot = await latest(runtime, route)
+        await runtime.submit(route, "event", event=event(runtime, route, 75000, "over", 303))
+        await settle(runtime)
         bot = LetsPlayBot(load_settings(base_dir=tmp_path, environ={}))
         async with bot:
             bot.game_runtime = runtime
@@ -301,10 +263,13 @@ async def test_saved_sdk_pages_are_private_exact_surface_and_nonpinging(
             assert reply["allowed_mentions"].users is False
             if surface in {"public", "private"}:
                 assert reply["embed"].footer.text is None
+                assert "Ordinary posts: 1" in str(reply["embed"].to_dict())
                 assert any("<@303>" in field.value for field in reply["embed"].fields)
-                assert all(not b.custom_id.startswith("nrp:") for b in reply["view"].children)
+                assert all(not b.custom_id.startswith("nrf:") for b in reply["view"].children)
             else:
-                assert reply["content"] == bot.presentation.text("summary.unavailable")
+                assert reply["content"] == bot.presentation.text(
+                    "control.unavailable" if surface == "bot" else "summary.unavailable"
+                )
             assert len(transport.summaries) == 1
             bot.game_runtime = None
 
@@ -329,7 +294,10 @@ async def test_public_transport_uses_saved_rules_no_footer_and_suppresses_mentio
         assert kwargs["embed"].footer.text is None
         assert "Roger Wilco" in str(kwargs["embed"].to_dict())
         assert len(kwargs["view"].children) == 1
-        assert kwargs["view"].children[0].custom_id.startswith("nrf:")
+        assert kwargs["view"].children[0].custom_id == f"nrs:{route.session_id}:round:0:0:n"
+        assert kwargs["view"].children[0].label == default_presentation().text(
+            "buttons.summary_current"
+        )
         copy = default_presentation()
         bad = replace(copy, strings={**copy.strings, "summary.capture_detail": "x" * 1100})
         with pytest.raises(PresentationError):
@@ -418,7 +386,9 @@ async def test_request_at_inactivity_expiry_only_closes_existing_panel(tmp_path,
 
 
 @pytest.mark.asyncio
-async def test_saved_scores_remain_inspectable_after_manager_end(tmp_path, monkeypatch):
+async def test_old_public_report_buttons_open_current_totals_after_manager_end(
+    tmp_path, monkeypatch
+):
     transport = PublicTransport()
     async with service(tmp_path, monkeypatch, transport=transport) as runtime:
         route = await opened(runtime)
