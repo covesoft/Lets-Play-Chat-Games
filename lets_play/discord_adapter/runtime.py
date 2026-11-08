@@ -202,6 +202,10 @@ class OpeningRuntime:
                     result = "stale"
                 elif action == "join":
                     result = await flow.join(frame, capabilities=d["capabilities"])
+                    if result is OpeningStatus.ALREADY_DONE and await DiscordStore(
+                        unit
+                    ).is_lobby_member(route.session_id, frame.actor_id):
+                        result = "already_joined"
                 else:
                     record = await flow.record(route.session_id)
                     if record.hand is None or not 0 <= d["index"] < 3:

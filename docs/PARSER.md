@@ -77,8 +77,9 @@ retained only inside a word; supported straight/curly/modifier/fullwidth and
 common typographic substitutes share a matching identity. Hyphens/dashes separate
 words. Matching uses NFC, apostrophe normalization, and casefolding; displayed
 case/text and literal punctuation remain intact. A Unicode ellipsis is not
-expanded into three periods. The period predicate requires a run of exactly
-three ASCII periods. Word endings may be followed by whitespace/punctuation,
+expanded into three periods. The period predicate requires a terminal run of at least
+three consecutive ASCII periods (owner clarification, v0.3.2). Longer runs pass;
+a lone Unicode ellipsis or separated dots do not. Word endings may be followed by whitespace/punctuation,
 but not another word, a symbol, or a Discord object.
 
 Empty/absent text is not applicable to these text predicates. Present whitespace,

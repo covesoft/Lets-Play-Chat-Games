@@ -53,7 +53,8 @@ and surrounding text without changing application code. Preserve these names:
 | `offer.description` | `{picker}` |
 | `scheduled.description` | `{timestamp}` |
 | `results.actual`, `results.ranking` | `{percent}` (numeric format specs such as `:.2f` are supported) |
-| `results.player` | `{actor}` |
+| `results.player` | `{actor}`; this mention is rendered in the field value |
+| `results.player_entry` | `{player}`, `{detail}` |
 | `results.detail` | `{actual}`, `{ranking}`, `{faults}`, `{opportunities}`, `{ordinary_posts}`, `{reaction_failures}` |
 | `results.footer` | `{page}` |
 
@@ -83,3 +84,7 @@ Operator CLI/log formatting is separate from player copy. Its version/banner
 constants are near the top of `cli.py`, with the ready separator near the top of
 `bot.py`. Tokens, emoji values and private file contents must never appear in
 startup diagnostics.
+
+Result identities belong in field values so Discord can render clickable mentions;
+`results.player_heading` is the separate editable field heading. Final-score
+footers appear only after an actual round exists, not on expired/cancelled lobbies.

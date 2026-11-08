@@ -132,7 +132,7 @@ async def test_opening_quorum_authorization_scoring_marker_dedup_and_end(tmp_pat
                 await runtime.submit(
                     route, "join", actor=303, message_id=state.panel_id, capabilities=CAPS
                 )
-                is OpeningStatus.ALREADY_DONE
+                == "already_joined"
             )
         assert (await runtime.state(route.session_id)).admission.joined == 1
         state = await choice(runtime, route)

@@ -139,3 +139,8 @@ Current preview recovery permits manager ending only. Do not infer live emoji
 usability from markup or permission bits: the admission probe must really react.
 Later-round pacing, modes, full summary baselines, automatic resume, final-output
 retry/24-hour cleanup and public release remain future increments.
+
+Patch handoffs must include copy-paste Windows commands from the repository root:
+`git apply --check`, `git apply`, the editable reinstall when needed, the relevant
+checks, and startup. Include migration/backup commands only when the schema
+changes. The owner prefers these commands with every delivered patch.

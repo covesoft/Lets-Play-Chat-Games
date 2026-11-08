@@ -17,7 +17,7 @@ are not implemented; every option currently produced is ordinary.
 | NR007 | Inside Voice | Lowercase mapping; casing slot |
 | NR008 | SPEAK UP | Uppercase mapping; casing slot |
 | NR010 | Questionable Conduct | ASCII question-mark ending; terminal slot |
-| NR011 | Are You Sure? | Exactly three terminal ASCII periods; terminal slot |
+| NR011 | Are You Sure? | At least three consecutive terminal ASCII periods; terminal slot |
 | NR013 | No Questions | No ASCII question marks; independent Typography restriction |
 | NR016 | Plain Clothes | No supported formatting; independent Typography restriction |
 | NR017 | Briefly | At most five words; Brevity |

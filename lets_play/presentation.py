@@ -20,6 +20,7 @@ TEMPLATE_FIELDS = {
     "results.actual": frozenset({"percent"}),
     "results.ranking": frozenset({"percent"}),
     "results.player": frozenset({"actor"}),
+    "results.player_entry": frozenset({"player", "detail"}),
     "results.detail": frozenset(
         {"actual", "ranking", "faults", "opportunities", "ordinary_posts", "reaction_failures"}
     ),

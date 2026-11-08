@@ -83,6 +83,17 @@ class DiscordStore:
         )
         return SessionRoute(row[0], row[1], session) if row else None
 
+    async def is_lobby_member(self, session, actor):
+        self.unit._check()
+        return bool(
+            await _row(
+                self.conn,
+                """SELECT 1 FROM nr_lobby_members m JOIN nr_admissions a USING(session_id)
+            WHERE m.session_id=? AND m.actor_id=? AND a.stage<>'ended'""",
+                (session, actor),
+            )
+        )
+
     async def receipt_position(self, session):
         self.unit._check()
         row = await _row(

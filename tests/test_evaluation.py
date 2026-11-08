@@ -202,7 +202,7 @@ def test_frozen_phrase_matches_contiguous_logical_word_identities(content):
         "bred duck",
         "red small duck",
         "red 🦆 duck",
-        "red <a:oof:123456> duck",
+        "red <a:emo:123456> duck",
         "red <@123456> duck",
         "red + duck",
         "red ‼ duck",

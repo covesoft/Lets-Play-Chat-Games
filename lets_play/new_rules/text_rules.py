@@ -100,7 +100,7 @@ def evaluate_text_rule(view: MessageView, instance: RuleInstance) -> RuleEvaluat
             passed = view.ends_with_word("over")
         case "NR011":
             ending = view.ending
-            passed = ending.endswith("...") and not ending.endswith("....")
+            passed = ending.endswith("...")
         case "NR016":
             passed = not view.formatting
         case "NR036":

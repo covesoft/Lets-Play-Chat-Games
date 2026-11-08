@@ -113,7 +113,7 @@
     "whisper": false,
     "outcomes": {
       "NR034": "pass",
-      "NR011": "fail",
+      "NR011": "pass",
       "NR016": "pass"
     }
   },
@@ -937,7 +937,7 @@
   },
   {
     "id": "opaque-custom-emoji",
-    "content": "<a:oh_no:123456>",
+    "content": "<a:emoji:123456>",
     "words": [],
     "formatting": [],
     "whisper": false,

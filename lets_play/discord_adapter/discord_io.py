@@ -128,15 +128,19 @@ def render(state, *, kind=None, page=0, presentation=None):
                 else copy.text("results.ranking", percent=float(score.ranking_percent()))
             )
             embed.add_field(
-                name=copy.text("results.player", actor=actor),
+                name=copy.text("results.player_heading"),
                 value=copy.text(
-                    "results.detail",
-                    actual=actual,
-                    ranking=ranking,
-                    faults=score.raw_faults,
-                    opportunities=score.opportunities,
-                    ordinary_posts=score.ordinary_posts,
-                    reaction_failures=score.reaction_failures,
+                    "results.player_entry",
+                    player=copy.text("results.player", actor=actor),
+                    detail=copy.text(
+                        "results.detail",
+                        actual=actual,
+                        ranking=ranking,
+                        faults=score.raw_faults,
+                        opportunities=score.opportunities,
+                        ordinary_posts=score.ordinary_posts,
+                        reaction_failures=score.reaction_failures,
+                    ),
                 ),
                 inline=False,
             )
@@ -146,7 +150,8 @@ def render(state, *, kind=None, page=0, presentation=None):
             button(view, copy.text("buttons.results_previous"), session, "results", page - 1)
         if state.more_scores:
             button(view, copy.text("buttons.results_next"), session, "results", page + 1)
-        embed.set_footer(text=copy.text("results.footer", page=page + 1))
+        if state.context is not None:
+            embed.set_footer(text=copy.text("results.footer", page=page + 1))
     elif state.recovery_id or a.stage == "recovery":
         embed.colour = copy.color("paused")
         embed.title = copy.text("paused.title")
@@ -418,11 +423,22 @@ class DiscordGame:
             )
         await interaction.response.defer(ephemeral=True, thinking=True)
         if future is None:
-            await interaction.followup.send(self.copy.text("end.manager_required"), ephemeral=True)
+            if (
+                not interaction.guild
+                or interaction.user.bot
+                or not interaction.permissions.manage_guild
+            ):
+                key = "end.manager_required"
+            elif not self.runtime or not self.runtime.ready:
+                key = "control.unavailable"
+            else:
+                key = "end.no_game_here"
+            await interaction.followup.send(self.copy.text(key), ephemeral=True)
             return
         try:
-            await future
-            await interaction.followup.send(self.copy.text("end.closed"), ephemeral=True)
+            result = await future
+            key = "end.no_game_here" if result is OpeningStatus.ALREADY_DONE else "end.closed"
+            await interaction.followup.send(self.copy.text(key), ephemeral=True)
         except LaneUnavailable:
             await interaction.followup.send(
                 self.copy.text("end.worker_unavailable"),
@@ -474,6 +490,7 @@ class DiscordGame:
                 else:
                     replies = {
                         "joined": self.copy.text("control.joined"),
+                        "already_joined": self.copy.text("control.already_joined"),
                         "opening": self.copy.text("control.opening"),
                         "selected": self.copy.text("control.selected"),
                         "unauthorized": self.copy.text("control.unauthorized"),

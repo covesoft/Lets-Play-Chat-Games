@@ -20,6 +20,7 @@ from lets_play.discord_adapter.discord_io import (
     render,
 )
 from lets_play.new_rules.contracts import ReferenceKind, SessionRoute
+from lets_play.presentation import default_presentation
 from lets_play.storage.opening_flow import OpeningStatus
 
 
@@ -151,7 +152,8 @@ async def test_render_scheduled_rule_is_explicit_and_ended_results_are_bounded(
         await activated(runtime, route)
         state = await runtime.state(route.session_id)
         embed, _ = render(state)
-        assert "current rules" in embed.title and "Roger Wilco" in str(embed.to_dict())
+        assert embed.title == default_presentation().text("active.title")
+        assert default_presentation().text("cards.NR034.name") in str(embed.to_dict())
         embed, _ = render(replace(state, recovery_id="pause"))
         assert "paused" in embed.title
         assert "No rule" not in embed.description

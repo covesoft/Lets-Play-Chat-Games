@@ -1,4 +1,4 @@
-# New Rules opening preview — v0.3.1 / schema 9
+# New Rules opening preview — v0.3.2 / schema 9
 
 This development build connects the existing engine to Discord. It is not the
 complete game. Run one bot process against a database. No deployment or command
@@ -110,3 +110,8 @@ Official references checked for this adapter:
 
 Sent copy and embed colors are editable independently of this preview’s game
 logic. See [PRESENTATION.md](PRESENTATION.md) for the catalog and private overrides.
+
+The v0.3.2 live-feedback fixes place result mentions in field values (with
+notifications suppressed), use separate no-game/manager/duplicate-join replies,
+and omit score footers from preplay closures. Are You Sure accepts three or more
+consecutive ASCII periods; stored effects are not retrospectively re-evaluated.

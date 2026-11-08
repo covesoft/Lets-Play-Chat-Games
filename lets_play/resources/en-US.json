@@ -9,6 +9,8 @@
     "results.actual": "{percent:.2f}%",
     "results.ranking": "{percent:.2f}",
     "results.player": "<@{actor}>",
+    "results.player_heading": "Player",
+    "results.player_entry": "{player}\n{detail}",
     "results.detail": "Actual compliance: {actual} · adjusted score: {ranking}\nFaults: {faults} · opportunities: {opportunities}\nOrdinary posts: {ordinary_posts} · reaction faults: {reaction_failures}",
     "results.footer": "Results page {page} · players ordered by ID",
     "buttons.results_previous": "Previous results",
@@ -75,7 +77,7 @@
     "cards.NR004.description": "No file attachments.",
     "cards.NR006.description": "No reaction emojis.",
     "cards.NR007.description": "Use no uppercase letters.",
-    "cards.NR011.description": "End text with three periods: ...",
+    "cards.NR011.description": "End text with at least three periods: ...",
     "cards.NR034.description": "End text with the word over. Punctuation may follow it."
   },
   "colors": {

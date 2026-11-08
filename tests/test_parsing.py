@@ -54,10 +54,10 @@ def test_canonical_equivalence_and_graphemes_do_not_change_literal_ellipsis():
 
 
 def test_link_destinations_and_discord_object_ids_do_not_become_words():
-    view = parse_message("[over...](https://example.invalid/hidden-word) <a:oh_no:123456>")
+    view = parse_message("[over...](https://example.invalid/hidden-word) <a:emoji:123456>")
     assert view.word_keys == ("over",)
     assert view.links[0].destination == "https://example.invalid/hidden-word"
-    assert view.objects == ("<a:oh_no:123456>",)
+    assert view.objects == ("<a:emoji:123456>",)
     assert not view.ends_with_word("over")  # The visible emoji follows the ending.
 
 
