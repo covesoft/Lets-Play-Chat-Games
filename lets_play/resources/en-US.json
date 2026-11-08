@@ -21,7 +21,7 @@
     "offer.description": "<@{picker}> chooses one card. The choice lasts 60 seconds from publication.",
     "scheduled.title": "New Rules — first rule scheduled",
     "scheduled.description": "The rule takes effect <t:{timestamp}:T>. No rule applies before then.",
-    "active.title": "New Rules — current rules",
+    "active.title": "New Rules — chat carefully!",
     "active.description": "Round 1 · Everyone posting here participates. Start with `-# ` to whisper.",
     "probe.message": "Checking New Rules reaction access…",
     "commands.start.description": "Start a chat game",
