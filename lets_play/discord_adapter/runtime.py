@@ -137,9 +137,11 @@ class OpeningRuntime:
             await self.lanes.pop(route.session_id).close()
         return route, result
 
-    async def state(self, session, *, page=0):
+    async def state(self, session, *, page=0, result_anchor=0, result_backwards=False):
         async with self.store.transaction(write=False) as unit:
-            return await DiscordStore(unit).state(session, page=page)
+            return await DiscordStore(unit).state(
+                session, page=page, result_anchor=result_anchor, result_backwards=result_backwards
+            )
 
     async def _handle(self, route, request):
         d, action = request.data, request.action

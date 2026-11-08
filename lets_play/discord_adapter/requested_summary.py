@@ -7,6 +7,7 @@ import discord
 from lets_play.presentation import PresentationError
 
 CONTROL = re.compile(r"nrs:([a-f0-9]{32}):(round|game):([0-9]{1,19}):([0-9]{1,19}):(n|p)\Z")
+RESULTS_CONTROL = re.compile(r"nrr:([a-f0-9]{32}):(n|p):([0-9]{1,19}):([0-9]{1,7})\Z")
 PAGE_SIZE = 5
 
 
@@ -90,7 +91,6 @@ def render(page, copy):
 
     button("buttons.summary_round", "round")
     button("buttons.summary_game", "game")
-    button("buttons.summary_refresh", page.scope, page.round_number)
     if page.previous and page.players:
         button("buttons.results_previous", page.scope, page.round_number, page.players[0][0], "p")
     if page.following and page.players:
@@ -103,3 +103,26 @@ def render(page, copy):
     ):
         raise PresentationError("Requested summary presentation exceeds Discord limits.")
     return embed, view
+
+
+async def begin_private(interaction):
+    editing = bool(getattr(getattr(interaction.message, "flags", None), "ephemeral", False))
+    await interaction.response.defer(ephemeral=True, thinking=not editing)
+    return editing
+
+
+async def reply_private(interaction, editing, *, content=None, embed=None, view=None):
+    mentions = discord.AllowedMentions.none()
+    if editing:
+        await interaction.edit_original_response(
+            content=content, embed=embed, view=view, allowed_mentions=mentions
+        )
+    else:
+        payload = {"allowed_mentions": mentions, "ephemeral": True}
+        if content is not None:
+            payload["content"] = content
+        if embed is not None:
+            payload["embed"] = embed
+        if view is not None:
+            payload["view"] = view
+        await interaction.followup.send(**payload)

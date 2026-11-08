@@ -116,3 +116,9 @@ Score identity/body formatting reuses your existing `results.*` templates. No
 footer is added to these private views. A customization exceeding Discord payload
 limits gives a private unavailable reply without changing scores or summary
 baselines. Copy changes need a restart; these new buttons need no command sync.
+
+v0.3.6 removes the Refresh control. Its catalog key remains accepted for older
+private overrides but is not rendered. Repeated scope clicks refresh in place.
+Final result order is now adjusted score descending, unrated last; update a private
+`results.footer` override if it still says players are ordered by ID. The `{page}`
+placeholder is unchanged. Private summary order remains by ID, with no footer.

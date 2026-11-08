@@ -1,5 +1,6 @@
 """Bounded adapter reads and durable send claims. No SDK objects or network I/O."""
 
+from bisect import insort
 from dataclasses import dataclass
 from datetime import datetime
 
@@ -32,6 +33,7 @@ class DisplayState:
     round_number: int | None = None
     next_deadline: datetime | None = None
     timeout_due: bool = False
+    previous_scores: bool = False
 
 
 @dataclass(frozen=True, slots=True)
@@ -52,10 +54,16 @@ class DiscordStore:
     def __init__(self, unit):
         self.unit, self.conn = unit, unit._conn
 
-    async def state(self, session, *, page=0):
+    async def state(self, session, *, page=0, result_anchor=0, result_backwards=False):
         self.unit._check()
         if type(page) is not int or not 0 <= page <= 1_000_000:
             raise ValueError("Invalid result page.")
+        if (
+            type(result_anchor) is not int
+            or not 0 <= result_anchor < 2**63
+            or type(result_backwards) is not bool
+        ):
+            raise ValueError("Invalid result cursor.")
         admission = await OpeningFlow(self.unit).record(session)
         if admission is None:
             return None
@@ -105,11 +113,19 @@ class DiscordStore:
         if context and (deadline := await EvolutionFlow(self.unit).next_deadline(session)):
             boundaries.append(deadline)
         next_deadline = min(boundaries) if boundaries else None
-        async with self.conn.execute(
-            "SELECT * FROM nr_participants WHERE session_id=? ORDER BY actor_id LIMIT 11 OFFSET ?",
-            (session, page * 10),
-        ) as cursor:
-            rows = await cursor.fetchall()
+        previous_scores = False
+        if admission.stage == "ended" and context is not None:
+            scores, previous_scores, more_scores = await self._ranked_scores(
+                session, result_anchor, result_backwards
+            )
+        else:
+            async with self.conn.execute(
+                "SELECT * FROM nr_participants WHERE session_id=? ORDER BY actor_id LIMIT 11 OFFSET ?",
+                (session, page * 10),
+            ) as cursor:
+                rows = await cursor.fetchall()
+            scores = tuple((r["actor_id"], decode_score(r)) for r in rows[:10])
+            more_scores = len(rows) > 10
         return DisplayState(
             admission,
             context,
@@ -120,8 +136,8 @@ class DiscordStore:
             ),
             panel[0] if panel else None,
             row[0],
-            tuple((r["actor_id"], decode_score(r)) for r in rows[:10]),
-            len(rows) > 10,
+            scores,
+            more_scores,
             next(
                 (
                     o.incoming.card_id
@@ -143,7 +159,49 @@ class DiscordStore:
                 and offer.choice_deadline
                 and next_deadline == offer.choice_deadline.expires_at
             ),
+            previous_scores,
         )
+
+    async def _ranked_scores(self, session, anchor, backwards):
+        # Exact Fraction ordering. Read keyset batches and retain only eleven
+        # candidates; never load an all-player cache or sort rounded percentages.
+        def key(actor, score):
+            ranking = score.ranking_percent()
+            return ranking is None, -(ranking or 0), actor
+
+        pivot = None
+        if anchor:
+            row = await _row(
+                self.conn,
+                "SELECT * FROM nr_participants WHERE session_id=? AND actor_id=?",
+                (session, anchor),
+            )
+            if row is None:
+                raise ValueError("Unknown result cursor.")
+            pivot = key(anchor, decode_score(row))
+        best, last = [], 0
+        while True:
+            async with self.conn.execute(
+                "SELECT * FROM nr_participants WHERE session_id=? AND actor_id>? ORDER BY actor_id LIMIT 64",
+                (session, last),
+            ) as cursor:
+                batch = await cursor.fetchall()
+            if not batch:
+                break
+            for row in batch:
+                actor, score = row["actor_id"], decode_score(row)
+                order = key(actor, score)
+                if pivot is not None and (order >= pivot if backwards else order <= pivot):
+                    continue
+                insort(best, (order, actor, score))
+                if len(best) > 11:
+                    best.pop(0 if backwards else -1)
+            last = batch[-1]["actor_id"]
+        more = len(best) > 10
+        if backwards and more:
+            best.pop(0)
+        scores = tuple((actor, score) for _, actor, score in best[:10])
+        return scores, more if backwards else bool(anchor), bool(anchor) if backwards else more
 
     async def route(self, session):
         self.unit._check()

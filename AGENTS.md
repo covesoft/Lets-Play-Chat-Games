@@ -179,6 +179,19 @@ Keep all copy/colors editable, mentions non-pinging, and private interim views
 footer-free. Preplay /rules must not expose copied mutation buttons. No schema or
 slash-command change is part of this increment. See docs/REQUESTED_SUMMARY.md.
 
+v0.3.6 private menu navigation edits the originating ephemeral response after a
+message-update defer; only a click from a public panel opens a new private reply.
+Use the fresh component interaction token, never edit the public phase panel.
+Scope/page buttons re-read scores and refresh in place; no Refresh button is shown.
+Keep its old catalog key accepted for private-override compatibility.
+Final played-game results sort by exact adjusted score descending, unrated last,
+then ID for exact ties. Summary pages remain ID-ordered. Read result rank pages
+in actor-keyset batches of 64 with at most eleven candidates for ten displayed
+players. Do not sort rounded floats or fetch the full roster. New result controls
+carry rank anchors/page labels; legacy ID-offset controls reopen ranked page one.
+Result paging also edits an existing private response. Scores, progression,
+public-summary baselines and schema remain unchanged.
+
 Patch handoffs must include copy-paste Windows commands from the repository root:
 `git apply --check`, `git apply`, the editable reinstall when needed, the relevant
 checks, and startup. Include migration/backup commands only when the schema

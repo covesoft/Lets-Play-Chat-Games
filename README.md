@@ -3,17 +3,18 @@
 Let’s Play is a Discord chat-game bot. Its first game, **New Rules**, is a party
 conversation game where unusual rules accumulate as people chat.
 
-**Current status: v0.3.5 — development-only ordinary-round preview (M2 in progress).**
+**Current status: v0.3.6 — development-only ordinary-round preview (M2 in progress).**
 M1 is accepted and closed at v0.2.9/schema 8. The Discord adapter connects a
 persisted three-human opening, message/raw-reaction scoring, markers, timed
 warnings, picker succession, three-card choices, replacements, and announced
 round changes. Opening hands use five proven templates; later hands use sixteen
 existing ordinary validators without a private phrase dependency. Held play and
-three-person revival preserve the open round. Manager ending posts basic results;
+three-person revival preserve the open round. Manager ending posts final results
+ordered by exact adjusted score, highest first, with unrated players last;
 inactivity ending only edits an existing panel.
 
 A private Summary button on the phase panel and `/rules` now shows paged round
-and game scores. Public/automatic summaries, modes, settings, automatic restart resume,
+and game scores. Scope/page buttons update the same private menu. Public/automatic summaries, modes, settings, automatic restart resume,
 output retry/retention cleanup and public-release checks remain unfinished.
 Restart and uncertain publication enter a durable pause; a manager can close the
 saved game. See [the preview runbook](docs/DISCORD_PREVIEW.md) for setup and live checks.
@@ -134,7 +135,7 @@ update commands.
 
 Schema **11** appends an offline summary capture/acknowledgement foundation.
 Existing clocks, scores and delivery claims are preserved. The Discord preview
-continues to use the v0.3.3 ordinary loop, with v0.3.5 read-only private score
+continues to use the v0.3.3 ordinary loop, with v0.3.6 read-only private score
 pages. Public summary posting is not wired yet.
 See [the summary API](docs/SUMMARY_FOUNDATION.md).
 Existing recognized databases upgrade in place

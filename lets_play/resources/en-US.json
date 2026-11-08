@@ -12,7 +12,7 @@
     "results.player_heading": "Player",
     "results.player_entry": "{player}\n{detail}",
     "results.detail": "Actual compliance: {actual} · adjusted score: {ranking}\nFaults: {faults} · opportunities: {opportunities}\nOrdinary posts: {ordinary_posts} · reaction faults: {reaction_failures}",
-    "results.footer": "Results page {page} · players ordered by ID",
+    "results.footer": "Results page {page} · adjusted score, highest first; unrated last",
     "buttons.results_previous": "Previous results",
     "buttons.results_next": "More results",
     "buttons.play": "Play",
@@ -117,7 +117,7 @@
     "summary.description": "Round {round} · human posts: {messages}, including {whispers} whispers.\n{as_of}\n{status}\nUse /rules for the current requirements.",
     "summary.as_of": "Last game update: <t:{timestamp}:T>.",
     "summary.as_of_unknown": "Latest committed totals.",
-    "summary.live": "Scores can change as play continues. Paging and refreshing update this private view.",
+    "summary.live": "Scores can change as play continues. Choose either scope to update this panel.",
     "summary.paused": "Enforcement is paused. Recorded progress is preserved; these pages do not resume play.",
     "summary.ended": "This game has ended. These are its recorded totals.",
     "summary.scope_round": "Round scores",
@@ -126,7 +126,8 @@
     "summary.empty_heading": "Scores",
     "summary.empty": "No participation recorded for this scope yet.",
     "summary.unavailable": "These scores are unavailable or this control has expired.",
-    "summary.round_closed": "This round is complete. These are its recorded totals."
+    "summary.round_closed": "This round is complete. These are its recorded totals.",
+    "results.unavailable": "Those final results are unavailable or this control has expired."
   },
   "colors": {
     "default": "#8665C7",

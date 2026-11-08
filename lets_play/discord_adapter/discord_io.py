@@ -158,10 +158,20 @@ def render(state, *, kind=None, page=0, presentation=None):
             )
         if not state.scores:
             embed.description = copy.text("results.empty")
-        if page:
-            button(view, copy.text("buttons.results_previous"), session, "results", page - 1)
-        if state.more_scores:
-            button(view, copy.text("buttons.results_next"), session, "results", page + 1)
+        if state.previous_scores and state.scores:
+            view.add_item(
+                discord.ui.Button(
+                    label=copy.text("buttons.results_previous"),
+                    custom_id=f"nrr:{session}:p:{state.scores[0][0]}:{max(0, page - 1)}",
+                )
+            )
+        if state.more_scores and state.scores:
+            view.add_item(
+                discord.ui.Button(
+                    label=copy.text("buttons.results_next"),
+                    custom_id=f"nrr:{session}:n:{state.scores[-1][0]}:{page + 1}",
+                )
+            )
         if state.context is not None:
             embed.set_footer(text=copy.text("results.footer", page=page + 1))
     elif state.recovery_id or a.stage == "recovery":
@@ -476,10 +486,22 @@ class DiscordGame:
         if summary:
             await self.private_summary(interaction, summary)
             return
+        ranked = requested_summary.RESULTS_CONTROL.fullmatch(
+            (interaction.data or {}).get("custom_id", "")
+        )
+        if ranked:
+            await self.ranked_results(interaction, ranked)
+            return
         match = CONTROL.fullmatch((interaction.data or {}).get("custom_id", ""))
         if not match:
             return
         session, action, number, target = match.groups()
+        if action == "results" and number is not None:
+            # Legacy ID-offset buttons reopen the ranked first page in the same
+            # private menu; new controls then use exact-score cursors.
+            ranked = requested_summary.RESULTS_CONTROL.fullmatch(f"nrr:{session}:n:0:0")
+            await self.ranked_results(interaction, ranked)
+            return
         route = self.route(interaction)
         captured = getattr(interaction, "extras", {}).pop("new_rules_receipt", None)
         future, unavailable = captured if captured else (None, False)
@@ -534,7 +556,7 @@ class DiscordGame:
             except LaneUnavailable:
                 await interaction.followup.send(self.copy.text("control.recovery"), ephemeral=True)
             return
-        # Read-only result paging and expired controls need no lane allocation.
+        # Expired controls need no lane allocation.
         async with self.runtime.store.transaction(write=False) as unit:
             saved = await DiscordStore(unit).route(session)
         if saved is None or (saved.guild_id, saved.channel_id) != (
@@ -543,27 +565,19 @@ class DiscordGame:
         ):
             await interaction.followup.send(self.copy.text("control.wrong_game"), ephemeral=True)
             return
-        if action == "results" and number is not None:
-            state = await self.runtime.state(session, page=int(number))
-            if state.admission.stage != "ended":
-                await interaction.followup.send(
-                    self.copy.text("control.results_not_ready"), ephemeral=True
-                )
-                return
-            embed, view = render(state, kind="closed", page=int(number), presentation=self.copy)
-            await interaction.followup.send(embed=embed, view=view, ephemeral=True)
-        else:
-            await interaction.followup.send(self.copy.text("control.expired"), ephemeral=True)
+        await interaction.followup.send(self.copy.text("control.expired"), ephemeral=True)
 
     async def private_summary(self, interaction, match):
-        await interaction.response.defer(ephemeral=True, thinking=True)
+        editing = await requested_summary.begin_private(interaction)
         if (
             not self.runtime
             or not self.runtime.ready
             or not interaction.guild
             or interaction.user.bot
         ):
-            await interaction.followup.send(self.copy.text("control.unavailable"), ephemeral=True)
+            await requested_summary.reply_private(
+                interaction, editing, content=self.copy.text("control.unavailable")
+            )
             return
         session, scope, round_number, actor, direction = match.groups()
         page = None
@@ -591,11 +605,45 @@ class DiscordGame:
             except PresentationError:
                 page = None
         if page is None:
-            await interaction.followup.send(self.copy.text("summary.unavailable"), ephemeral=True)
-        else:
-            await interaction.followup.send(
-                embed=embed,
-                view=view,
-                ephemeral=True,
-                allowed_mentions=discord.AllowedMentions.none(),
+            await requested_summary.reply_private(
+                interaction, editing, content=self.copy.text("summary.unavailable")
             )
+        else:
+            await requested_summary.reply_private(interaction, editing, embed=embed, view=view)
+
+    async def ranked_results(self, interaction, match):
+        editing = await requested_summary.begin_private(interaction)
+        if (
+            not self.runtime
+            or not self.runtime.ready
+            or not interaction.guild
+            or interaction.user.bot
+        ):
+            await requested_summary.reply_private(
+                interaction, editing, content=self.copy.text("control.unavailable")
+            )
+            return
+        session, direction, anchor, page = match.groups()
+        try:
+            async with self.runtime.store.transaction(write=False) as unit:
+                route = await DiscordStore(unit).route(session)
+                state = None
+                if route and (route.guild_id, route.channel_id) == (
+                    interaction.guild_id,
+                    interaction.channel_id,
+                ):
+                    state = await DiscordStore(unit).state(
+                        session,
+                        page=int(page),
+                        result_anchor=int(anchor),
+                        result_backwards=direction == "p",
+                    )
+            if state is None or state.admission.stage != "ended":
+                raise ValueError("Final results are unavailable.")
+            embed, view = render(state, kind="closed", page=int(page), presentation=self.copy)
+        except (ValueError, StoreOverloaded):
+            await requested_summary.reply_private(
+                interaction, editing, content=self.copy.text("results.unavailable")
+            )
+            return
+        await requested_summary.reply_private(interaction, editing, embed=embed, view=view)

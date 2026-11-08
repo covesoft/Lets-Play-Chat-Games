@@ -195,9 +195,10 @@ async def test_overlong_custom_copy_returns_private_unavailable_response(tmp_pat
             request = interaction()
             request.data = {"custom_id": f"nrs:{route.session_id}:round:0:0:n"}
             await bot.game_adapter.component(request)
-            request.followup.send.assert_awaited_once_with(
-                bot.presentation.text("summary.unavailable"), ephemeral=True
+            assert request.followup.send.call_args.kwargs["content"] == bot.presentation.text(
+                "summary.unavailable"
             )
+            assert request.followup.send.call_args.kwargs["ephemeral"] is True
             bot.game_runtime = None
 
 

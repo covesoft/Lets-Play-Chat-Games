@@ -1,4 +1,4 @@
-# New Rules ordinary-round preview — v0.3.5 / schema 11
+# New Rules ordinary-round preview — v0.3.6 / schema 11
 
 This development build connects the existing ordinary engine to Discord. Run one
 bot process against a database. Full summaries, modes and automatic restart
@@ -112,10 +112,11 @@ Errors log types, not received text or exception payloads.
 
 ## Remaining work and editable copy
 
-Basic manager/final standings remain ten-player pages ordered by ID, with
+Manager/final standings use ten-player pages ordered by exact adjusted score,
+highest first, with unrated players last and ID breaking exact ties. They retain
 clickable non-pinging identities and no score footer on preplay closures.
 Public automatic/requested/per-round summaries and their delivery integration,
-ranking/badge presentation, Drawing Conclusions, settings, owner grants,
+badge presentation, Drawing Conclusions, settings, owner grants,
 evidence-based restart resume and final-output retry/24-hour cleanup workers are
 not wired. Failed terminal delivery retains durable results evidence. This is a
 development preview, not a public-play release or M2 completion.
@@ -132,7 +133,8 @@ Official platform references rechecked for this increment:
 - [Discord reactions](https://docs.discord.com/developers/resources/message#create-reaction)
 
 After play starts, press Summary on the phase panel or inside `/rules` for private
-round/game totals, five-player ID-ordered pages and Refresh. Round paging retains
+round/game totals and five-player ID-ordered pages. Scope/page buttons edit the
+existing private response and read updated scores; there is no Refresh button. Round paging retains
 its round number through cutover; Current round opens the new round. Scores are
 live reads and can change between requests. These controls neither resume paused
 play nor change public summary baselines. See [REQUESTED_SUMMARY.md](REQUESTED_SUMMARY.md).
