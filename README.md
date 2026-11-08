@@ -3,7 +3,7 @@
 Let’s Play is a Discord chat-game bot. Its first game, **New Rules**, is a party
 conversation game where unusual rules accumulate as people chat.
 
-**Current status: v0.3.3 — development-only ordinary-round preview (M2 in progress).**
+**Current status: v0.3.4 — development-only ordinary-round preview (M2 in progress).**
 M1 is accepted and closed at v0.2.9/schema 8. The Discord adapter connects a
 persisted three-human opening, message/raw-reaction scoring, markers, timed
 warnings, picker succession, three-card choices, replacements, and announced
@@ -131,8 +131,10 @@ update commands.
 | `tests/` | Configuration, offline startup, SDK boundary, and real SQLite checks |
 | `docs/` | Public configuration, dependency, and storage documentation |
 
-Schema **10** extends the durable Discord send-attempt guard to later-round
-outputs while preserving schema-9 send claims and existing gameplay data.
+Schema **11** appends an offline summary capture/acknowledgement foundation.
+Existing clocks, scores and delivery claims are preserved. The Discord preview
+continues to use the v0.3.3 ordinary loop; summary posting is not wired yet.
+See [the summary API](docs/SUMMARY_FOUNDATION.md).
 Existing recognized databases upgrade in place
 on `--init-db` or startup. Stop the bot and make a verified SQLite backup before
 upgrading. Read the [database API and backup policy](docs/STORAGE.md).

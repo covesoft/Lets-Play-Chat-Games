@@ -567,5 +567,34 @@ MIGRATIONS = (
             "CREATE INDEX nr_discord_known_panels ON nr_discord_deliveries(session_id,ack_sequence DESC,attempted_at_utc DESC) WHERE message_id IS NOT NULL",
         ),
     ),
+    Migration(
+        version=11,
+        name="summary_capture_and_ack_foundation",
+        statements=(
+            """CREATE TABLE nr_summary_baselines (
+                session_id TEXT PRIMARY KEY REFERENCES nr_sessions ON DELETE CASCADE,
+                public_at_utc INTEGER NOT NULL,ack_messages INTEGER NOT NULL DEFAULT 0 CHECK(ack_messages>=0)
+            ) STRICT""",
+            """CREATE TABLE nr_summary_outputs (
+                summary_id INTEGER PRIMARY KEY AUTOINCREMENT,
+                session_id TEXT NOT NULL REFERENCES nr_sessions ON DELETE CASCADE,
+                output_key TEXT NOT NULL,kind TEXT NOT NULL CHECK(kind IN ('automatic','requested')),
+                state TEXT NOT NULL CHECK(state IN ('prepared','sending','uncertain','delivered')),
+                round_id TEXT NOT NULL,round_number INTEGER NOT NULL CHECK(round_number>0),
+                captured_at_utc INTEGER NOT NULL,human_messages INTEGER NOT NULL CHECK(human_messages>=0),
+                whispers INTEGER NOT NULL CHECK(whispers>=0),round_messages INTEGER NOT NULL CHECK(round_messages>=0),
+                round_whispers INTEGER NOT NULL CHECK(round_whispers>=0),rules_json TEXT NOT NULL,
+                attempted_at_utc INTEGER,message_id INTEGER CHECK(message_id>0),delivered_at_utc INTEGER,
+                UNIQUE(session_id,output_key),
+                FOREIGN KEY(session_id,round_id) REFERENCES nr_rounds ON DELETE CASCADE
+            ) STRICT""",
+            "CREATE UNIQUE INDEX nr_summary_inflight ON nr_summary_outputs(session_id) WHERE state IN ('prepared','sending','uncertain')",
+            f"""CREATE TABLE nr_summary_scores (
+                summary_id INTEGER NOT NULL REFERENCES nr_summary_outputs ON DELETE CASCADE,
+                scope TEXT NOT NULL CHECK(scope IN ('game','round')),actor_id INTEGER NOT NULL CHECK(actor_id>0),
+                {_SCORE_COLUMNS_V2},PRIMARY KEY(summary_id,scope,actor_id)
+            ) STRICT""",
+        ),
+    ),
 )
 SCHEMA_VERSION = MIGRATIONS[-1].version

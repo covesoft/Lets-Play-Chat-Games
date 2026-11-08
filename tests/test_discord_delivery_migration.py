@@ -47,7 +47,7 @@ async def test_nine_to_ten_preserves_claims_and_all_other_live_rows(tmp_path, mo
     ]
     before = {t: rows(path, f"SELECT * FROM {t}") for t in tables}
     claims = rows(path, "SELECT * FROM nr_discord_deliveries ORDER BY output_id")
-    assert (await bootstrap.initialize_database(path)).schema_version == 10
+    assert (await bootstrap.initialize_database(path)).schema_version == 11
     assert {t: rows(path, f"SELECT * FROM {t}") for t in tables} == before
     assert rows(
         path,
@@ -88,4 +88,4 @@ async def test_failed_tenth_migration_restores_original_guard_and_scores(
     assert rows(path, "PRAGMA user_version") == [(9,)]
     assert {t: rows(path, f"SELECT * FROM {t}") for t in tables} == before
     assert rows(path, "SELECT name FROM sqlite_schema WHERE name='nr_discord_deliveries_v9'") == []
-    assert (await bootstrap.initialize_database(path)).schema_version == 10
+    assert (await bootstrap.initialize_database(path)).schema_version == 11

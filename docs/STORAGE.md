@@ -59,6 +59,9 @@ reader locks, not just fabricated exceptions.
   sequence. All schema-9 attempts, states and actual message IDs survive. Scores,
   clocks, frozen offers and progress are unchanged. Reusing an output number in
   another family cannot authorize a duplicate send or block unrelated work.
+* Schema **11** appends summary baselines, immutable capture headers and derived
+  round/game score snapshots. Existing data is unchanged. This service remains
+  offline; see [SUMMARY_FOUNDATION.md](SUMMARY_FOUNDATION.md).
 * New databases must be empty and unclaimed. Foreign, unrecognized nonempty, and
   newer-version databases fail clearly; there is no automatic downgrade/adoption.
 

@@ -1,4 +1,4 @@
-# New Rules ordinary-round preview — v0.3.3 / schema 10
+# New Rules ordinary-round preview — v0.3.4 / schema 11
 
 This development build connects the existing ordinary engine to Discord. Run one
 bot process against a database. Full summaries, modes and automatic restart
@@ -8,12 +8,12 @@ resume remain separate work; M2 is still in progress.
 
 Stop the bot and make a verified SQLite backup using the procedure in
 [STORAGE.md](STORAGE.md). Install the updated package using the README commands,
-run offline checks, then `python -m lets_play --init-db`. Expect schema 10, WAL and
-foreign keys enabled. Released migrations 1–9 are unchanged. Migration 10 extends
-the outbound-attempt guard to later-round outputs and preserves every old claim,
-message ID and gameplay row. A failed migration rolls back atomically. To roll
+run offline checks, then `python -m lets_play --init-db`. Expect schema 11, WAL and
+foreign keys enabled. Released migrations 1–10 are unchanged. Migration 11 appends offline summary
+capture/baseline tables and preserves every old claim, message ID, clock and
+gameplay row. The live adapter does not call that service yet. A failed migration rolls back atomically. To roll
 back after a successful upgrade, stop the bot and restore the verified pre-upgrade
-backup with the matching old code; never downgrade a schema-10 file in place.
+backup with the matching old code; never downgrade a schema-11 file in place.
 
 Keep token, owner IDs and actual emoji markup in the private `.env`:
 

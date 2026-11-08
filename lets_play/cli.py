@@ -20,7 +20,7 @@ CLI_VERSION = "Let's Play is on version {version}!"
 LOG_FORMAT = "%(levelname)s:%(name)s:%(message)s"
 LOG_SEPARATOR = "=" * 55
 LOG_LAUNCH = "Launching Let's Play Chat Games Discord bot (v%s)"
-LOG_STOP = "-"*10 + "Bot stopped by intervention." + "-"*10
+LOG_STOP = "-" * 10 + "Bot stopped by intervention." + "-" * 10
 
 
 def main(argv: list[str] | None = None, *, base_dir: Path | None = None) -> int:
