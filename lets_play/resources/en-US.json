@@ -43,7 +43,7 @@
     "start.channel_busy": "This channel already has a game.",
     "start.capacity": "This server has reached its simultaneous-game limit. Premium allows more.",
     "start.failed": "A complete playable lobby could not be opened.",
-    "start.access_failed": "I could not verify channel access and the configured reaction marker. Check my permissions and marker configuration, then try again.",
+    "start.access_failed": "I could not verify channel access. Check my permissions in this channel or try elsewhere. :)",
     "rules.explanation": "**New Rules** is a chat game: follow evolving rules while you chat. Start with `/start-game new-rules`; minimum 3 players. Once active, everyone posting in the exact game channel participates. Start a message with `-# ` to whisper.",
     "end.manager_required": "A server manager must use this in the game's channel.",
     "end.no_game_here": "No game is active in this channel.",
