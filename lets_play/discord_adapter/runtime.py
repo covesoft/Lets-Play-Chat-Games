@@ -20,6 +20,7 @@ from lets_play.storage.opening_flow import OpeningFlow, OpeningStatus
 from lets_play.storage.ordinary_flow import OrdinaryFlow
 from lets_play.storage.pacing_flow import RoundPacing
 from lets_play.storage.recovery_flow import RecoveryFlow, active_recovery
+from lets_play.storage.round_reports import RoundReports
 from lets_play.storage.summary_store import SummaryStore
 
 logger = logging.getLogger(__name__)
@@ -166,6 +167,7 @@ class OpeningRuntime:
             "prepare": EventKind.OFFER_PREPARE,
             "summary_request": EventKind.TIMER,
             "summary_ack": EventKind.TIMER,
+            "round_ack": EventKind.TIMER,
         }.get(action)
         if action == "publish":
             kind = PUBLISH_KINDS[d["output"].ui_kind]
@@ -210,17 +212,22 @@ class OpeningRuntime:
                     if recovery
                     else await flow.cancel(frame, authorized=d["authorized"])
                 )
-            elif action == "summary_ack":
+            elif action in {"summary_ack", "round_ack"}:
                 if recovery:
                     await RecoveryFlow(unit).observe(frame, recovery)
                 else:
                     await flow.tick(frame)
-                result = await SummaryStore(unit).acknowledge(
-                    route.session_id,
-                    d["output_key"],
-                    message_id=d["message_id"],
-                    now=frame.received_at,
-                )
+                if action == "summary_ack":
+                    result = await SummaryStore(unit).acknowledge(
+                        route.session_id,
+                        d["output_key"],
+                        message_id=d["message_id"],
+                        now=frame.received_at,
+                    )
+                else:
+                    result = await RoundReports(unit).acknowledge(
+                        d["report"], message_id=d["message_id"], now=frame.received_at
+                    )
             elif recovery:
                 await RecoveryFlow(unit).observe(frame, recovery)
                 result = "paused"
@@ -233,6 +240,8 @@ class OpeningRuntime:
                 )
             else:
                 result = await self._normal(unit, route, frame, action, d)
+            if not recovery and action not in {"pause", "end", "admit"}:
+                await self._maybe_auto(unit, route, frame)
         self.work_queued.discard(d.get("work_key"))
         if action == "configure" and not recovery:
             self.configured.add(route.session_id)
@@ -241,6 +250,20 @@ class OpeningRuntime:
             self._kick(route)
         await self._schedule(route)
         return result
+
+    async def _maybe_auto(self, unit, route, frame):
+        context = await unit.get_context(route.session_id)
+        if not context or context.position.lifecycle != "playing":
+            return
+        summaries = SummaryStore(unit)
+        await summaries.initialize(route.session_id)
+        if await RoundReports(unit).pending(route.session_id):
+            return
+        due = await summaries.next_deadline(route.session_id, now=frame.received_at)
+        if due and frame.received_at >= due:
+            await summaries.prepare(
+                route.session_id, f"auto:{frame.sequence}", now=frame.received_at
+            )
 
     async def _normal(self, unit, route, frame, action, d):
         opening, flow, evolution = OpeningFlow(unit), OrdinaryFlow(unit), EvolutionFlow(unit)
@@ -387,13 +410,23 @@ class OpeningRuntime:
         if self.closed or not state or state.recovery_id or state.admission.stage == "ended":
             return
         deadline = state.next_deadline
+        async with self.store.transaction(write=False) as unit:
+            summary_due = (
+                None
+                if await RoundReports(unit).pending(route.session_id)
+                else await SummaryStore(unit).next_deadline(route.session_id, now=self.clock.now())
+            )
+        if summary_due and (deadline is None or summary_due < deadline):
+            deadline = summary_due
+            action = "tick"
+        else:
+            action = (
+                "timeout"
+                if state.timeout_due or state.admission.stage == "opening_published"
+                else "tick"
+            )
         if deadline is None:
             return
-        action = (
-            "timeout"
-            if state.timeout_due or state.admission.stage == "opening_published"
-            else "tick"
-        )
         delay = max(0, (deadline - self.clock.now()).total_seconds())
         self.timers[route.session_id] = asyncio.get_running_loop().call_later(
             delay, self._timer, route, action
@@ -452,6 +485,8 @@ class OpeningRuntime:
                         async with self.store.transaction() as unit:
                             await unit.acknowledge_marker(intent)
                     continue
+                if await self._publish_round(route):
+                    continue
                 if await self._publish_summary(route):
                     continue
                 state = await self.state(route.session_id)
@@ -485,20 +520,21 @@ class OpeningRuntime:
             ):
                 return False
             summary = await SummaryStore(unit).pending(route.session_id)
-            if summary is None or summary.kind != "requested":
+            if summary is None:
                 return False
             page = await SummaryStore(unit).preview(summary)
         if summary.state != "prepared":
             await self._fault(route, "uncertain_summary_delivery")
             return False
-        async with self.store.transaction() as unit:
-            claimed = await SummaryStore(unit).claim(
-                route.session_id, summary.output_key, now=self.clock.now()
-            )
-        if not claimed:
-            return False
         try:
             async with self.network_slots, asyncio.timeout(20):
+                async with self.store.transaction() as unit:
+                    claimed = await SummaryStore(unit).claim(
+                        route.session_id, summary.output_key, now=self.clock.now()
+                    )
+                if not claimed:
+                    await self._schedule(route)
+                    return False
                 message_id = await self.transport.publish_summary(route, summary, page)
             await asyncio.shield(
                 self.submit(
@@ -511,6 +547,34 @@ class OpeningRuntime:
         except Exception:
             async with self.store.transaction() as unit:
                 await SummaryStore(unit).mark_uncertain(route.session_id, summary.output_key)
+            raise
+        return True
+
+    async def _publish_round(self, route):
+        async with self.store.transaction(write=False) as unit:
+            reports = RoundReports(unit)
+            report = await reports.pending(route.session_id)
+            if report is None:
+                return False
+            page = await reports.page(route.session_id, report.round_number)
+        if report.state is not None:
+            await self._fault(route, "uncertain_round_report")
+            return False
+        try:
+            async with self.network_slots, asyncio.timeout(20):
+                async with self.store.transaction() as unit:
+                    claimed = await RoundReports(unit).claim(report, now=self.clock.now())
+                if not claimed:
+                    return False
+                message_id = await self.transport.publish_round(route, report, page)
+            await asyncio.shield(
+                self.submit(route, "round_ack", report=report, message_id=message_id)
+            )
+        except asyncio.CancelledError:
+            raise
+        except Exception:
+            async with self.store.transaction() as unit:
+                await RoundReports(unit).uncertain(report)
             raise
         return True
 

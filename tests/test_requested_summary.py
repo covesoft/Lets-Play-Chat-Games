@@ -36,6 +36,7 @@ async def test_forward_backward_pages_are_bounded_and_do_not_mutate_state(tmp_pa
         )
         await settle(runtime)
         before = await runtime.state(route.session_id)
+        baseline_before = rows(tmp_path / "game.sqlite3", "SELECT * FROM nr_summary_baselines")
         count = len(runtime.transport.messages)
         first = await read(runtime, route)
         assert first.human_messages == 14 and first.whispers == 1
@@ -62,9 +63,9 @@ async def test_forward_backward_pages_are_bounded_and_do_not_mutate_state(tmp_pa
         assert back.players == first.players
         assert await runtime.state(route.session_id) == before
         assert len(runtime.transport.messages) == count
-        assert rows(tmp_path / "game.sqlite3", "SELECT COUNT(*) FROM nr_summary_baselines") == [
-            (0,)
-        ]
+        assert (
+            rows(tmp_path / "game.sqlite3", "SELECT * FROM nr_summary_baselines") == baseline_before
+        )
         assert rows(tmp_path / "game.sqlite3", "SELECT COUNT(*) FROM nr_summary_outputs") == [(0,)]
 
 

@@ -4,8 +4,8 @@ This increment supplies persisted summary capture and delivery bookkeeping only.
 At v0.3.4 the live Discord adapter did not invoke its capture/ACK writes. v0.3.5 added a
 read-only `live_page` method and private buttons/rendering described in
 [REQUESTED_SUMMARY.md](REQUESTED_SUMMARY.md). v0.3.7 integrates explicit public
-requests and claim/ACK delivery; v0.3.8 replaces saved browsing with live current-score access and discards delivered copies. Automatic/round-end delivery remains
-unwired. No new command is registered. Schema remains 11.
+requests and claim/ACK delivery; v0.3.8 replaces saved browsing with live current-score access and discards delivered copies. v0.3.9 wires automatic/round-end reporting through schema 12, described in
+[ROUND_REPORTS.md](ROUND_REPORTS.md). No new command is registered.
 
 `storage.summary_store.SummaryStore` uses an existing game unit of work. Compose
 writes after actual engine effects in the same authoritative receipt lane; these
@@ -15,11 +15,11 @@ No method performs network I/O.
 
 - `initialize(session)` sets a baseline once from the saved real first activation.
   Unknown legacy start times require recovery rather than being guessed.
-- `next_deadline(session)` is available only when at least 25 new engine human
-  messages are above the acknowledged counter. Its boundary is 60 seconds after
-  the public baseline. Active recovery/paused enforcement or pending/uncertain
-  output withholds automatic readiness. A later scheduler must observe that
-  deadline without depending on another message.
+- `next_deadline(session)` is available only when at least 25 new ordinary
+  posts are above the acknowledged current-round counter. Its boundary is 120 seconds
+  after the later of round start and the successful-public baseline. Active recovery/paused enforcement or pending/uncertain
+  output withholds automatic readiness. The adapter scheduler observes that
+  deadline without depending on another message, with transition suppression.
 - `prepare(session, output_key, now=..., kind=...)` freezes the current round's
   identity/rules/traffic and exact round/game scores. Automatic captures require
   both gates; requested captures bypass them. A bounded server key is immutable
@@ -58,7 +58,6 @@ migrations 1–10 and existing scores, offers, clocks, progression and delivery 
 are unchanged. Stop the bot and verify a SQLite backup before `--init-db`; expect
 schema 11, WAL and foreign keys on. Every migration step has a rollback fixture.
 
-Remaining integration: automatic scheduler handling,
-richer score/fault/rule/streak presentation, round/final
-summary capture and delivery proof reconciliation. No complete summary service,
+Remaining integration: richer score/fault/rule/streak presentation and delivery
+proof reconciliation. Final game standings retain their existing delivery path. No complete summary service,
 mode, automatic restart resume or M2 completion is claimed by this foundation.

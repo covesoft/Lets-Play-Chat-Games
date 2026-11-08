@@ -42,6 +42,9 @@ def render(page, copy, *, snapshot=None, public=False):
             else "summary.live"
         ),
     )
+    if snapshot and snapshot.kind == "automatic":
+        embed.title = copy.text("reports.mid_title")
+        embed.description = copy.text("reports.mid_description", round=page.round_number)
     if snapshot:
         embed.add_field(
             name=copy.text("summary.capture_heading"),

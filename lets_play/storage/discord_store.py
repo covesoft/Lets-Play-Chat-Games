@@ -162,19 +162,22 @@ class DiscordStore:
             previous_scores,
         )
 
-    async def _ranked_scores(self, session, anchor, backwards):
+    async def _ranked_scores(self, session, anchor, backwards, *, round_id=None, limit=10):
         # Exact Fraction ordering. Read keyset batches and retain only eleven
         # candidates; never load an all-player cache or sort rounded percentages.
         def key(actor, score):
             ranking = score.ranking_percent()
             return ranking is None, -(ranking or 0), actor
 
+        table = "nr_round_scores" if round_id else "nr_participants"
+        condition = "session_id=?" + (" AND round_id=?" if round_id else "")
+        args = (session, round_id) if round_id else (session,)
         pivot = None
         if anchor:
             row = await _row(
                 self.conn,
-                "SELECT * FROM nr_participants WHERE session_id=? AND actor_id=?",
-                (session, anchor),
+                f"SELECT * FROM {table} WHERE {condition} AND actor_id=?",
+                (*args, anchor),
             )
             if row is None:
                 raise ValueError("Unknown result cursor.")
@@ -182,8 +185,8 @@ class DiscordStore:
         best, last = [], 0
         while True:
             async with self.conn.execute(
-                "SELECT * FROM nr_participants WHERE session_id=? AND actor_id>? ORDER BY actor_id LIMIT 64",
-                (session, last),
+                f"SELECT * FROM {table} WHERE {condition} AND actor_id>? ORDER BY actor_id LIMIT 64",
+                (*args, last),
             ) as cursor:
                 batch = await cursor.fetchall()
             if not batch:
@@ -194,13 +197,13 @@ class DiscordStore:
                 if pivot is not None and (order >= pivot if backwards else order <= pivot):
                     continue
                 insort(best, (order, actor, score))
-                if len(best) > 11:
+                if len(best) > limit + 1:
                     best.pop(0 if backwards else -1)
             last = batch[-1]["actor_id"]
-        more = len(best) > 10
+        more = len(best) > limit
         if backwards and more:
             best.pop(0)
-        scores = tuple((actor, score) for _, actor, score in best[:10])
+        scores = tuple((actor, score) for _, actor, score in best[:limit])
         return scores, more if backwards else bool(anchor), bool(anchor) if backwards else more
 
     async def route(self, session):
@@ -211,6 +214,16 @@ class DiscordStore:
             (session,),
         )
         return SessionRoute(row[0], row[1], session) if row else None
+
+    async def channel_busy(self, guild, channel):
+        self.unit._check()
+        return bool(
+            await _row(
+                self.conn,
+                "SELECT 1 FROM nr_admissions WHERE guild_id=? AND channel_id=? AND stage!='ended'",
+                (guild, channel),
+            )
+        )
 
     async def is_lobby_member(self, session, actor):
         self.unit._check()

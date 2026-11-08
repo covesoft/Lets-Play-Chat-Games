@@ -17,6 +17,9 @@ from types import MappingProxyType
 MAX_CATALOG_BYTES = 128 * 1024
 # Only these templates accept arguments. Attribute/index lookups are prohibited.
 TEMPLATE_FIELDS = {
+    "reports.mid_description": frozenset({"round"}),
+    "reports.round_description": frozenset({"round"}),
+    "reports.score": frozenset({"percent"}),
     "summary.capture_detail": frozenset(
         {"session", "round_messages", "round_whispers", "game_messages", "game_whispers"}
     ),

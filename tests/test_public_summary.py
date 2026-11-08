@@ -86,9 +86,9 @@ async def test_public_request_coalesces_pending_and_recent_success_then_allows_n
         assert await request(runtime, route, "public-two") == "recent"
         runtime.clock.at += timedelta(seconds=29)
         await runtime.submit(route, "event", event=event(runtime, route, 70999, "over"))
-        assert await request(runtime, route, "public-two") == "recent"
+        assert await request(runtime, route, "public-two-29") == "recent"
         runtime.clock.at += timedelta(seconds=1)
-        assert await request(runtime, route, "public-two") == "queued"
+        assert await request(runtime, route, "public-three") == "queued"
         await settle(runtime)
         assert len(transport.summaries) == 2
         assert await request(runtime, route, "public-one") == "shared"
@@ -117,15 +117,13 @@ async def test_public_snapshot_and_ack_keep_arrivals_during_send_pending(tmp_pat
         assert (await baseline(runtime, route))[1] == 1
         async with runtime.store.transaction(write=False) as unit:
             summaries = SummaryStore(unit)
-            assert await summaries.next_deadline(
-                route.session_id
-            ) == runtime.clock.now() + timedelta(seconds=60)
+            assert await summaries.next_deadline(route.session_id) is None
             live = await summaries.live_page(route.session_id, scope="game")
         assert frozen.human_messages == 1 and live.human_messages == 26
         assert dict(transport.summaries[0][2].players)[606].ordinary_faults == 1
         assert rows(tmp_path / "game.sqlite3", "SELECT COUNT(*) FROM nr_summary_scores") == [(0,)]
         assert live.whispers == 25
-        # This release does not activate the automatic sender, even once due.
+        # Whisper-only traffic cannot activate the automatic sender.
         runtime.clock.at += timedelta(seconds=61)
         await runtime.submit(route, "tick")
         await settle(runtime)

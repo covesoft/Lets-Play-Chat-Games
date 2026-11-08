@@ -1,6 +1,13 @@
 {
   "locale": "en-US",
   "strings": {
+    "reports.mid_title": "New Rules — round update",
+    "reports.mid_description": "Round {round} is underway, here's how you're doing:",
+    "reports.round_title": "New Rules — round results",
+    "reports.round_description": "Round {round} is over, here's how you did:",
+    "reports.score": "Scoring {percent:.2f}",
+    "reports.unrated": "Scoring Unrated",
+    "reports.unavailable": "Those round results are no longer available.",
     "game.title": "New Rules",
     "results.title": "New Rules — game over",
     "results.description": "The game is now over and the results are in!  I hope you had fun!",
@@ -25,7 +32,7 @@
     "scheduled.description": "The rule takes effect <t:{timestamp}:T>. No rule applies before then.",
     "active.title": "New Rules — chat carefully!",
     "active.description": "Round 1 · Everyone posting here participates. Start with `-# ` to whisper.",
-    "probe.message": "--- I'm starting a New Rules game here in a moment ---",
+    "probe.message": "--- a New Rules game is starting here in a moment ---",
     "commands.start.description": "Start a chat game",
     "commands.new_rules.description": "Open a New Rules lobby",
     "commands.rules.description": "View New Rules and the current game",
@@ -143,6 +150,7 @@
     "summary.post_uncertain": "The previous summary delivery could not be confirmed. A manager must resolve the paused game before more reports can be posted."
   },
   "colors": {
+    "round_results": "#8665C7",
     "default": "#8665C7",
     "results": "#8665C7",
     "paused": "#8665C7",

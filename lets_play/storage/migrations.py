@@ -597,4 +597,29 @@ MIGRATIONS = (
         ),
     ),
 )
+MIGRATIONS += (
+    Migration(
+        version=12,
+        name="round_reports_and_interim_watermarks",
+        statements=(
+            "ALTER TABLE nr_summary_baselines ADD COLUMN auto_round_id TEXT",
+            "ALTER TABLE nr_summary_baselines ADD COLUMN auto_round_posts INTEGER NOT NULL DEFAULT 0 CHECK(auto_round_posts>=0)",
+            "ALTER TABLE nr_summary_baselines ADD COLUMN ack_nonwhispers INTEGER NOT NULL DEFAULT 0 CHECK(ack_nonwhispers>=0)",
+            "ALTER TABLE nr_summary_baselines ADD COLUMN request_cursor INTEGER NOT NULL DEFAULT 0 CHECK(request_cursor>=0)",
+            "ALTER TABLE nr_summary_baselines ADD COLUMN public_message_id INTEGER CHECK(public_message_id>0)",
+            "ALTER TABLE nr_summary_outputs ADD COLUMN ordinary_posts INTEGER NOT NULL DEFAULT 0 CHECK(ordinary_posts>=0)",
+            "UPDATE nr_summary_baselines SET ack_nonwhispers=COALESCE((SELECT human_messages-whispers FROM nr_summary_outputs o WHERE o.session_id=nr_summary_baselines.session_id AND state='delivered' ORDER BY summary_id DESC LIMIT 1),0),public_message_id=(SELECT message_id FROM nr_summary_outputs o WHERE o.session_id=nr_summary_baselines.session_id AND state='delivered' ORDER BY summary_id DESC LIMIT 1)",
+            "UPDATE nr_summary_baselines SET request_cursor=COALESCE((SELECT MAX(CAST(substr(output_key,9) AS INTEGER)) FROM nr_summary_outputs o WHERE o.session_id=nr_summary_baselines.session_id AND output_key LIKE 'request:%' AND length(substr(output_key,9)) BETWEEN 1 AND 19 AND substr(output_key,9) NOT GLOB '*[^0-9]*'),0)",
+            """CREATE TABLE nr_round_reports (
+                session_id TEXT NOT NULL,round_id TEXT NOT NULL,
+                state TEXT NOT NULL CHECK(state IN ('sending','uncertain','delivered')),
+                attempted_at_utc INTEGER NOT NULL,message_id INTEGER CHECK(message_id>0),
+                delivered_at_utc INTEGER,human_messages INTEGER NOT NULL CHECK(human_messages>=0),
+                nonwhispers INTEGER NOT NULL CHECK(nonwhispers>=0),
+                PRIMARY KEY(session_id,round_id),
+                FOREIGN KEY(session_id,round_id) REFERENCES nr_round_resolutions ON DELETE CASCADE
+            ) STRICT""",
+        ),
+    ),
+)
 SCHEMA_VERSION = MIGRATIONS[-1].version

@@ -1,4 +1,4 @@
-# New Rules ordinary-round preview — v0.3.8 / schema 11
+# New Rules ordinary-round preview — v0.3.9 / schema 12
 
 This development build connects the existing ordinary engine to Discord. Run one
 bot process against a database. Full summaries, modes and automatic restart
@@ -14,7 +14,7 @@ capture/baseline tables and preserves every old claim, message ID, clock and
 gameplay row. The capture/ACK methods remain offline. The adapter now uses its read-only
 private score-page API. A failed migration rolls back atomically. To roll
 back after a successful upgrade, stop the bot and restore the verified pre-upgrade
-backup with the matching old code; never downgrade a schema-11 file in place.
+backup with the matching old code; never downgrade a schema-12 file in place.
 
 Keep token, owner IDs and actual emoji markup in the private `.env`:
 
@@ -147,5 +147,7 @@ and page clicks must remain quiet. Choice/target menus should contain only their
 choice controls; the disclosure panel and `/rules` retain Summary. Earlier saved
 report buttons now open current scores. Delivered copies are removed at ACK and
 older delivered archives are compacted on startup; unresolved send evidence is
-preserved. Automatic/round-end summaries remain disabled. Schema stays 11, with
-no migration or command sync required.
+preserved. Automatic/round-end summaries are enabled in v0.3.9; see ROUND_REPORTS.md.
+This release upgrades schema 11 to 12. Stop the bot, make and verify a SQLite
+backup, apply/reinstall, then run --init-db before starting. No command sync is
+required. An already occupied channel is rejected before the reaction probe.

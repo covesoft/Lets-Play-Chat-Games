@@ -15,10 +15,12 @@ from lets_play.storage.game_codec import SCORE_COLUMNS, IncompatibleState, decod
 from lets_play.storage.game_store import _execute, _row
 from lets_play.storage.game_store import _unit_mutating as _write
 from lets_play.storage.offer_codec import utc_datetime, utc_int
+from lets_play.storage.pacing_flow import RoundPacing
 from lets_play.storage.recovery_flow import active_recovery, require_dispatchable
 
-AUTO_SECONDS = 60
+AUTO_SECONDS = 120
 AUTO_MESSAGES = 25
+AUTO_WARNING_BUFFER_SECONDS = 60
 REQUEST_COALESCE_SECONDS = 30
 _COLUMNS = ",".join(SCORE_COLUMNS)
 
@@ -44,6 +46,7 @@ class SummarySnapshot:
     round_whispers: int
     rules: tuple[RuleInstance, ...]
     message_id: int | None
+    ordinary_posts: int = 0
 
 
 @dataclass(frozen=True, slots=True)
@@ -81,25 +84,33 @@ class SummaryStore:
         context = await self.unit.get_context(session)
         if context is None or context.position.lifecycle == "ended":
             return "unavailable"
+        await self.initialize(session)
+        baseline = await _row(
+            self.conn, "SELECT * FROM nr_summary_baselines WHERE session_id=?", (session,)
+        )
+        control = output_key.removeprefix("request:")
+        if output_key.startswith("request:") and control.isdecimal():
+            control_id = int(control)
+            if not 0 < control_id < 2**63:
+                raise ValueError("Invalid report interaction identity.")
+            if control_id <= baseline["request_cursor"]:
+                return "shared"
+            await _execute(
+                self.conn,
+                "UPDATE nr_summary_baselines SET request_cursor=? WHERE session_id=?",
+                (control_id, session),
+            )
         existing = await self.snapshot(session, output_key) or await self.pending(session)
         if existing:
             return "uncertain" if existing.state == "uncertain" else "shared"
-        previous = await _row(
-            self.conn,
-            "SELECT output_key,delivered_at_utc,human_messages-whispers FROM nr_summary_outputs WHERE session_id=? AND state='delivered' ORDER BY summary_id DESC LIMIT 1",
-            (session,),
-        )
-        if previous:
-            # SDK request keys contain increasing interaction IDs. A replay of an
-            # older interaction stays harmless after its obsolete receipt is pruned.
-            prior_id = previous["output_key"].removeprefix("request:")
-            current_id = output_key.removeprefix("request:")
-            if prior_id.isdecimal() and current_id.isdecimal() and int(current_id) <= int(prior_id):
-                return "shared"
-            if utc_int(now - timedelta(seconds=REQUEST_COALESCE_SECONDS)) < previous[1]:
+        if baseline["public_message_id"]:
+            if (
+                utc_int(now - timedelta(seconds=REQUEST_COALESCE_SECONDS))
+                < baseline["public_at_utc"]
+            ):
                 return "recent"
             traffic = await self.unit.get_traffic(session)
-            if traffic.human_messages - traffic.whispers <= previous[2]:
+            if traffic.human_messages - traffic.whispers <= baseline["ack_nonwhispers"]:
                 return "no_new_posts"
         snapshot = await self.prepare(session, output_key, now=now, kind="requested")
         return "queued" if snapshot else "unavailable"
@@ -208,22 +219,44 @@ class SummaryStore:
             row["round_whispers"],
             rules,
             row["message_id"],
+            row["ordinary_posts"],
         )
 
-    async def next_deadline(self, session):
+    async def next_deadline(self, session, *, now=None):
         self.unit._check()
         if await active_recovery(self.unit, session):
             return None
         row = await _row(
             self.conn,
-            """SELECT b.public_at_utc FROM nr_summary_baselines b
-            JOIN nr_sessions s USING(session_id) WHERE b.session_id=? AND s.lifecycle='playing'
-            AND s.human_messages-b.ack_messages>=?
+            """SELECT b.*,r.round_id,r.started_at_utc,r.ordinary_posts,s.advancement FROM nr_summary_baselines b
+            JOIN nr_sessions s USING(session_id) JOIN nr_rounds r ON r.session_id=s.session_id AND r.round_id=s.round_id
+            WHERE b.session_id=? AND s.lifecycle='playing' AND s.phase='ordinary'
+            AND NOT EXISTS(SELECT 1 FROM nr_offers f WHERE f.session_id=s.session_id AND f.offer_id=s.offer_id AND f.stage IN ('prepared','published','selected'))
             AND NOT EXISTS(SELECT 1 FROM nr_summary_outputs o WHERE o.session_id=b.session_id
                 AND o.state IN ('prepared','sending','uncertain'))""",
-            (session, AUTO_MESSAGES),
+            (session,),
         )
-        return utc_datetime(row[0]) + timedelta(seconds=AUTO_SECONDS) if row else None
+        if row is None:
+            return None
+        acknowledged = row["auto_round_posts"] if row["auto_round_id"] == row["round_id"] else 0
+        if row["ordinary_posts"] - acknowledged < AUTO_MESSAGES:
+            return None
+        pacing = await RoundPacing(self.unit).record(session)
+        if pacing is None or (pacing.stage != "waiting" and row["advancement"] != "held"):
+            return None
+        due = utc_datetime(max(row["public_at_utc"], row["started_at_utc"])) + timedelta(
+            seconds=AUTO_SECONDS
+        )
+        warning = pacing.next_deadline
+        if warning and due >= warning - timedelta(seconds=AUTO_WARNING_BUFFER_SECONDS):
+            return None
+        if (
+            now is not None
+            and warning
+            and now >= warning - timedelta(seconds=AUTO_WARNING_BUFFER_SECONDS)
+        ):
+            return None
+        return due
 
     @_write
     async def prepare(self, session, output_key, *, now, kind="automatic"):
@@ -261,14 +294,19 @@ class SummaryStore:
         if pending:
             return None
         if kind == "automatic":
-            deadline = await self.next_deadline(session)
+            deadline = await self.next_deadline(session, now=now)
             if deadline is None or now < deadline:
+                return None
+            pacing = await RoundPacing(self.unit).record(session)
+            if pacing.next_deadline and now >= pacing.next_deadline - timedelta(
+                seconds=AUTO_WARNING_BUFFER_SECONDS
+            ):
                 return None
         p = context.position
         traffic = await self.unit.get_traffic(session)
         rnd = await _row(
             self.conn,
-            "SELECT round_number,human_messages,whispers FROM nr_rounds WHERE session_id=? AND round_id=?",
+            "SELECT round_number,human_messages,whispers,ordinary_posts FROM nr_rounds WHERE session_id=? AND round_id=?",
             (session, p.round_id),
         )
         rules = json.dumps(
@@ -293,6 +331,11 @@ class SummaryStore:
         )
         summary = cursor.lastrowid
         await cursor.close()
+        await _execute(
+            self.conn,
+            "UPDATE nr_summary_outputs SET ordinary_posts=? WHERE summary_id=?",
+            (rnd[3], summary),
+        )
         for scope, table in (("game", "nr_participants"), ("round", "nr_round_scores")):
             condition = "session_id=?" + (" AND round_id=?" if scope == "round" else "")
             values = (session, p.round_id) if scope == "round" else (session,)
@@ -315,6 +358,26 @@ class SummaryStore:
         context = await self.unit.get_context(session)
         if context is None or context.position.lifecycle == "ended":
             return False
+        if row.kind == "automatic":
+            pacing = await RoundPacing(self.unit).record(session)
+            if (
+                context.position.round_id != row.round_id
+                or context.position.lifecycle != "playing"
+                or context.position.phase != "ordinary"
+                or context.position.offer_id
+                or pacing is None
+                or (pacing.stage != "waiting" and context.position.advancement != "held")
+                or (
+                    pacing.next_deadline
+                    and now >= pacing.next_deadline - timedelta(seconds=AUTO_WARNING_BUFFER_SECONDS)
+                )
+            ):
+                await _execute(
+                    self.conn,
+                    "DELETE FROM nr_summary_outputs WHERE summary_id=? AND state='prepared'",
+                    (row.summary_id,),
+                )
+                return False
         return bool(
             await _execute(
                 self.conn,
@@ -360,13 +423,37 @@ class SummaryStore:
             "UPDATE nr_summary_outputs SET state='delivered',message_id=?,delivered_at_utc=? WHERE summary_id=?",
             (message_id, delivered, row.summary_id),
         )
-        await _execute(
-            self.conn,
-            "UPDATE nr_summary_baselines SET public_at_utc=MAX(public_at_utc,?),ack_messages=MAX(ack_messages,?) WHERE session_id=?",
-            (delivered, row.human_messages, session),
+        await self.public_success(
+            session,
+            message_id=message_id,
+            now=now,
+            human_messages=row.human_messages,
+            nonwhispers=row.human_messages - row.whispers,
+            round_id=row.round_id,
+            ordinary_posts=row.ordinary_posts,
         )
         await self._compact_session(session)
         return True
+
+    async def public_success(
+        self, session, *, message_id, now, human_messages, nonwhispers, round_id, ordinary_posts
+    ):
+        self.unit._check(write=True)
+        await _execute(
+            self.conn,
+            """UPDATE nr_summary_baselines SET public_at_utc=MAX(public_at_utc,?),
+            ack_messages=MAX(ack_messages,?),ack_nonwhispers=MAX(ack_nonwhispers,?),public_message_id=?,
+            auto_round_id=?,auto_round_posts=? WHERE session_id=?""",
+            (
+                utc_int(now),
+                human_messages,
+                nonwhispers,
+                message_id,
+                round_id,
+                ordinary_posts,
+                session,
+            ),
+        )
 
     async def scores(self, session, output_key, *, scope="game", after_actor=0, limit=20):
         self.unit._check()

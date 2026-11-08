@@ -1,4 +1,4 @@
-# Requested summaries — v0.3.8 / schema 11 unchanged
+# Requested summaries — v0.3.9 / schema 12
 
 During play, Summary is available on the rules disclosure panel and inside
 `/rules`. Choice and replacement-target menus show only their choice controls.
@@ -37,8 +37,8 @@ non-whisper human message beyond that report's captured totals**. The constant
 requests coalesce. Whisper-only traffic, reactions, controls and private reads
 do not unlock a repost. A blocked request does not reset the cooldown or consume
 traffic. New non-whisper traffic arriving during a send remains eligible after
-the cooldown. This is separate from the future automatic 60-second/25-message
-gate, which still includes whispers.
+the cooldown. This is separate from the automatic 120-second/25-ordinary-post
+gate, which excludes whispers and mode posts; see [ROUND_REPORTS.md](ROUND_REPORTS.md).
 
 SDK dispatch captures a public request before HTTP defer, in the existing
 bounded ordered lane. Due engine boundaries run first, then one consistent
@@ -59,13 +59,14 @@ arrivals during delivery. In that same transaction, copied scores/rules are
 removed and obsolete completed receipts are discarded. At most one completed
 receipt per retained game remains for cooldown, traffic watermark, latest ACK
 identity and old-interaction replay checks, alongside any unresolved send.
-The SDK interaction ID in a request key provides a bounded replay watermark.
+A bounded SDK interaction cursor in the baseline protects even coalesced or declined requests from replay.
 No growing request cache is added. Discord history retains the public report.
 
 Startup also compacts earlier delivered archives, including ended games, in
 receipt-keyset pages. It preserves pending/sending/uncertain output and its
 proof. Cleanup never changes actual game/round scores, rules, activity,
-progression or the acknowledged baseline. It uses schema 11 without a migration.
+progression or the acknowledged baseline. Schema 12 preserves that cleanup policy and adds round-local watermarks plus
+minimal round-report delivery receipts. Back up before upgrading from schema 11.
 Same-message ACK replay of the retained receipt is a no-op; conflicting identity
 rejects. Obsolete completed capture keys are not a historical API.
 
@@ -75,7 +76,8 @@ shutdown/restart retain the sending fence. No blind retries are introduced.
 Managers can currently end paused games; evidence reconciliation and explicit
 resume remain later work. Prepared reports are withheld after ending or through
 recovery. Inactivity closure edits only its known panel. Automatic/round-end
-publishers, richer details and modes remain separate work; M2 is incomplete.
+publishers are described in ROUND_REPORTS.md. Richer details and modes remain
+separate work; M2 is incomplete.
 
 SDK interaction edit/defer behavior follows the pinned discord.py API:
 https://discordpy.readthedocs.io/en/stable/interactions/api.html#discord.Interaction.edit_original_response

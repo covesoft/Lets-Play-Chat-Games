@@ -34,6 +34,16 @@ class Transport:
         self.block = None
         self.fail = None
         self.entered = asyncio.Event()
+        self.summaries = []
+        self.round_reports = []
+
+    async def publish_summary(self, route, snapshot, page):
+        self.summaries.append((route, snapshot, page))
+        return 9000 + len(self.summaries)
+
+    async def publish_round(self, route, report, page):
+        self.round_reports.append((route, report, page))
+        return 10000 + len(self.round_reports)
 
     async def publish(self, route, kind, state):
         self.messages.append((route, kind, state))

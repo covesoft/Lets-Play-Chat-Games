@@ -22,6 +22,7 @@ def offline_publisher(monkeypatch):
     from lets_play.discord_adapter.runtime import OpeningRuntime
 
     monkeypatch.setattr(OpeningRuntime, "_publish_summary", AsyncMock(return_value=False))
+    monkeypatch.setattr(OpeningRuntime, "_maybe_auto", AsyncMock())
 
 
 async def capture(runtime, route, key="one", kind="requested"):
@@ -54,18 +55,20 @@ async def test_automatic_capture_needs_both_gates_without_new_message_at_deadlin
         start = runtime.clock.now()
         async with runtime.store.transaction() as unit:
             await SummaryStore(unit).initialize(route.session_id)
-        runtime.clock.at = start + timedelta(seconds=59)
+        runtime.clock.at = start + timedelta(seconds=119)
         for n in range(25):
             await post(runtime, route, n, "-# listening")
         assert await capture(runtime, route, kind="automatic") is None
+        for n in range(25, 50):
+            await post(runtime, route, n)
         async with runtime.store.transaction(write=False) as unit:
             assert await SummaryStore(unit).next_deadline(route.session_id) == start + timedelta(
-                seconds=60
+                seconds=120
             )
         runtime.clock.at += timedelta(seconds=1)
         snapshot = await capture(runtime, route, kind="automatic")
-        assert snapshot.human_messages == snapshot.whispers == 25
-        assert snapshot.round_messages == snapshot.round_whispers == 25
+        assert snapshot.human_messages == 50 and snapshot.whispers == 25
+        assert snapshot.round_messages == 50 and snapshot.round_whispers == 25
         assert runtime.transport.messages[-1][1] == "activation"
 
 
@@ -74,7 +77,7 @@ async def test_time_alone_and_commands_do_not_fill_traffic_gate(tmp_path, monkey
     async with service(tmp_path, monkeypatch) as runtime:
         route = await opened(runtime)
         await activated(runtime, route)
-        runtime.clock.at += timedelta(seconds=61)
+        runtime.clock.at += timedelta(seconds=121)
         for n in range(24):
             await post(runtime, route, n)
         await runtime.submit(route, "tick")
@@ -121,7 +124,7 @@ async def test_public_ack_preserves_arrivals_during_send_and_retry_does_not_rese
         async with runtime.store.transaction() as unit:
             assert await SummaryStore(unit).claim(route.session_id, "one", now=runtime.clock.now())
         for n in range(2, 27):
-            await post(runtime, route, n, "-# during send")
+            await post(runtime, route, n, "over")
         runtime.clock.at += timedelta(seconds=10)
         async with runtime.store.transaction() as unit:
             assert await SummaryStore(unit).acknowledge(
@@ -132,7 +135,7 @@ async def test_public_ack_preserves_arrivals_during_send_and_retry_does_not_rese
         async with runtime.store.transaction(write=False) as unit:
             assert await SummaryStore(unit).next_deadline(
                 route.session_id
-            ) == runtime.clock.now() + timedelta(seconds=60)
+            ) == runtime.clock.now() + timedelta(seconds=120)
         runtime.clock.at += timedelta(seconds=5)
         async with runtime.store.transaction() as unit:
             assert not await SummaryStore(unit).acknowledge(

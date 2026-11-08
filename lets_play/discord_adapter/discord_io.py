@@ -6,7 +6,7 @@ import re
 import discord
 from discord import app_commands
 
-from lets_play.discord_adapter import requested_summary
+from lets_play.discord_adapter import requested_summary, round_report_ui
 from lets_play.discord_adapter.lane import LaneUnavailable
 from lets_play.discord_adapter.ordinary_ui import render_ordinary
 from lets_play.new_rules.contracts import (
@@ -22,6 +22,7 @@ from lets_play.presentation import PresentationError, default_presentation
 from lets_play.storage.discord_store import DiscordStore
 from lets_play.storage.game_store import StoreOverloaded
 from lets_play.storage.opening_flow import OpeningCapabilities, OpeningStatus
+from lets_play.storage.round_reports import RoundReports
 from lets_play.storage.summary_store import SummaryStore
 
 # Command identifiers are stable protocol names, independent of sent-copy locale.
@@ -279,6 +280,14 @@ class DiscordTransport:
         )
         return message.id
 
+    async def publish_round(self, route, report, page):
+        embed, view = round_report_ui.render(route.session_id, report.round_number, page, self.copy)
+        channel = await self.channel(route)
+        message = await channel.send(
+            embed=embed, view=view, allowed_mentions=discord.AllowedMentions.none()
+        )
+        return message.id
+
     async def mark(self, route, message_id):
         channel = await self.channel(route)
         try:
@@ -381,6 +390,15 @@ class DiscordGame:
             await interaction.followup.send(self.copy.text("start.unavailable"), ephemeral=True)
             return
         try:
+            async with self.runtime.store.transaction(write=False) as unit:
+                occupied = await DiscordStore(unit).channel_busy(
+                    interaction.guild_id, interaction.channel_id
+                )
+            if occupied:
+                await interaction.followup.send(
+                    self.copy.text("start.channel_busy"), ephemeral=True
+                )
+                return
             async with self.runtime.network_slots, asyncio.timeout(20):
                 facts = await self.runtime.transport.probe(interaction.channel)
             _, result = await self.runtime.start(
@@ -399,7 +417,7 @@ class DiscordGame:
                 replies.get(result, self.copy.text("start.failed")),
                 ephemeral=True,
             )
-        except (LaneUnavailable, discord.HTTPException, TimeoutError):
+        except (LaneUnavailable, discord.HTTPException, TimeoutError, StoreOverloaded):
             await interaction.followup.send(
                 self.copy.text("start.access_failed"),
                 ephemeral=True,
@@ -501,6 +519,12 @@ class DiscordGame:
             )
 
     async def component(self, interaction):
+        leaderboard = round_report_ui.CONTROL.fullmatch(
+            (interaction.data or {}).get("custom_id", "")
+        )
+        if leaderboard:
+            await self.round_leaderboard(interaction, leaderboard)
+            return
         post = requested_summary.POST_CONTROL.fullmatch(
             (interaction.data or {}).get("custom_id", "")
         )
@@ -657,6 +681,35 @@ class DiscordGame:
         await requested_summary.reply_private(
             interaction, editing, content=self.copy.text(reply), embed=embed, view=view
         )
+
+    async def round_leaderboard(self, interaction, match):
+        editing = await requested_summary.begin_private(interaction)
+        session, number, direction, anchor = match.groups()
+        page = None
+        if self.runtime and self.runtime.ready and interaction.guild and not interaction.user.bot:
+            try:
+                async with self.runtime.store.transaction(write=False) as unit:
+                    route = await DiscordStore(unit).route(session)
+                    if route and (route.guild_id, route.channel_id) == (
+                        interaction.guild_id,
+                        interaction.channel_id,
+                    ):
+                        page = await RoundReports(unit).page(
+                            session, int(number), anchor=int(anchor), backwards=direction == "p"
+                        )
+            except StoreOverloaded:
+                pass
+        if page is not None:
+            try:
+                embed, view = round_report_ui.render(session, int(number), page, self.copy)
+            except PresentationError:
+                page = None
+        if page is None:
+            await requested_summary.reply_private(
+                interaction, editing, content=self.copy.text("reports.unavailable")
+            )
+        else:
+            await requested_summary.reply_private(interaction, editing, embed=embed, view=view)
 
     async def private_summary(self, interaction, match):
         editing = await requested_summary.begin_private(interaction)

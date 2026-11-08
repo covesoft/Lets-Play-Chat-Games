@@ -139,3 +139,12 @@ refer to a posted report rather than a browsable archive. Existing field
 placeholders are unchanged. `buttons.summary_saved` remains accepted solely for
 older private override compatibility; it is not rendered. All current-score
 navigation stays live and private.
+
+
+v0.3.9 adds `reports.mid_title`, `reports.mid_description` (`{round}`),
+`reports.round_title`, `reports.round_description` (`{round}`), `reports.score`
+(`{percent:.2f}`), `reports.unrated`, `reports.unavailable` and the `round_results`
+color. Automatic reports use the new underway lead-in; manual/private Summary
+panels keep their existing text. Round leaderboards show only each adjusted
+score heading and clickable player mention, without a footer. All existing
+placeholders and newer owner copy are preserved.

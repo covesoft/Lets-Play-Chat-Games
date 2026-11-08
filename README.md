@@ -3,7 +3,7 @@
 Let’s Play is a Discord chat-game bot. Its first game, **New Rules**, is a party
 conversation game where unusual rules accumulate as people chat.
 
-**Current status: v0.3.8 — development-only ordinary-round preview (M2 in progress).**
+**Current status: v0.3.9 — development-only ordinary-round preview (M2 in progress).**
 M1 is accepted and closed at v0.2.9/schema 8. The Discord adapter connects a
 persisted three-human opening, message/raw-reaction scoring, markers, timed
 warnings, picker succession, three-card choices, replacements, and announced
@@ -18,7 +18,8 @@ round/game scores, with scope/page buttons updating the same private menu.
 Post summary to channel publishes a brief report; Check current scores opens
 the live private menu. Repeat reports require 30 seconds and new non-whisper
 chat. Delivered score copies are discarded; Discord history keeps the report.
-Automatic/round-end summaries, modes, settings, automatic restart resume,
+Busy-round progress reports and compact round-end leaderboards are now wired.
+Modes, settings, automatic restart resume,
 output retry/retention cleanup and public-release checks remain unfinished.
 Restart and uncertain publication enter a durable pause; a manager can close the
 saved game. See [the preview runbook](docs/DISCORD_PREVIEW.md) for setup and live checks.
@@ -137,10 +138,11 @@ update commands.
 | `tests/` | Configuration, offline startup, SDK boundary, and real SQLite checks |
 | `docs/` | Public configuration, dependency, and storage documentation |
 
-Schema **11** supplies the summary capture/acknowledgement foundation.
+Schema **12** adds round-report delivery receipts and round-local reporting watermarks.
 Existing clocks, scores and delivery claims are preserved. The Discord preview
-continues to use the v0.3.3 ordinary loop, with v0.3.8 live private score
-pages and quiet, explicitly requested public reports. Automatic/round-end summary posting remains separate.
+continues to use the v0.3.3 ordinary loop, with v0.3.9 live private score
+pages, quiet requested reports, gated interim updates and compact round leaderboards.
+See [round reporting](docs/ROUND_REPORTS.md) for policy and upgrade checks.
 See [the summary API](docs/SUMMARY_FOUNDATION.md).
 Existing recognized databases upgrade in place
 on `--init-db` or startup. Stop the bot and make a verified SQLite backup before

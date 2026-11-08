@@ -226,3 +226,21 @@ Patch handoffs must include copy-paste Windows commands from the repository root
 `git apply --check`, `git apply`, the editable reinstall when needed, the relevant
 checks, and startup. Include migration/backup commands only when the schema
 changes. The owner prefers these commands with every delivered patch.
+
+v0.3.9/schema 12 supersedes earlier automatic-report timing: BOTH 120 seconds and
+25 new ordinary non-whisper human posts, reset per round, including offending/media
+posts and excluding modes/whispers/reactions/controls. Successful public reports
+restart the gates; HTTP arrivals remain pending. Suppress within 60 seconds of
+a known warning, throughout warning/choice, modes, pause/recovery and ending.
+Timers must work without another message. Revalidate before claim after acquiring
+a network slot. Keep manual/private Summary layouts intact and all copy editable.
+After actual activation closes a round, post an exact adjusted-score leaderboard
+with only score headings and mentions. Include selection-period posts; never
+treat warning/selection/held/revival as closure. Existing final game output covers
+game ending, and inactivity stays quiet. Read actual closed-round scores in bounded
+rank pages, with no copied archive. New nr_round_reports receipts claim before
+HTTP and ACK through the lane; unknown sends pause, known success can ACK during
+pause/end, and old-round boards never consume new-round traffic. Preserve older
+send claims and require a verified schema-11 backup before migration 12. Reject
+occupied-channel start commands before reaction probing; admission remains the
+authoritative race guard. See docs/ROUND_REPORTS.md.
