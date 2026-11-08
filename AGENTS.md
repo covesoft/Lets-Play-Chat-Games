@@ -155,8 +155,8 @@ panel only, with no new-message fallback. Modes, full summary baselines,
 automatic resume, final-output retry/24-hour cleanup and public release remain
 future increments.
 
-v0.3.4/schema 11 adds only the offline summary capture/ACK foundation. It is not
-called by the live adapter. Use SummaryStore inside the same ordered engine write
+v0.3.4/schema 11 adds only the offline summary capture/ACK foundation. Its capture/ACK writes are not
+called by the live adapter. v0.3.5 uses only the read-only live_page method. Use SummaryStore inside the same ordered engine write
 unit after actual effects; commit before treating a capture as deliverable.
 Initialize timing from the real first activation, never an inferred legacy clock.
 Automatic preparation needs both 60 seconds and 25 new human traffic messages.
@@ -164,9 +164,20 @@ Only actual public success consumes the frozen counter watermark and advances
 time; arrivals during HTTP remain pending. Persist one send claim before HTTP.
 Unknown sends block new captures/retries pending future explicit reconciliation.
 Same-message ACK replay is a no-op; identity conflicts roll back. Read score pages
-by actor key with bounded limits. Rendering, exact ranking, summary scheduler,
-controls, round/final summaries and detailed fault/streak UI remain separate work.
+by actor key with bounded limits. Private rendering and controls exist in v0.3.5; exact ranking order, public
+summary scheduling, round/final summary integration and detailed fault/streak UI
+remain separate work.
 See docs/SUMMARY_FOUNDATION.md. Keep the existing runtime and public copy intact.
+
+v0.3.5 Summary controls are private, read-only, scoped to the exact saved session
+and guild/channel, with no FIFO receipt allocation or state transition. They never
+prepare/claim/ACK a public capture or reset its counter/time baseline. Read at most
+six score rows for a five-player page by actor key. Round navigation retains its
+round number; Current round selects the current owner, and game totals stay live.
+Paging/refresh reads new committed values; do not label them frozen snapshots.
+Keep all copy/colors editable, mentions non-pinging, and private interim views
+footer-free. Preplay /rules must not expose copied mutation buttons. No schema or
+slash-command change is part of this increment. See docs/REQUESTED_SUMMARY.md.
 
 Patch handoffs must include copy-paste Windows commands from the repository root:
 `git apply --check`, `git apply`, the editable reinstall when needed, the relevant

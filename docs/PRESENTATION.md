@@ -65,6 +65,13 @@ and surrounding text without changing application code. Preserve these names:
 | `revival.description` | `{joined}` |
 | `cards.NR036.description` | `{phrase}`; legacy display only, not offered by this preview |
 
+Private summary templates add:
+
+| Template | Required fields |
+| --- | --- |
+| `summary.description` | `{round}`, `{messages}`, `{whispers}`, `{as_of}`, `{status}` |
+| `summary.as_of` | `{timestamp}` |
+
 Other current strings take no fields. Ordinary literal braces must be doubled as
 `{{` and `}}`. Attribute/index expressions, conversions and nested format fields
 are refused. The application fills IDs, counts and timestamps; no chat transcript
@@ -103,3 +110,9 @@ live round panel. Move a private customization of that key to `round.description
 and include `{round}`. The default lobby closing paragraph now explains evolving
 rules. Existing private overrides keep their text, so update any old claim that
 the first rule lasts until manager ending. Validate before restarting.
+
+Private score pages use `summary.*`, `buttons.summary*` and the `summary` color.
+Score identity/body formatting reuses your existing `results.*` templates. No
+footer is added to these private views. A customization exceeding Discord payload
+limits gives a private unavailable reply without changing scores or summary
+baselines. Copy changes need a restart; these new buttons need no command sync.

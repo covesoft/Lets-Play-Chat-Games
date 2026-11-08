@@ -1,4 +1,4 @@
-# New Rules ordinary-round preview — v0.3.4 / schema 11
+# New Rules ordinary-round preview — v0.3.5 / schema 11
 
 This development build connects the existing ordinary engine to Discord. Run one
 bot process against a database. Full summaries, modes and automatic restart
@@ -11,7 +11,8 @@ Stop the bot and make a verified SQLite backup using the procedure in
 run offline checks, then `python -m lets_play --init-db`. Expect schema 11, WAL and
 foreign keys enabled. Released migrations 1–10 are unchanged. Migration 11 appends offline summary
 capture/baseline tables and preserves every old claim, message ID, clock and
-gameplay row. The live adapter does not call that service yet. A failed migration rolls back atomically. To roll
+gameplay row. The capture/ACK methods remain offline. The adapter now uses its read-only
+private score-page API. A failed migration rolls back atomically. To roll
 back after a successful upgrade, stop the bot and restore the verified pre-upgrade
 backup with the matching old code; never downgrade a schema-11 file in place.
 
@@ -113,7 +114,7 @@ Errors log types, not received text or exception payloads.
 
 Basic manager/final standings remain ten-player pages ordered by ID, with
 clickable non-pinging identities and no score footer on preplay closures.
-Full automatic/requested/per-round summaries and their delivery baselines,
+Public automatic/requested/per-round summaries and their delivery integration,
 ranking/badge presentation, Drawing Conclusions, settings, owner grants,
 evidence-based restart resume and final-output retry/24-hour cleanup workers are
 not wired. Failed terminal delivery retains durable results evidence. This is a
@@ -129,3 +130,9 @@ Official platform references rechecked for this increment:
 - [Discord embeds and limits](https://docs.discord.com/developers/resources/message#embed-object-embed-limits)
 - [discord.py buttons and views](https://discordpy.readthedocs.io/en/stable/interactions/api.html#discord.ui.Button)
 - [Discord reactions](https://docs.discord.com/developers/resources/message#create-reaction)
+
+After play starts, press Summary on the phase panel or inside `/rules` for private
+round/game totals, five-player ID-ordered pages and Refresh. Round paging retains
+its round number through cutover; Current round opens the new round. Scores are
+live reads and can change between requests. These controls neither resume paused
+play nor change public summary baselines. See [REQUESTED_SUMMARY.md](REQUESTED_SUMMARY.md).

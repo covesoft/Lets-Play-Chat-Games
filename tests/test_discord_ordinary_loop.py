@@ -339,8 +339,9 @@ async def test_partial_replacement_retains_incoming_and_original_deadline(
         await settle(runtime)
         state = await runtime.state(route.session_id)
         embed, view = render(state, kind="ordinary_offer")
-        assert len(view.children) == 2 and len(embed.fields) == 1
-        assert all(":target:" in b.custom_id and len(b.custom_id) <= 100 for b in view.children)
+        targets = [b for b in view.children if ":target:" in b.custom_id]
+        assert len(targets) == 2 and len(embed.fields) == 1
+        assert all(len(b.custom_id) <= 100 for b in view.children)
         assert (
             await runtime.submit(
                 route, "target", actor=999, message_id=message, index=index, target_index=0

@@ -6,6 +6,7 @@ import re
 import discord
 from discord import app_commands
 
+from lets_play.discord_adapter import requested_summary
 from lets_play.discord_adapter.lane import LaneUnavailable
 from lets_play.discord_adapter.ordinary_ui import render_ordinary
 from lets_play.new_rules.contracts import (
@@ -17,9 +18,11 @@ from lets_play.new_rules.contracts import (
     ReactionEvent,
     ReferenceKind,
 )
-from lets_play.presentation import default_presentation
+from lets_play.presentation import PresentationError, default_presentation
 from lets_play.storage.discord_store import DiscordStore
+from lets_play.storage.game_store import StoreOverloaded
 from lets_play.storage.opening_flow import OpeningCapabilities, OpeningStatus
+from lets_play.storage.summary_store import SummaryStore
 
 # Command identifiers are stable protocol names, independent of sent-copy locale.
 COMMAND_START = "start-game"
@@ -115,7 +118,9 @@ def render(state, *, kind=None, page=0, presentation=None):
     copy = presentation or default_presentation()
     a = state.admission
     if state.context is not None and a.stage != "ended":
-        return render_ordinary(state, copy, button, kind=kind)
+        embed, view = render_ordinary(state, copy, button, kind=kind)
+        requested_summary.add_button(view, copy, a.session_id)
+        return embed, view
     session = a.session_id
     view = discord.ui.View(timeout=None)
     embed = discord.Embed(title=copy.text("game.title"), colour=copy.color())
@@ -384,7 +389,9 @@ class DiscordGame:
         state = await self.runtime.state(route.session_id) if route else None
         if state:
             embed, view = render(state, kind="rules", presentation=self.copy)
-            await interaction.followup.send(embed=embed, ephemeral=True)
+            if state.context is None:
+                view.clear_items()
+            await interaction.followup.send(embed=embed, view=view, ephemeral=True)
         else:
             await interaction.followup.send(
                 self.copy.text("rules.explanation"),
@@ -465,6 +472,10 @@ class DiscordGame:
             )
 
     async def component(self, interaction):
+        summary = requested_summary.CONTROL.fullmatch((interaction.data or {}).get("custom_id", ""))
+        if summary:
+            await self.private_summary(interaction, summary)
+            return
         match = CONTROL.fullmatch((interaction.data or {}).get("custom_id", ""))
         if not match:
             return
@@ -543,3 +554,48 @@ class DiscordGame:
             await interaction.followup.send(embed=embed, view=view, ephemeral=True)
         else:
             await interaction.followup.send(self.copy.text("control.expired"), ephemeral=True)
+
+    async def private_summary(self, interaction, match):
+        await interaction.response.defer(ephemeral=True, thinking=True)
+        if (
+            not self.runtime
+            or not self.runtime.ready
+            or not interaction.guild
+            or interaction.user.bot
+        ):
+            await interaction.followup.send(self.copy.text("control.unavailable"), ephemeral=True)
+            return
+        session, scope, round_number, actor, direction = match.groups()
+        page = None
+        try:
+            async with self.runtime.store.transaction(write=False) as unit:
+                route = await DiscordStore(unit).route(session)
+                page = None
+                if route and (route.guild_id, route.channel_id) == (
+                    interaction.guild_id,
+                    interaction.channel_id,
+                ):
+                    page = await SummaryStore(unit).live_page(
+                        session,
+                        scope=scope,
+                        round_number=int(round_number),
+                        actor=int(actor),
+                        backwards=direction == "p",
+                        limit=requested_summary.PAGE_SIZE,
+                    )
+        except StoreOverloaded:
+            pass
+        if page is not None:
+            try:
+                embed, view = requested_summary.render(page, self.copy)
+            except PresentationError:
+                page = None
+        if page is None:
+            await interaction.followup.send(self.copy.text("summary.unavailable"), ephemeral=True)
+        else:
+            await interaction.followup.send(
+                embed=embed,
+                view=view,
+                ephemeral=True,
+                allowed_mentions=discord.AllowedMentions.none(),
+            )

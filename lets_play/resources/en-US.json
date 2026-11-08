@@ -108,7 +108,25 @@
     "cards.NR025.description": "Do not use the word sorry.",
     "cards.NR027.description": "Do not use the word maybe.",
     "cards.NR033.description": "Begin text with the word please.",
-    "cards.NR036.description": "Include this phrase: {phrase}"
+    "cards.NR036.description": "Include this phrase: {phrase}",
+    "buttons.summary": "Summary",
+    "buttons.summary_round": "Current round",
+    "buttons.summary_game": "Whole game",
+    "buttons.summary_refresh": "Refresh",
+    "summary.title": "New Rules — summary",
+    "summary.description": "Round {round} · human posts: {messages}, including {whispers} whispers.\n{as_of}\n{status}\nUse /rules for the current requirements.",
+    "summary.as_of": "Last game update: <t:{timestamp}:T>.",
+    "summary.as_of_unknown": "Latest committed totals.",
+    "summary.live": "Scores can change as play continues. Paging and refreshing update this private view.",
+    "summary.paused": "Enforcement is paused. Recorded progress is preserved; these pages do not resume play.",
+    "summary.ended": "This game has ended. These are its recorded totals.",
+    "summary.scope_round": "Round scores",
+    "summary.scope_game": "Game scores",
+    "summary.order": "Players ordered by ID. Actual compliance and adjusted scores are shown separately.",
+    "summary.empty_heading": "Scores",
+    "summary.empty": "No participation recorded for this scope yet.",
+    "summary.unavailable": "These scores are unavailable or this control has expired.",
+    "summary.round_closed": "This round is complete. These are its recorded totals."
   },
   "colors": {
     "default": "#8665C7",
@@ -120,6 +138,7 @@
     "active": "#8665C7",
     "warning": "#8665C7",
     "held": "#8665C7",
-    "revival": "#8665C7"
+    "revival": "#8665C7",
+    "summary": "#8665C7"
   }
 }

@@ -1,8 +1,10 @@
 # Offline summary foundation — v0.3.4 / schema 11
 
 This increment supplies persisted summary capture and delivery bookkeeping only.
-The live Discord adapter does not invoke it. No button, automatic post, summary
-renderer or new command is added. The ordinary-loop preview behaves as before.
+The live Discord adapter does not invoke its capture/ACK writes. v0.3.5 adds a
+read-only `live_page` method and private buttons/rendering described in
+[REQUESTED_SUMMARY.md](REQUESTED_SUMMARY.md). Public/automatic delivery remains
+unwired. No new command is registered.
 
 `storage.summary_store.SummaryStore` uses an existing game unit of work. Compose
 writes after actual engine effects in the same authoritative receipt lane; these

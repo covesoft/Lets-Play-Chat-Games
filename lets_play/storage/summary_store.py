@@ -10,6 +10,7 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta
 
 from lets_play.new_rules.contracts import RuleInstance
+from lets_play.new_rules.scoring import ScoreTotals
 from lets_play.storage.game_codec import SCORE_COLUMNS, IncompatibleState, decode_score
 from lets_play.storage.game_store import _execute, _row
 from lets_play.storage.game_store import _unit_mutating as _write
@@ -42,6 +43,21 @@ class SummarySnapshot:
     round_whispers: int
     rules: tuple[RuleInstance, ...]
     message_id: int | None
+
+
+@dataclass(frozen=True, slots=True)
+class LiveSummaryPage:
+    session_id: str
+    scope: str
+    round_number: int
+    lifecycle: str
+    round_closed: bool
+    as_of: datetime | None
+    human_messages: int
+    whispers: int
+    players: tuple[tuple[int, ScoreTotals], ...]
+    previous: bool
+    following: bool
 
 
 class SummaryStore:
@@ -275,3 +291,68 @@ class SummaryStore:
             (row.summary_id, scope, after_actor, limit),
         ) as cursor:
             return tuple((r["actor_id"], decode_score(r)) for r in await cursor.fetchall())
+
+    async def live_page(
+        self, session, *, scope="round", round_number=0, actor=0, backwards=False, limit=5
+    ):
+        """Read-only current totals; round pages stay bound to their round number.
+
+        Unlike public captures, values can change between page requests. Actor
+        keysets keep navigation bounded without an all-player cache or new writes.
+        """
+        self.unit._check()
+        if (
+            scope not in {"round", "game"}
+            or type(round_number) is not int
+            or not 0 <= round_number < 2**63
+            or type(actor) is not int
+            or not 0 <= actor < 2**63
+            or type(backwards) is not bool
+            or type(limit) is not int
+            or not 1 <= limit <= 100
+        ):
+            return None
+        context = await self.unit.get_context(session)
+        if context is None:
+            return None
+        p = context.position
+        rnd = await _row(
+            self.conn,
+            "SELECT round_id,round_number,human_messages,whispers FROM nr_rounds WHERE session_id=? AND "
+            + ("round_number=?" if round_number and scope == "round" else "round_id=?"),
+            (session, round_number if round_number and scope == "round" else p.round_id),
+        )
+        if rnd is None:
+            return None
+        traffic = await self.unit.get_traffic(session) if scope == "game" else None
+        mark = await _row(
+            self.conn,
+            "SELECT observed_at_utc FROM nr_flow_watermarks WHERE session_id=?",
+            (session,),
+        )
+        condition = "session_id=?" + (" AND round_id=?" if scope == "round" else "")
+        values = (session, rnd["round_id"]) if scope == "round" else (session,)
+        table = "nr_round_scores" if scope == "round" else "nr_participants"
+        comparison, order = ("<", "DESC") if backwards else (">", "ASC")
+        async with self.conn.execute(
+            f"SELECT * FROM {table} WHERE {condition} AND actor_id{comparison}? ORDER BY actor_id {order} LIMIT ?",
+            (*values, actor, limit + 1),
+        ) as cursor:
+            rows = await cursor.fetchall()
+        more = len(rows) > limit
+        selected = rows[:limit]
+        if backwards:
+            selected.reverse()
+        return LiveSummaryPage(
+            session,
+            scope,
+            rnd["round_number"],
+            p.lifecycle.value,
+            scope == "round" and rnd["round_id"] != p.round_id,
+            utc_datetime(mark[0]) if mark else None,
+            traffic.human_messages if traffic else rnd["human_messages"],
+            traffic.whispers if traffic else rnd["whispers"],
+            tuple((r["actor_id"], decode_score(r)) for r in selected),
+            more if backwards else bool(actor),
+            bool(actor) if backwards else more,
+        )
