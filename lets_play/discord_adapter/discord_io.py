@@ -7,7 +7,6 @@ import discord
 from discord import app_commands
 
 from lets_play.discord_adapter.lane import LaneUnavailable
-from lets_play.new_rules.catalog import CARD_SPECS
 from lets_play.new_rules.contracts import (
     AttachmentSnapshot,
     EmojiIdentity,
@@ -17,16 +16,15 @@ from lets_play.new_rules.contracts import (
     ReactionEvent,
     ReferenceKind,
 )
+from lets_play.presentation import default_presentation
 from lets_play.storage.discord_store import DiscordStore
 from lets_play.storage.opening_flow import OpeningCapabilities, OpeningStatus
 
-CARD_COPY = {
-    "NR004": "No file attachments. Link previews are not attachments.",
-    "NR006": "No reactions. Each human can incur one fault per target message for this game.",
-    "NR007": "Use no uppercase letters.",
-    "NR011": "End text with exactly three periods: ...",
-    "NR034": "End text with the word over. Punctuation may follow it.",
-}
+# Command identifiers are stable protocol names, independent of sent-copy locale.
+COMMAND_START = "start-game"
+COMMAND_NEW_RULES = "new-rules"
+COMMAND_RULES = "rules"
+COMMAND_END = "end-game"
 CONTROL = re.compile(r"nr:([a-f0-9]{32}):(join|pick|results)(?::([0-9]{1,7}))?\Z")
 
 
@@ -108,91 +106,92 @@ def button(view, label, session, action, index=None):
     view.add_item(discord.ui.Button(label=label, custom_id=f"nr:{session}:{action}{suffix}"))
 
 
-def render(state, *, kind=None, page=0):
+def render(state, *, kind=None, page=0, presentation=None):
+    copy = presentation or default_presentation()
     a = state.admission
     session = a.session_id
     view = discord.ui.View(timeout=None)
-    embed = discord.Embed(title="New Rules", colour=0x8665C7)
+    embed = discord.Embed(title=copy.text("game.title"), colour=copy.color())
     if kind == "closed" or a.stage == "ended":
-        embed.title = "New Rules — game over"
-        embed.description = "The game has ended. Earned progress has been applied."
+        embed.colour = copy.color("results")
+        embed.title = copy.text("results.title")
+        embed.description = copy.text("results.description")
         for actor, score in state.scores:
             actual = (
-                "Unrated" if score.actual_percent is None else f"{float(score.actual_percent):.2f}%"
+                copy.text("results.unrated")
+                if score.actual_percent is None
+                else copy.text("results.actual", percent=float(score.actual_percent))
             )
             ranking = (
-                "Unrated"
+                copy.text("results.unrated")
                 if score.ranking_percent() is None
-                else f"{float(score.ranking_percent()):.2f}"
+                else copy.text("results.ranking", percent=float(score.ranking_percent()))
             )
             embed.add_field(
-                name=f"Player {actor}",
-                value=(
-                    f"Actual compliance: {actual} · adjusted score: {ranking}\n"
-                    f"Faults: {score.raw_faults} · opportunities: {score.opportunities}\n"
-                    f"Ordinary posts: {score.ordinary_posts} · reaction faults: {score.reaction_failures}"
+                name=copy.text("results.player", actor=actor),
+                value=copy.text(
+                    "results.detail",
+                    actual=actual,
+                    ranking=ranking,
+                    faults=score.raw_faults,
+                    opportunities=score.opportunities,
+                    ordinary_posts=score.ordinary_posts,
+                    reaction_failures=score.reaction_failures,
                 ),
                 inline=False,
             )
         if not state.scores:
-            #embed.description = "The game has ended. No scored participation was recorded."
-            embed.description = "Maybe now's not the time.. The game has been closed."
+            embed.description = copy.text("results.empty")
         if page:
-            button(view, "Previous results", session, "results", page - 1)
+            button(view, copy.text("buttons.results_previous"), session, "results", page - 1)
         if state.more_scores:
-            button(view, "More results", session, "results", page + 1)
-        embed.set_footer(text=f"Results page {page + 1} · players ordered by ID")
+            button(view, copy.text("buttons.results_next"), session, "results", page + 1)
+        embed.set_footer(text=copy.text("results.footer", page=page + 1))
     elif state.recovery_id or a.stage == "recovery":
-        embed.title = "New Rules — paused"
-        embed.description = (
-            "Enforcement is paused after an interruption. Scores and earned progress are preserved. "
-            "A server manager can use /end-game to close this game."
-        )
+        embed.colour = copy.color("paused")
+        embed.title = copy.text("paused.title")
+        embed.description = copy.text("paused.description")
     elif kind == "lobby" or a.stage.startswith("lobby"):
-        embed.description = (
-            "Chat under unusual rules! The starter has joined; two more people must press Play.\n\n"
-            "Once play begins, rules apply to everyone posting in this exact channel. "
-            "Start a message with `-# ` to whisper: the whole message is exempt.\n\n"
-            "The invitation lasts three minutes. Use /rules for current rules. "
-            "A manager can end the game with /end-game.\n\n"
-            "**Opening preview:** one rule remains until a manager ends the game."
-        )
-        button(view, "Play", session, "join")
+        embed.colour = copy.color("lobby")
+        embed.description = copy.text("lobby.description")
+        button(view, copy.text("buttons.play"), session, "join")
     elif kind == "offer" or a.stage.startswith("opening"):
-        embed.title = "New Rules — choose the first rule"
-        embed.description = (
-            f"<@{a.picker_id}> chooses one card. The choice lasts 60 seconds from publication."
-        )
+        embed.colour = copy.color("offer")
+        embed.title = copy.text("offer.title")
+        embed.description = copy.text("offer.description", picker=a.picker_id)
         for index, option in enumerate(a.hand.options):
             card = option.incoming.card_id
-            embed.add_field(name=CARD_SPECS[card].name, value=CARD_COPY[card], inline=False)
-            button(view, CARD_SPECS[card].name, session, "pick", index)
+            label = copy.text(f"cards.{card}.name")
+            embed.add_field(name=label, value=copy.text(f"cards.{card}.description"), inline=False)
+            button(view, label, session, "pick", index)
     else:
         selected = a.stage == "selected"
-        embed.title = (
-            "New Rules — first rule scheduled" if selected else "New Rules — current rules"
-        )
+        embed.colour = copy.color("scheduled" if selected else "active")
+        embed.title = copy.text("scheduled.title" if selected else "active.title")
         embed.description = (
-            f"The rule takes effect <t:{int(a.effective_at.timestamp())}:T>. No rule applies before then."
+            copy.text("scheduled.description", timestamp=int(a.effective_at.timestamp()))
             if selected
-            else "Round 1 · Everyone posting here participates. Start with `-# ` to whisper."
+            else copy.text("active.description")
         )
         if selected:
-            # The selected incoming ID is persisted separately; runtime supplies the
-            # actual rule via context only after activation. Resolve through state.
             cards = (state.selected_card,) if state.selected_card else ()
         else:
             cards = (
                 tuple(i.card_id for i in state.context.active_instances) if state.context else ()
             )
         for card in cards:
-            embed.add_field(name=CARD_SPECS[card].name, value=CARD_COPY[card], inline=False)
+            embed.add_field(
+                name=copy.text(f"cards.{card}.name"),
+                value=copy.text(f"cards.{card}.description"),
+                inline=False,
+            )
     return embed, view
 
 
 class DiscordTransport:
     def __init__(self, bot):
         self.bot = bot
+        self.copy = getattr(bot, "presentation", None) or default_presentation()
         self.marker = discord.PartialEmoji.from_str(bot.settings.ding_emoji or "")
         self.refreshed = {}
 
@@ -211,7 +210,7 @@ class DiscordTransport:
                 "This channel needs view, send, embeds, history, and reaction access with a custom marker."
             )
         probe = await channel.send(
-            "Checking New Rules reaction access…", allowed_mentions=discord.AllowedMentions.none()
+            self.copy.text("probe.message"), allowed_mentions=discord.AllowedMentions.none()
         )
         try:
             await probe.add_reaction(self.marker)
@@ -225,7 +224,7 @@ class DiscordTransport:
 
     async def publish(self, route, kind, state):
         channel = await self.channel(route)
-        embed, view = render(state, kind=kind)
+        embed, view = render(state, kind=kind, presentation=self.copy)
         # A lobby expiry edits its invitation instead of leaving active Play controls.
         if kind == "closed" and state.context is None and state.panel_id:
             await channel.get_partial_message(state.panel_id).edit(
@@ -255,7 +254,7 @@ class DiscordTransport:
         if self.refreshed.get(route.session_id) == signature or state.panel_id is None:
             return
         channel = await self.channel(route)
-        embed, view = render(state)
+        embed, view = render(state, presentation=self.copy)
         await channel.get_partial_message(state.panel_id).edit(embed=embed, view=view)
         self.refreshed[route.session_id] = signature
 
@@ -263,7 +262,7 @@ class DiscordTransport:
         if state is None or state.admission.stage == "ended":
             return
         channel = await self.channel(route)
-        embed, view = render(state)
+        embed, view = render(state, presentation=self.copy)
         if state.panel_id:
             await channel.get_partial_message(state.panel_id).edit(embed=embed, view=view)
         else:
@@ -276,26 +275,36 @@ class DiscordGame:
     def __init__(self, bot):
         self.bot = bot
         start = app_commands.Group(
-            name="start-game", description="Start a chat game", guild_only=True
+            name=COMMAND_START,
+            description=self.copy.text("commands.start.description"),
+            guild_only=True,
         )
         start.add_command(
             app_commands.Command(
-                name="new-rules", description="Open a New Rules lobby", callback=self.start
+                name=COMMAND_NEW_RULES,
+                description=self.copy.text("commands.new_rules.description"),
+                callback=self.start,
             )
         )
         bot.tree.add_command(start)
         bot.tree.add_command(
             app_commands.Command(
-                name="rules", description="View New Rules and the current game", callback=self.rules
+                name=COMMAND_RULES,
+                description=self.copy.text("commands.rules.description"),
+                callback=self.rules,
             )
         )
         bot.tree.add_command(
             app_commands.Command(
-                name="end-game",
-                description="End this channel's game (server managers)",
+                name=COMMAND_END,
+                description=self.copy.text("commands.end.description"),
                 callback=self.end,
             )
         )
+
+    @property
+    def copy(self):
+        return self.bot.presentation
 
     @property
     def runtime(self):
@@ -310,7 +319,7 @@ class DiscordGame:
         await interaction.response.defer(ephemeral=True, thinking=True)
         if not self.bot.settings.development_mode:
             await interaction.followup.send(
-                "The opening preview is available only in development mode.", ephemeral=True
+                self.copy.text("start.development_only"), ephemeral=True
             )
             return
         if (
@@ -319,9 +328,7 @@ class DiscordGame:
             or not self.runtime
             or not self.runtime.ready
         ):
-            await interaction.followup.send(
-                "Start this game in an available server channel.", ephemeral=True
-            )
+            await interaction.followup.send(self.copy.text("start.unavailable"), ephemeral=True)
             return
         try:
             async with self.runtime.network_slots, asyncio.timeout(20):
@@ -334,17 +341,17 @@ class DiscordGame:
                 facts,
             )
             replies = {
-                OpeningStatus.ADMITTED: "The public invitation is being posted.",
-                OpeningStatus.CHANNEL_BUSY: "This channel already has a game.",
-                OpeningStatus.CAPACITY: "This server has reached its simultaneous-game limit.",
+                OpeningStatus.ADMITTED: self.copy.text("start.admitted"),
+                OpeningStatus.CHANNEL_BUSY: self.copy.text("start.channel_busy"),
+                OpeningStatus.CAPACITY: self.copy.text("start.capacity"),
             }
             await interaction.followup.send(
-                replies.get(result, "A complete playable lobby could not be opened."),
+                replies.get(result, self.copy.text("start.failed")),
                 ephemeral=True,
             )
         except (LaneUnavailable, discord.HTTPException, TimeoutError):
             await interaction.followup.send(
-                "I could not verify channel and animated-marker access. Check my permissions, then try again.",
+                self.copy.text("start.access_failed"),
                 ephemeral=True,
             )
 
@@ -353,14 +360,11 @@ class DiscordGame:
         route = self.route(interaction)
         state = await self.runtime.state(route.session_id) if route else None
         if state:
-            embed, view = render(state)
+            embed, view = render(state, presentation=self.copy)
             await interaction.followup.send(embed=embed, ephemeral=True)
         else:
             await interaction.followup.send(
-                "**New Rules** is a chat game: follow evolving rules while you chat. "
-                "Start with `/start-game new-rules`; minimum 3 players. "
-                "Once active, everyone posting in the exact game channel participates. "
-                "Start a message with `-# ` to whisper.",
+                self.copy.text("rules.explanation"),
                 ephemeral=True,
             )
 
@@ -371,7 +375,7 @@ class DiscordGame:
             return None
         if interaction.type is discord.InteractionType.application_command:
             if (
-                interaction.data.get("name") != "end-game"
+                interaction.data.get("name") != COMMAND_END
                 or not interaction.permissions.manage_guild
             ):
                 return None
@@ -414,18 +418,14 @@ class DiscordGame:
             )
         await interaction.response.defer(ephemeral=True, thinking=True)
         if future is None:
-            await interaction.followup.send(
-                "A server manager must use this in the game's channel.", ephemeral=True
-            )
+            await interaction.followup.send(self.copy.text("end.manager_required"), ephemeral=True)
             return
         try:
             await future
-            await interaction.followup.send(
-                "The game is closed; final results are being posted.", ephemeral=True
-            )
+            await interaction.followup.send(self.copy.text("end.closed"), ephemeral=True)
         except LaneUnavailable:
             await interaction.followup.send(
-                "The game worker is unavailable; restart the bot to recover manager controls.",
+                self.copy.text("end.worker_unavailable"),
                 ephemeral=True,
             )
 
@@ -463,30 +463,26 @@ class DiscordGame:
             or not interaction.guild
             or interaction.user.bot
         ):
-            await interaction.followup.send("This game is unavailable.", ephemeral=True)
+            await interaction.followup.send(self.copy.text("control.unavailable"), ephemeral=True)
             return
         if future is not None:
             try:
                 result = await future
                 if unavailable:
                     await self.runtime._show_pause(route)
-                    reply = "Essential channel access is unavailable; enforcement is paused."
+                    reply = self.copy.text("control.access_lost")
                 else:
                     replies = {
-                        "joined": "You're in!",
-                        "opening": "Three players joined; the first choice is being announced.",
-                        "selected": "Choice saved; the start time is being announced.",
-                        "unauthorized": "You weren't selected to choose.",
-                        "paused": "Enforcement is paused.",
+                        "joined": self.copy.text("control.joined"),
+                        "opening": self.copy.text("control.opening"),
+                        "selected": self.copy.text("control.selected"),
+                        "unauthorized": self.copy.text("control.unauthorized"),
+                        "paused": self.copy.text("control.paused"),
                     }
-                    reply = replies.get(
-                        str(result), "That control is no longer available or was already used."
-                    )
+                    reply = replies.get(str(result), self.copy.text("control.stale"))
                 await interaction.followup.send(reply, ephemeral=True)
             except LaneUnavailable:
-                await interaction.followup.send(
-                    "This game is paused. A manager can use /end-game.", ephemeral=True
-                )
+                await interaction.followup.send(self.copy.text("control.recovery"), ephemeral=True)
             return
         # Read-only result paging and expired controls need no lane allocation.
         async with self.runtime.store.transaction(write=False) as unit:
@@ -495,20 +491,16 @@ class DiscordGame:
             interaction.guild_id,
             interaction.channel_id,
         ):
-            await interaction.followup.send(
-                "This control belongs to a different or expired game.", ephemeral=True
-            )
+            await interaction.followup.send(self.copy.text("control.wrong_game"), ephemeral=True)
             return
         if action == "results" and number is not None:
             state = await self.runtime.state(session, page=int(number))
             if state.admission.stage != "ended":
                 await interaction.followup.send(
-                    "Final results are available after the game ends.", ephemeral=True
+                    self.copy.text("control.results_not_ready"), ephemeral=True
                 )
                 return
-            embed, view = render(state, kind="closed", page=int(number))
+            embed, view = render(state, kind="closed", page=int(number), presentation=self.copy)
             await interaction.followup.send(embed=embed, view=view, ephemeral=True)
         else:
-            await interaction.followup.send(
-                "That game has ended or its controls have expired.", ephemeral=True
-            )
+            await interaction.followup.send(self.copy.text("control.expired"), ephemeral=True)

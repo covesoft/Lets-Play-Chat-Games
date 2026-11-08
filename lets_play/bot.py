@@ -16,10 +16,12 @@ from lets_play.discord_adapter.discord_io import (
     reaction_snapshot,
 )
 from lets_play.discord_adapter.runtime import OpeningRuntime
+from lets_play.presentation import load_presentation
 from lets_play.storage import initialize_database
 from lets_play.storage.game_store import open_game_store
 
 logger = logging.getLogger(__name__)
+READY_SEPARATOR = "- " * 25 + "-"
 
 
 def build_intents() -> discord.Intents:
@@ -34,6 +36,7 @@ def build_intents() -> discord.Intents:
 class LetsPlayBot(commands.Bot):
     def __init__(self, settings: Settings):
         self.settings = settings
+        self.presentation = load_presentation(settings.presentation_path)
         super().__init__(
             command_prefix=commands.when_mentioned,
             help_command=None,
@@ -58,7 +61,7 @@ class LetsPlayBot(commands.Bot):
         self.game_runtime = OpeningRuntime(store, DiscordTransport(self))
         if self.settings.sync_commands and self.tree.get_commands():
             cmds = await self.tree.sync()
-            logger.info(f"Synced {len(cmds)} application commands to Discord.")
+            logger.info("Synced %d application commands to Discord.", len(cmds))
         elif self.settings.sync_commands:
             logger.info("Command sync skipped: no registered application commands.")
         else:
@@ -72,7 +75,7 @@ class LetsPlayBot(commands.Bot):
         if self.settings.development_mode:
             for guild in self.guilds:
                 logger.info("Guild %s [%s]", guild.id, guild.name)
-        logger.info("- "*25 + "-")
+        logger.info("%s", READY_SEPARATOR)
 
     async def on_disconnect(self):
         if self.game_runtime and not self.game_runtime.closed:
@@ -141,7 +144,7 @@ class LetsPlayBot(commands.Bot):
 
     async def on_message(self, message):
         # No message-prefix commands; receipt capture occurs at dispatch above.
-        pass # This function is intentionally left blank to avoid processing messages with command prefixes.
+        pass
 
     async def close(self):
         if self.game_runtime:
@@ -151,6 +154,6 @@ class LetsPlayBot(commands.Bot):
 
 
 async def run_bot(settings: Settings) -> None:
-    token = settings.require_token() # called again just for safety; settings.require_token() raises if token is missing
+    token = settings.require_token()
     async with LetsPlayBot(settings) as bot:
         await bot.start(token)

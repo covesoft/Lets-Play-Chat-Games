@@ -3,7 +3,7 @@
 Let’s Play is a Discord chat-game bot. Its first game, **New Rules**, is a party
 conversation game where unusual rules accumulate as people chat.
 
-**Current status: v0.3.0 — development-only opening preview (M2 in progress).**
+**Current status: v0.3.1 — development-only opening preview (M2 in progress).**
 M1 is accepted and closed at v0.2.9/schema 8. The new Discord adapter connects
 persisted admission, a public three-human lobby, picker-only choice, scheduled
 first activation, current rules, message/raw-reaction scoring, markers and manager
@@ -47,6 +47,9 @@ Copy `.env.example` to `.env`, or transfer your existing values into its
 `CHATGAMES_*` settings. All environment settings use that prefix, including
 `CHATGAMES_ADMIN_IDS`. Set `CHATGAMES_DISCORD_TOKEN` only for live startup.
 See the full [configuration contract](docs/CONFIGURATION.md).
+Edit sent copy/colors in `lets_play/resources/en-US.json`, or configure private
+overrides; see [presentation and translation groundwork](docs/PRESENTATION.md).
+Real emoji assets/IDs are private configuration, with no bundled marker.
 
 With the virtual environment active, or substituting its Python executable:
 

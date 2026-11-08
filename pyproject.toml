@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "lets-play-chat-games"
-version = "0.3.0"
+version = "0.3.1"
 description = "Let's Play — a Discord chat-game bot, starting with New Rules."
 readme = "README.md"
 requires-python = ">=3.13,<3.14"
@@ -36,6 +36,9 @@ dev = [
 
 [tool.setuptools.packages.find]
 include = ["lets_play*"]
+
+[tool.setuptools.package-data]
+lets_play = ["resources/*.json"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

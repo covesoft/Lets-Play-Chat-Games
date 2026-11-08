@@ -1,4 +1,4 @@
-# New Rules opening preview — v0.3.0 / schema 9
+# New Rules opening preview — v0.3.1 / schema 9
 
 This development build connects the existing engine to Discord. It is not the
 complete game. Run one bot process against a database. No deployment or command
@@ -16,8 +16,12 @@ Keep the token and owner IDs in the existing local `.env`. Set:
 ```dotenv
 CHATGAMES_DEVELOPMENT_MODE=true
 CHATGAMES_SYNC_COMMANDS=true
-CHATGAMES_DING_EMOJI=<a:NUH_UH_neon:1568499898071126026>
+CHATGAMES_DING_EMOJI=
 ```
+
+Set `CHATGAMES_DING_EMOJI` privately to your own custom emoji markup before
+starting a game. Real assets and IDs do not belong in examples, fixtures or Git.
+There is no public default or fallback marker.
 
 Command sync registers `/start-game new-rules`, `/rules`, and `/end-game` globally.
 Turn command sync off again after registration. Ensure Message Content intent is
@@ -103,3 +107,6 @@ Official references checked for this adapter:
 - [Application-owned emoji](https://docs.discord.com/developers/resources/emoji#application-owned-emoji)
 - [discord.py raw reaction events](https://discordpy.readthedocs.io/en/stable/api.html#discord.on_raw_reaction_add)
 - [Interaction responses](https://discordpy.readthedocs.io/en/stable/interactions/api.html#discord.InteractionResponse.defer)
+
+Sent copy and embed colors are editable independently of this preview’s game
+logic. See [PRESENTATION.md](PRESENTATION.md) for the catalog and private overrides.

@@ -20,6 +20,21 @@ Never commit `.env`, production word lists, databases/sidecars, transcripts, or
 media. Use harmless fixtures. Do not contact/invite collaborators or deploy the
 bot without instructions. Do not run the live bot just to verify an offline edit.
 
+Owner emoji assets (including names/markup and IDs) are private configuration.
+Never put actual owner assets/IDs into public source, defaults, fixtures, examples,
+logs, docs or distributions. Use synthetic fixtures only. An absent marker has no
+fallback; it must be supplied privately before admitting a game.
+
+All player/public-facing copy and embed colors must be owner-editable near the
+file top or in a dedicated presentation file. Current sent copy, card display
+labels, buttons, command descriptions and phase colors live in
+`lets_play/resources/en-US.json`; use stable keys through `Presentation`. Preserve
+owner copy edits when refactoring. Keep protocol IDs/command identifiers separate
+from translated text. New strings/colors must follow this boundary. Private
+`CHATGAMES_PRESENTATION_PATH` overrides are validated at startup/config check;
+keep template placeholders stable and include the catalog in wheel/sdist builds.
+See `docs/PRESENTATION.md`.
+
 Run meaningful checks for each change:
 
 ```bash

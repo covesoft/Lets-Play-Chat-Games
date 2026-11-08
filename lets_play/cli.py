@@ -11,11 +11,23 @@ from pathlib import Path
 
 from lets_play import __version__
 from lets_play.config import ConfigError, load_settings
+from lets_play.presentation import PresentationError, load_presentation
+
+logger = logging.getLogger(__name__)
+# Operator-facing CLI/log presentation is kept together for easy owner edits.
+CLI_DESCRIPTION = "Let's Play — New Rules (development scaffold)"
+CLI_VERSION = "Let's Play is on version {version}!"
+LOG_FORMAT = "%(levelname)s:%(name)s:%(message)s"
+LOG_SEPARATOR = "=" * 55
+LOG_LAUNCH = "Launching Let's Play Chat Games Discord bot (v%s)"
+LOG_STOP = "Bot stopped by intervention."
 
 
 def main(argv: list[str] | None = None, *, base_dir: Path | None = None) -> int:
-    parser = argparse.ArgumentParser(description="Let's Play — New Rules (development scaffold)")
-    parser.add_argument("--version", action="version", version=f"Let's Play is on version {__version__}!")
+    parser = argparse.ArgumentParser(description=CLI_DESCRIPTION)
+    parser.add_argument(
+        "--version", action="version", version=CLI_VERSION.format(version=__version__)
+    )
     mode = parser.add_mutually_exclusive_group()
     mode.add_argument(
         "--check-config", action="store_true", help="Validate without a login or DB write"
@@ -27,6 +39,7 @@ def main(argv: list[str] | None = None, *, base_dir: Path | None = None) -> int:
     try:
         settings = load_settings(base_dir=base_dir)
         if args.check_config:
+            load_presentation(settings.presentation_path)
             print("Configuration valid. No Discord connection or database write performed.")
             print(
                 "Live token: configured."
@@ -52,13 +65,13 @@ def main(argv: list[str] | None = None, *, base_dir: Path | None = None) -> int:
         settings.require_token()
         from lets_play.bot import run_bot
 
-        logging.basicConfig(level=logging.INFO, format="%(levelname)s:%(name)s:%(message)s")
-        logging.getLogger(__name__).info("="*55)
-        logging.getLogger(__name__).info("-"*5 + " Launching Let's Play Chat Games Discord bot " + "-"*5)
+        logging.basicConfig(level=logging.INFO, format=LOG_FORMAT)
+        logger.info("%s", LOG_SEPARATOR)
+        logger.info(LOG_LAUNCH, __version__)
 
         asyncio.run(run_bot(settings))
         return 0
-    except ConfigError as exc:
+    except (ConfigError, PresentationError) as exc:
         print(f"Configuration error: {exc}", file=sys.stderr)
         return 2
     except (OSError, sqlite3.Error) as exc:
@@ -68,5 +81,5 @@ def main(argv: list[str] | None = None, *, base_dir: Path | None = None) -> int:
         )
         return 1
     except KeyboardInterrupt:
-        logging.getLogger(__name__).info("-"*10 + " Bot stopped by intervention. " + "-"*30)
+        logger.info(LOG_STOP)
         return 0

@@ -11,7 +11,7 @@ from test_discord_runtime import activated, opened, service
 from test_ordinary_flow import NOW
 
 from lets_play.bot import LetsPlayBot
-from lets_play.config import CHATGAMES_DING_EMOJI, load_settings
+from lets_play.config import load_settings
 from lets_play.discord_adapter.discord_io import (
     DiscordTransport,
     capabilities,
@@ -50,12 +50,12 @@ def test_forum_container_and_unverified_marker_are_not_playable():
 
 
 @pytest.mark.asyncio
-async def test_marker_probe_uses_exact_animated_asset_and_real_reaction_ack():
-    settings = load_settings(environ={})
-    assert settings.ding_emoji == CHATGAMES_DING_EMOJI == "<a:NUH_UH_neon:1568499898071126026>"
+async def test_marker_probe_uses_configured_asset_and_real_reaction_ack():
+    settings = load_settings(environ={"CHATGAMES_DING_EMOJI": "<a:example:123456789012345678>"})
+    assert settings.ding_emoji == "<a:example:123456789012345678>"
     user = NS(id=55)
     transport = DiscordTransport(NS(settings=settings, user=user))
-    assert transport.marker.id == 1568499898071126026 and transport.marker.animated
+    assert transport.marker.id == 123456789012345678 and transport.marker.animated
     probe = NS(add_reaction=AsyncMock(), remove_reaction=AsyncMock(), delete=AsyncMock())
     channel = NS(
         send=AsyncMock(return_value=probe),

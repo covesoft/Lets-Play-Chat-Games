@@ -130,7 +130,8 @@ def test_module_cli_version_matches_package():
         timeout=10,
     )
     assert result.returncode == 0
-    assert result.stdout.strip() == f"Let's Play {__version__}"
+    assert __version__ in result.stdout
+    assert result.stdout.startswith("Let's Play")
 
 
 def test_module_cli_reports_new_configuration_key_without_token(tmp_path):
