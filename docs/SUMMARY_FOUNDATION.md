@@ -1,10 +1,11 @@
 # Offline summary foundation — v0.3.4 / schema 11
 
 This increment supplies persisted summary capture and delivery bookkeeping only.
-The live Discord adapter does not invoke its capture/ACK writes. v0.3.5 adds a
+At v0.3.4 the live Discord adapter did not invoke its capture/ACK writes. v0.3.5 added a
 read-only `live_page` method and private buttons/rendering described in
-[REQUESTED_SUMMARY.md](REQUESTED_SUMMARY.md). Public/automatic delivery remains
-unwired. No new command is registered.
+[REQUESTED_SUMMARY.md](REQUESTED_SUMMARY.md). v0.3.7 integrates explicit public
+requests, saved pages and claim/ACK delivery. Automatic/round-end delivery remains
+unwired. No new command is registered. Schema remains 11.
 
 `storage.summary_store.SummaryStore` uses an existing game unit of work. Compose
 writes after actual engine effects in the same authoritative receipt lane; these
@@ -23,7 +24,8 @@ No method performs network I/O.
   identity/rules/traffic and exact round/game scores. Automatic captures require
   both gates; requested captures bypass them. A bounded server key is immutable
   and idempotent. One prepared/sending/uncertain output per session prevents
-  overlapping routine sends. Requested UI/coalescing remains future work.
+  overlapping routine sends. `request` adds pending/recent coalescing for the
+  explicit public UI; it never ACKs or advances the public baseline.
 - `claim(..., now=...)` commits a unique sending attempt before HTTP. A second
   connection cannot claim the same output again. The caller may send only after
   a successful claim transaction commits.
@@ -53,7 +55,7 @@ migrations 1–10 and existing scores, offers, clocks, progression and delivery 
 are unchanged. Stop the bot and verify a SQLite backup before `--init-db`; expect
 schema 11, WAL and foreign keys on. Every migration step has a rollback fixture.
 
-Remaining integration: ordered adapter calls, safe publisher/scheduler handling,
-private/requested controls, score/fault/rule/streak presentation, round/final
+Remaining integration: automatic scheduler handling,
+richer score/fault/rule/streak presentation, round/final
 summary capture and delivery proof reconciliation. No complete summary service,
 mode, automatic restart resume or M2 completion is claimed by this foundation.

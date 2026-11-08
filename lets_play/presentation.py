@@ -17,6 +17,10 @@ from types import MappingProxyType
 MAX_CATALOG_BYTES = 128 * 1024
 # Only these templates accept arguments. Attribute/index lookups are prohibited.
 TEMPLATE_FIELDS = {
+    "summary.capture_detail": frozenset(
+        {"session", "round_messages", "round_whispers", "game_messages", "game_whispers"}
+    ),
+    "summary.rule": frozenset({"rule"}),
     "summary.description": frozenset({"round", "messages", "whispers", "as_of", "status"}),
     "summary.as_of": frozenset({"timestamp"}),
     "round.description": frozenset({"round"}),
@@ -100,6 +104,8 @@ def _validate_strings(strings):
                             "phrase",
                             "player",
                             "detail",
+                            "session",
+                            "rule",
                         }
                         else 1
                     )

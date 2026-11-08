@@ -3,6 +3,7 @@
 import asyncio
 import sqlite3
 from datetime import timedelta
+from unittest.mock import AsyncMock
 
 import pytest
 from test_discord_runtime import activated, event, opened, service
@@ -12,6 +13,15 @@ from lets_play.storage.game_codec import IncompatibleState
 from lets_play.storage.game_store import open_game_store
 from lets_play.storage.recovery_flow import RecoveryRequired
 from lets_play.storage.summary_store import SummaryStore
+
+
+@pytest.fixture(autouse=True)
+def offline_publisher(monkeypatch):
+    # These foundation cases manually claim/ACK. Integration delivery is covered
+    # in test_public_summary; the runtime must not race their simulated sender.
+    from lets_play.discord_adapter.runtime import OpeningRuntime
+
+    monkeypatch.setattr(OpeningRuntime, "_publish_summary", AsyncMock(return_value=False))
 
 
 async def capture(runtime, route, key="one", kind="requested"):

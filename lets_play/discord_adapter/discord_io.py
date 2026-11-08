@@ -267,6 +267,14 @@ class DiscordTransport:
         )
         return message.id
 
+    async def publish_summary(self, route, snapshot, page):
+        embed, view = requested_summary.render(page, self.copy, snapshot=snapshot, public=True)
+        channel = await self.channel(route)
+        message = await channel.send(
+            embed=embed, view=view, allowed_mentions=discord.AllowedMentions.none()
+        )
+        return message.id
+
     async def mark(self, route, message_id):
         channel = await self.channel(route)
         try:
@@ -413,6 +421,13 @@ class DiscordGame:
         route = self.route(interaction)
         if not route or interaction.user.bot:
             return None
+        post = requested_summary.POST_CONTROL.fullmatch(
+            (interaction.data or {}).get("custom_id", "")
+        )
+        if post and post[1] == route.session_id and interaction.message is not None:
+            return self.runtime.submit(
+                route, "summary_request", actor=interaction.user.id, source=str(interaction.id)
+            ), False
         if interaction.type is discord.InteractionType.application_command:
             if (
                 interaction.data.get("name") != COMMAND_END
@@ -482,6 +497,18 @@ class DiscordGame:
             )
 
     async def component(self, interaction):
+        post = requested_summary.POST_CONTROL.fullmatch(
+            (interaction.data or {}).get("custom_id", "")
+        )
+        if post:
+            await self.post_summary(interaction, post)
+            return
+        saved = requested_summary.SAVED_CONTROL.fullmatch(
+            (interaction.data or {}).get("custom_id", "")
+        )
+        if saved:
+            await self.saved_summary(interaction, saved)
+            return
         summary = requested_summary.CONTROL.fullmatch((interaction.data or {}).get("custom_id", ""))
         if summary:
             await self.private_summary(interaction, summary)
@@ -566,6 +593,94 @@ class DiscordGame:
             await interaction.followup.send(self.copy.text("control.wrong_game"), ephemeral=True)
             return
         await interaction.followup.send(self.copy.text("control.expired"), ephemeral=True)
+
+    async def post_summary(self, interaction, match):
+        # Preserve dispatch ordering even when the HTTP defer is slow.
+        captured = getattr(interaction, "extras", {}).pop("new_rules_receipt", None)
+        if captured is None:
+            captured = self.capture_control(interaction)
+        editing = await requested_summary.begin_private(interaction)
+        if (
+            not self.runtime
+            or not self.runtime.ready
+            or not interaction.guild
+            or interaction.user.bot
+            or self.route(interaction) is None
+            or self.route(interaction).session_id != match[1]
+        ):
+            reply = "summary.unavailable"
+        elif captured is None:
+            reply = "summary.unavailable"
+        else:
+            try:
+                status = await asyncio.shield(captured[0])
+                reply = {
+                    "queued": "summary.post_queued",
+                    "shared": "summary.post_shared",
+                    "recent": "summary.post_recent",
+                    "uncertain": "summary.post_uncertain",
+                    "paused": "control.paused",
+                }.get(status, "summary.unavailable")
+            except LaneUnavailable:
+                reply = "control.recovery"
+        # Keep the menu usable and edit the originating private response.
+        page = None
+        if self.runtime and self.runtime.ready and interaction.guild and not interaction.user.bot:
+            try:
+                async with self.runtime.store.transaction(write=False) as unit:
+                    route = await DiscordStore(unit).route(match[1])
+                    if route and (route.guild_id, route.channel_id) == (
+                        interaction.guild_id,
+                        interaction.channel_id,
+                    ):
+                        page = await SummaryStore(unit).live_page(match[1])
+            except StoreOverloaded:
+                pass
+        embed = view = None
+        if page:
+            try:
+                embed, view = requested_summary.render(page, self.copy)
+            except PresentationError:
+                pass
+        await requested_summary.reply_private(
+            interaction, editing, content=self.copy.text(reply), embed=embed, view=view
+        )
+
+    async def saved_summary(self, interaction, match):
+        editing = await requested_summary.begin_private(interaction)
+        session, summary_id, scope, actor, direction = match.groups()
+        page = snapshot = None
+        if self.runtime and self.runtime.ready and interaction.guild and not interaction.user.bot:
+            try:
+                async with self.runtime.store.transaction(write=False) as unit:
+                    route = await DiscordStore(unit).route(session)
+                    if route and (route.guild_id, route.channel_id) == (
+                        interaction.guild_id,
+                        interaction.channel_id,
+                    ):
+                        summaries = SummaryStore(unit)
+                        snapshot = await summaries.delivered_snapshot(session, int(summary_id))
+                        if snapshot:
+                            page = await summaries.captured_page(
+                                snapshot,
+                                scope=scope,
+                                actor=int(actor),
+                                backwards=direction == "p",
+                                limit=requested_summary.PAGE_SIZE,
+                            )
+            except StoreOverloaded:
+                pass
+        if page:
+            try:
+                embed, view = requested_summary.render(page, self.copy, snapshot=snapshot)
+            except PresentationError:
+                page = None
+        if page is None:
+            await requested_summary.reply_private(
+                interaction, editing, content=self.copy.text("summary.unavailable")
+            )
+        else:
+            await requested_summary.reply_private(interaction, editing, embed=embed, view=view)
 
     async def private_summary(self, interaction, match):
         editing = await requested_summary.begin_private(interaction)

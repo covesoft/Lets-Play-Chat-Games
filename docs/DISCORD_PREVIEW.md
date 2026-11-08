@@ -1,4 +1,4 @@
-# New Rules ordinary-round preview — v0.3.6 / schema 11
+# New Rules ordinary-round preview — v0.3.7 / schema 11
 
 This development build connects the existing ordinary engine to Discord. Run one
 bot process against a database. Full summaries, modes and automatic restart
@@ -138,3 +138,10 @@ existing private response and read updated scores; there is no Refresh button. R
 its round number through cutover; Current round opens the new round. Scores are
 live reads and can change between requests. These controls neither resume paused
 play nor change public summary baselines. See [REQUESTED_SUMMARY.md](REQUESTED_SUMMARY.md).
+
+For a public report, choose **Post summary to channel** in that private menu.
+Verify one saved report appears, its saved round/game pages open privately and
+keep their captured scores after more chat. Rapid repeat clicks should share a
+pending report or receive a private recent-report reply. The live scope buttons
+remain quiet. Automated/round-end summaries are not enabled yet. This increment
+uses the installed schema 11 and needs no migration or command sync.

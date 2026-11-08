@@ -71,6 +71,8 @@ Private summary templates add:
 | --- | --- |
 | `summary.description` | `{round}`, `{messages}`, `{whispers}`, `{as_of}`, `{status}` |
 | `summary.as_of` | `{timestamp}` |
+| `summary.capture_detail` | `{session}`, `{round_messages}`, `{round_whispers}`, `{game_messages}`, `{game_whispers}` |
+| `summary.rule` | `{rule}` |
 
 Other current strings take no fields. Ordinary literal braces must be doubled as
 `{{` and `}}`. Attribute/index expressions, conversions and nested format fields
@@ -122,3 +124,9 @@ private overrides but is not rendered. Repeated scope clicks refresh in place.
 Final result order is now adjusted score descending, unrated last; update a private
 `results.footer` override if it still says players are ordered by ID. The `{page}`
 placeholder is unchanged. Private summary order remains by ID, with no footer.
+
+v0.3.7 adds `buttons.summary_post`, `buttons.summary_saved`, `summary.captured`,
+`summary.capture_*`, `summary.rules_heading`, `summary.rule` and `summary.post_*`.
+The public report and saved private pages reuse the `summary` color and existing
+score templates, with no footer. `session` is a short game identifier, not a
+Discord Gateway session. Captured rule names follow your `cards.*.name` overrides.

@@ -127,7 +127,18 @@
     "summary.empty": "No participation recorded for this scope yet.",
     "summary.unavailable": "These scores are unavailable or this control has expired.",
     "summary.round_closed": "This round is complete. These are its recorded totals.",
-    "results.unavailable": "Those final results are unavailable or this control has expired."
+    "results.unavailable": "Those final results are unavailable or this control has expired.",
+    "buttons.summary_post": "Post summary to channel",
+    "buttons.summary_saved": "View saved scores",
+    "summary.captured": "Saved at the time of this report. Later play does not change these scores.",
+    "summary.capture_heading": "Saved report",
+    "summary.capture_detail": "Game {session} · Round traffic: {round_messages} posts, {round_whispers} whispers · Game traffic: {game_messages} posts, {game_whispers} whispers.",
+    "summary.rules_heading": "Rules at capture",
+    "summary.rule": "• {rule}",
+    "summary.post_queued": "A saved summary is queued for this channel.",
+    "summary.post_shared": "That summary has already been requested; no extra report is queued.",
+    "summary.post_recent": "A summary was just posted. Please give it a moment before requesting another.",
+    "summary.post_uncertain": "The previous summary delivery could not be confirmed. A manager must resolve the paused game before more reports can be posted."
   },
   "colors": {
     "default": "#8665C7",

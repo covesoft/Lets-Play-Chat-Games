@@ -1,4 +1,4 @@
-"""Offline summary capture/ACK foundation. No scheduler, SDK or public output.
+"""Summary capture/ACK and bounded projections. No scheduler, SDK or network I/O.
 
 Compose writes after engine effects in the same ordered receipt unit. A snapshot
 is provisional until commit; claim before HTTP and ACK only actual public success.
@@ -19,6 +19,7 @@ from lets_play.storage.recovery_flow import active_recovery, require_dispatchabl
 
 AUTO_SECONDS = 60
 AUTO_MESSAGES = 25
+REQUEST_COALESCE_SECONDS = 15
 _COLUMNS = ",".join(SCORE_COLUMNS)
 
 
@@ -63,6 +64,78 @@ class LiveSummaryPage:
 class SummaryStore:
     def __init__(self, unit):
         self.unit, self.conn = unit, unit._conn
+
+    async def pending(self, session):
+        self.unit._check()
+        row = await _row(
+            self.conn,
+            "SELECT output_key FROM nr_summary_outputs WHERE session_id=? AND state IN ('prepared','sending','uncertain')",
+            (session,),
+        )
+        return await self.snapshot(session, row[0]) if row else None
+
+    @_write
+    async def request(self, session, output_key, *, now):
+        """Coalesce explicit public requests without advancing the delivery baseline."""
+        _key(output_key)
+        existing = await self.snapshot(session, output_key) or await self.pending(session)
+        if existing:
+            return "uncertain" if existing.state == "uncertain" else "shared"
+        recent = await _row(
+            self.conn,
+            "SELECT 1 FROM nr_summary_outputs WHERE session_id=? AND state='delivered' AND delivered_at_utc>? LIMIT 1",
+            (session, utc_int(now - timedelta(seconds=REQUEST_COALESCE_SECONDS))),
+        )
+        if recent:
+            return "recent"
+        snapshot = await self.prepare(session, output_key, now=now, kind="requested")
+        return "queued" if snapshot else "unavailable"
+
+    async def delivered_snapshot(self, session, summary_id):
+        self.unit._check()
+        if type(summary_id) is not int or not 0 < summary_id < 2**63:
+            return None
+        row = await _row(
+            self.conn,
+            "SELECT output_key FROM nr_summary_outputs WHERE session_id=? AND summary_id=? AND state='delivered'",
+            (session, summary_id),
+        )
+        return await self.snapshot(session, row[0]) if row else None
+
+    async def captured_page(self, snapshot, *, scope="round", actor=0, backwards=False, limit=5):
+        """Bounded frozen pages; no live counters or membership enter this read."""
+        self.unit._check()
+        if (
+            scope not in {"round", "game"}
+            or type(actor) is not int
+            or not 0 <= actor < 2**63
+            or type(backwards) is not bool
+            or type(limit) is not int
+            or not 1 <= limit <= 100
+        ):
+            return None
+        comparison, order = ("<", "DESC") if backwards else (">", "ASC")
+        async with self.conn.execute(
+            f"SELECT * FROM nr_summary_scores WHERE summary_id=? AND scope=? AND actor_id{comparison}? ORDER BY actor_id {order} LIMIT ?",
+            (snapshot.summary_id, scope, actor, limit + 1),
+        ) as cursor:
+            rows = await cursor.fetchall()
+        more, selected = len(rows) > limit, rows[:limit]
+        if backwards:
+            selected.reverse()
+        return LiveSummaryPage(
+            snapshot.session_id,
+            scope,
+            snapshot.round_number,
+            "captured",
+            False,
+            snapshot.captured_at,
+            snapshot.round_messages if scope == "round" else snapshot.human_messages,
+            snapshot.round_whispers if scope == "round" else snapshot.whispers,
+            tuple((r["actor_id"], decode_score(r)) for r in selected),
+            more if backwards else bool(actor),
+            bool(actor) if backwards else more,
+        )
 
     @_write
     async def initialize(self, session):

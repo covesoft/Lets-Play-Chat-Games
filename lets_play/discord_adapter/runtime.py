@@ -8,6 +8,7 @@ remain separate integration work.
 import asyncio
 import logging
 from dataclasses import replace
+from hashlib import sha256
 from random import Random
 from uuid import uuid4
 
@@ -20,6 +21,7 @@ from lets_play.storage.opening_flow import OpeningFlow, OpeningStatus
 from lets_play.storage.ordinary_flow import OrdinaryFlow
 from lets_play.storage.pacing_flow import RoundPacing
 from lets_play.storage.recovery_flow import RecoveryFlow, active_recovery
+from lets_play.storage.summary_store import SummaryStore
 
 logger = logging.getLogger(__name__)
 # Deliberately small, proven text/media/reaction slice; no phrase dependency.
@@ -157,6 +159,8 @@ class OpeningRuntime:
             "pause": EventKind.RECOVERY_BEGIN,
             "configure": EventKind.ADVANCEMENT_RECHECK,
             "prepare": EventKind.OFFER_PREPARE,
+            "summary_request": EventKind.TIMER,
+            "summary_ack": EventKind.TIMER,
         }.get(action)
         if action == "publish":
             kind = PUBLISH_KINDS[d["output"].ui_kind]
@@ -200,6 +204,17 @@ class OpeningRuntime:
                     await RecoveryFlow(unit).end(frame, recovery, authorized=d["authorized"])
                     if recovery
                     else await flow.cancel(frame, authorized=d["authorized"])
+                )
+            elif action == "summary_ack":
+                if recovery:
+                    await RecoveryFlow(unit).observe(frame, recovery)
+                else:
+                    await flow.tick(frame)
+                result = await SummaryStore(unit).acknowledge(
+                    route.session_id,
+                    d["output_key"],
+                    message_id=d["message_id"],
+                    now=frame.received_at,
                 )
             elif recovery:
                 await RecoveryFlow(unit).observe(frame, recovery)
@@ -321,6 +336,11 @@ class OpeningRuntime:
             return await opening.timeout(frame, rng=self.rng)
         if action == "tick":
             return await opening.tick(frame)
+        if action == "summary_request":
+            # Observe due phase boundaries before capturing, in the same receipt.
+            await opening.tick(frame)
+            key = "request:" + sha256(frame.source_id.encode()).hexdigest()
+            return await SummaryStore(unit).request(route.session_id, key, now=frame.received_at)
         raise ValueError("Unknown runtime action.")
 
     async def _followups(self, route):
@@ -427,6 +447,8 @@ class OpeningRuntime:
                         async with self.store.transaction() as unit:
                             await unit.acknowledge_marker(intent)
                     continue
+                if await self._publish_summary(route):
+                    continue
                 state = await self.state(route.session_id)
                 if state and state.admission.stage in {"active", "ended"}:
                     async with self.network_slots, asyncio.timeout(20):
@@ -447,6 +469,45 @@ class OpeningRuntime:
             await self._fault(route, type(exc).__name__)
         finally:
             self.publishers.pop(route.session_id, None)
+
+    async def _publish_summary(self, route):
+        async with self.store.transaction(write=False) as unit:
+            context = await unit.get_context(route.session_id)
+            if (
+                context is None
+                or context.position.lifecycle == "ended"
+                or await active_recovery(unit, route.session_id)
+            ):
+                return False
+            summary = await SummaryStore(unit).pending(route.session_id)
+            if summary is None or summary.kind != "requested":
+                return False
+            page = await SummaryStore(unit).captured_page(summary)
+        if summary.state != "prepared":
+            await self._fault(route, "uncertain_summary_delivery")
+            return False
+        async with self.store.transaction() as unit:
+            claimed = await SummaryStore(unit).claim(
+                route.session_id, summary.output_key, now=self.clock.now()
+            )
+        if not claimed:
+            return False
+        try:
+            async with self.network_slots, asyncio.timeout(20):
+                message_id = await self.transport.publish_summary(route, summary, page)
+            await asyncio.shield(
+                self.submit(
+                    route, "summary_ack", output_key=summary.output_key, message_id=message_id
+                )
+            )
+        except asyncio.CancelledError:
+            # The durable sending claim is intentionally retained on shutdown.
+            raise
+        except Exception:
+            async with self.store.transaction() as unit:
+                await SummaryStore(unit).mark_uncertain(route.session_id, summary.output_key)
+            raise
+        return True
 
     async def _retire(self, route):
         if self.routes.get((route.guild_id, route.channel_id)) == route:

@@ -155,8 +155,8 @@ panel only, with no new-message fallback. Modes, full summary baselines,
 automatic resume, final-output retry/24-hour cleanup and public release remain
 future increments.
 
-v0.3.4/schema 11 adds only the offline summary capture/ACK foundation. Its capture/ACK writes are not
-called by the live adapter. v0.3.5 uses only the read-only live_page method. Use SummaryStore inside the same ordered engine write
+v0.3.4/schema 11 added the offline summary capture/ACK foundation. Its capture/ACK writes were not
+called by the live adapter until v0.3.7. v0.3.5 uses only the read-only live_page method. Use SummaryStore inside the same ordered engine write
 unit after actual effects; commit before treating a capture as deliverable.
 Initialize timing from the real first activation, never an inferred legacy clock.
 Automatic preparation needs both 60 seconds and 25 new human traffic messages.
@@ -191,6 +191,20 @@ players. Do not sort rounded floats or fetch the full roster. New result control
 carry rank anchors/page labels; legacy ID-offset controls reopen ranked page one.
 Result paging also edits an existing private response. Scores, progression,
 public-summary baselines and schema remain unchanged.
+
+v0.3.7 integrates an explicit Post summary to channel control in live private
+menus. Capture its receipt before HTTP defer, observe due engine boundaries and
+freeze the report in that same write unit. Scope/page reads remain quiet and
+read-only. Coalesce pending requests and the 15 seconds after actual public
+success; never ACK a private reply or reset the public baseline on a request.
+Public delivery commits one sending claim before HTTP, then ACKs the actual
+returned message ID through the lane. Preserve arrivals during delivery and
+known success during pause/end. Timeout/shutdown/restart retain uncertainty and
+never blindly resend. Prepared reports cannot be sent after ending or through
+recovery. Saved round/game pages use frozen membership/scores/rules and bounded
+actor cursors; they open privately and then edit that menu. All summaries remain
+ID-ordered, mention-safe and footer-free. Automatic/round-end posting, evidence
+reconciliation, resume and richer details remain separate work. Schema stays 11.
 
 Patch handoffs must include copy-paste Windows commands from the repository root:
 `git apply --check`, `git apply`, the editable reinstall when needed, the relevant

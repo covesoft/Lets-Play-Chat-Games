@@ -38,7 +38,7 @@ async def test_summary_opens_privately_then_edits_ephemeral_menu_in_place(
             result = request.edit_original_response if editing else request.followup.send
             kwargs = result.call_args.kwargs
             assert "embed" in kwargs and kwargs["allowed_mentions"].users is False
-            assert len(kwargs["view"].children) == 2
+            assert len(kwargs["view"].children) == 3
             assert all(
                 b.label != bot.presentation.text("buttons.summary_refresh")
                 for b in kwargs["view"].children
