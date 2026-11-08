@@ -244,3 +244,12 @@ pause/end, and old-round boards never consume new-round traffic. Preserve older
 send claims and require a verified schema-11 backup before migration 12. Reject
 occupied-channel start commands before reaction probing; admission remains the
 authoritative race guard. See docs/ROUND_REPORTS.md.
+
+v0.3.10 later ordinary offers edit the known phase panel rather than create a
+second choice message. Persist/ACK that same message ID as the authoritative
+offer; successful edit publication owns the original choice deadline. Refresh
+must not reveal a prepared offer or an unacknowledged selected activation.
+Confirmed partial target changes still refresh in place. A missing/uncertain
+edit is not permission for a replacement send; retain existing recovery/send
+claims. Opening choices and acknowledged new-rule disclosures keep their
+existing paths. Schema remains 12 and owner copy is unchanged.

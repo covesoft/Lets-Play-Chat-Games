@@ -237,7 +237,7 @@ wheels = [
 
 [[package]]
 name = "lets-play-chat-games"
-version = "0.3.9"
+version = "0.3.10"
 source = { editable = "." }
 dependencies = [
     { name = "aiosqlite" },

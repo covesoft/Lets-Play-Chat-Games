@@ -21,7 +21,7 @@ from lets_play.storage import initialize_database
 from lets_play.storage.game_store import open_game_store
 
 logger = logging.getLogger(__name__)
-READY_SEPARATOR = "- " * 25 + "-"
+READY_SEPARATOR = "- " * 27 + "-"  # = 55 width
 
 
 def build_intents() -> discord.Intents:

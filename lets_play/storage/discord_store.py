@@ -34,6 +34,7 @@ class DisplayState:
     next_deadline: datetime | None = None
     timeout_due: bool = False
     previous_scores: bool = False
+    offer_display_ready: bool = True
 
 
 @dataclass(frozen=True, slots=True)
@@ -160,6 +161,17 @@ class DiscordStore:
                 and next_deadline == offer.choice_deadline.expires_at
             ),
             previous_scores,
+            not offer
+            or (
+                offer.stage != "prepared"
+                and (
+                    offer.stage != "selected"
+                    or await OrdinaryFlow(self.unit).known_message_id(
+                        session, offer.hand.offer_id, "activation"
+                    )
+                    is not None
+                )
+            ),
         )
 
     async def _ranked_scores(self, session, anchor, backwards, *, round_id=None, limit=10):

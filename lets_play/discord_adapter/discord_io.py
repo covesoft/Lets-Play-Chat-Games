@@ -258,13 +258,16 @@ class DiscordTransport:
         channel = await self.channel(route)
         embed, view = render(state, kind=kind, presentation=self.copy)
         # A lobby expiry edits its invitation instead of leaving active Play controls.
-        if kind == "evolution_closed_silent" and state.panel_id is None:
-            raise LaneUnavailable("Silent closure has no known panel to edit.")
-        if kind == "evolution_closed_silent" or (
+        if kind in {"evolution_closed_silent", "ordinary_offer"} and state.panel_id is None:
+            raise LaneUnavailable("Panel publication has no known message to edit.")
+        if kind in {"evolution_closed_silent", "ordinary_offer"} or (
             kind == "closed" and state.context is None and state.panel_id
         ):
             await channel.get_partial_message(state.panel_id).edit(
-                embed=embed, view=view, content=None
+                embed=embed,
+                view=view,
+                content=None,
+                allowed_mentions=discord.AllowedMentions.none(),
             )
             return state.panel_id
         message = await channel.send(
@@ -301,6 +304,10 @@ class DiscordTransport:
     async def refresh(self, route, state):
         if state.admission.stage == "ended":
             self.refreshed.pop(route.session_id, None)
+            return
+        if not state.offer_display_ready and not state.recovery_id:
+            # Only the publisher may reveal an unacknowledged choice/activation.
+            # Its actual edit/send ACK establishes the authoritative message ID.
             return
         signature = (
             state.panel_id,

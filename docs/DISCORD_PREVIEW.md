@@ -1,4 +1,4 @@
-# New Rules ordinary-round preview — v0.3.9 / schema 12
+# New Rules ordinary-round preview — v0.3.10 / schema 12
 
 This development build connects the existing ordinary engine to Discord. Run one
 bot process against a database. Full summaries, modes and automatic restart
@@ -148,6 +148,16 @@ choice controls; the disclosure panel and `/rules` retain Summary. Earlier saved
 report buttons now open current scores. Delivered copies are removed at ACK and
 older delivered archives are compacted on startup; unresolved send evidence is
 preserved. Automatic/round-end summaries are enabled in v0.3.9; see ROUND_REPORTS.md.
-This release upgrades schema 11 to 12. Stop the bot, make and verify a SQLite
+v0.3.9 upgrades schema 11 to 12. Stop the bot, make and verify a SQLite
 backup, apply/reinstall, then run --init-db before starting. No command sync is
 required. An already occupied channel is rejected before the reaction probe.
+
+v0.3.10 changes later-round offer publication to edit the last known phase panel
+(normally the 30-second warning) instead of posting a second choice message.
+The successful edit ACK binds that same ID to the offer and starts its choice
+clock. Those original-panel buttons remain authoritative. Refresh waits for
+prepared offers and selected activations to be published before changing a
+panel, avoiding premature choices or a premature duplicate disclosure. Partial
+target changes still refresh in place. Missing/uncertain panel edits enter
+recovery without a replacement send. Schema stays 12; no migration or command
+sync is required for this fix.
