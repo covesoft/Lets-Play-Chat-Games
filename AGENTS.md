@@ -13,8 +13,8 @@ are no legacy launcher/configuration aliases. No token or external private list
 is required for offline tests.
 
 Keep the New Rules domain independent of Discord and storage. M1 is accepted and closed at v0.2.9/schema 8. M2 is in progress. Preserve the
-existing engine/storage APIs; the v0.3.0 development preview wires only the opening
-path. Do not claim later-round play, modes or full recovery from that preview. Resolve the relevant open contracts at their designated gates.
+existing engine/storage APIs; v0.3.3 wires the ordinary round loop for sixteen
+proven templates. Full summaries, modes and automatic restart resume remain open. Resolve the relevant open contracts at their designated gates.
 
 Never commit `.env`, production word lists, databases/sidecars, transcripts, or
 media. Use harmless fixtures. Do not contact/invite collaborators or deploy the
@@ -71,8 +71,8 @@ contiguous server receipt sequence for every flow action, chat/reaction, and tim
 Never skip a sequence gap or backdate a timer over queued chat. Publication ACKs
 are external facts, not output preparation. Old rules apply until the announced
 whole-second cutover; missing/late ACK requests explicit recovery. Closures retain
-closure evidence; only nr_round_resolutions certifies general progression. Actual delivery and startup
-adapter remain unfinished; schema 7 composes ordinary refresh/held/revival.
+closure evidence; only nr_round_resolutions certifies general progression. The v0.3.3 adapter delivers these ordinary transitions; full summaries and
+automatic restart resume remain open. Schema 7 composes ordinary refresh/held/revival.
 
 Schema 4 progression is New Rules only. Score qualification, live credit flag,
 global increment and Familiar Face commit together. Resolve actual closures in
@@ -90,7 +90,8 @@ before the first at/after-cutoff receipt is scored; later events remain old-roun
 until activation. Preserve exact-score candidate evidence and unrated eligibility.
 Rotation service commits only at valid activation, together with general resolution
 and next-round pacing. Compose ordinary held/refresh/revival through schema 7;
-scheduler/publisher/reconciliation and startup recovery remain.
+v0.3.3 wires ordinary scheduler/publisher dispatch. Automatic recovery
+reconciliation remains open.
 
 Schema 6 OpeningFlow reserves real guild/channel capacity before publishing a lobby.
 Lobbies/opening/recovery have no nr_sessions/nr_rounds or score effects. Actual
@@ -114,7 +115,8 @@ credit. Quorum preserves the open round; actual activation or ending resolves it
 Held idle counts only new human messages (including whispers); settings-only
 restoration does not reset it. Silent expiry releases capacity/general finalization
 atomically and requests only an existing-panel update. O-03 final delivery remains
-M2. Reopening handles is tested; the explicit schema-8 barrier still needs a live startup adapter.
+wired for the ordinary preview in v0.3.3. The startup adapter enters the
+schema-8 barrier; automatic resume remains open.
 Do not infer missing legacy revival publication times or waive old failure pauses.
 
 Schema 8 RecoveryFlow is an explicit offline disruption coordinator. Stop dispatch,
@@ -126,8 +128,8 @@ rebinds ownership without resetting original clocks, partial choices or scores.
 Known lobby/revival expiry still wins while paused. Ignore/guard historical sources
 created before actual resumption; do not backfill missing chat or mode success.
 Old capability/dependency/recovery pauses, legacy clockless revival and unsupported
-modes require specialized policy or explicit authorized ending. Startup adapter,
-send reconciliation/leases, real announcements and cleanup remain M2/later work.
+modes require specialized policy or explicit authorized ending. The startup adapter enters barriers before dispatch. Automatic
+resume, send reconciliation/leases, recovery announcements and cleanup remain open.
 
 Schema 9 appends only the Discord outbound-attempt guard. The development preview
 uses one bounded FIFO and one publisher per live session, and one bot process per
@@ -137,8 +139,21 @@ the actor/target offense guard. Claims commit before HTTP; unknown sends pause a
 are never blindly retried. All startup routes enter recovery before output/timers.
 Current preview recovery permits manager ending only. Do not infer live emoji
 usability from markup or permission bits: the admission probe must really react.
-Later-round pacing, modes, full summary baselines, automatic resume, final-output
-retry/24-hour cleanup and public release remain future increments.
+Schema 10 preserves all schema-9 claims and namespaces new guards by output
+family/identity. Save the actual delivered message and ordered ACK sequence in
+the same transaction as its flow acknowledgement. Each live route reads its own
+bounded pending-output page; never filter a global first page in memory.
+
+v0.3.3 wires warnings, picker snapshot, ordinary offers, single/partial replacement,
+timeouts, cutover and held/revival using the existing engine. Later hands use the
+sixteen existing non-phrase validators; opening remains the five-card pool.
+Keep the original published deadline on partial target choice and the exact
+warning/revival attempt on ACK. /rules shows old enforced rules until cutover,
+even while the public transition announces the future rules. Revival quorum
+preserves the same open round. Silent inactivity expiry edits the last known
+panel only, with no new-message fallback. Modes, full summary baselines,
+automatic resume, final-output retry/24-hour cleanup and public release remain
+future increments.
 
 Patch handoffs must include copy-paste Windows commands from the repository root:
 `git apply --check`, `git apply`, the editable reinstall when needed, the relevant

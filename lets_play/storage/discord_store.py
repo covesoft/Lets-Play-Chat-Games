@@ -1,14 +1,18 @@
 """Bounded adapter reads and durable send claims. No SDK objects or network I/O."""
 
 from dataclasses import dataclass
+from datetime import datetime
 
 from lets_play.new_rules.contracts import SessionRoute
 from lets_play.new_rules.evaluation import EvaluationContext
 from lets_play.new_rules.scoring import ScoreTotals
+from lets_play.storage.evolution_flow import EvolutionFlow, RevivalRecord
 from lets_play.storage.game_codec import decode_score
 from lets_play.storage.game_store import _execute, _row
 from lets_play.storage.offer_codec import utc_datetime, utc_int
 from lets_play.storage.opening_flow import AdmissionRecord, OpeningFlow
+from lets_play.storage.ordinary_flow import OfferRecord, OrdinaryFlow
+from lets_play.storage.pacing_flow import PacingRecord, RoundPacing
 from lets_play.storage.recovery_flow import active_recovery
 
 
@@ -22,6 +26,26 @@ class DisplayState:
     scores: tuple[tuple[int, ScoreTotals], ...]
     more_scores: bool
     selected_card: str | None
+    offer: OfferRecord | None = None
+    pacing: PacingRecord | None = None
+    revival: RevivalRecord | None = None
+    round_number: int | None = None
+    next_deadline: datetime | None = None
+    timeout_due: bool = False
+
+
+@dataclass(frozen=True, slots=True)
+class PendingOutput:
+    family: str
+    output_id: int
+    kind: str
+    token: str
+    round_id: str | None = None
+    attempt: int = 1
+
+    @property
+    def ui_kind(self):
+        return self.kind if self.family == "opening" else f"{self.family}_{self.kind}"
 
 
 class DiscordStore:
@@ -42,9 +66,45 @@ class DiscordStore:
         )
         panel = await _row(
             self.conn,
-            "SELECT message_id FROM nr_opening_outputs WHERE session_id=? AND message_id IS NOT NULL ORDER BY output_id DESC LIMIT 1",
+            """SELECT message_id FROM nr_discord_deliveries WHERE session_id=? AND message_id IS NOT NULL
+            ORDER BY ack_sequence DESC,attempted_at_utc DESC,output_id DESC LIMIT 1""",
             (session,),
         )
+        if panel is None:
+            panel = await _row(
+                self.conn,
+                "SELECT message_id FROM nr_opening_outputs WHERE session_id=? AND message_id IS NOT NULL ORDER BY output_id DESC LIMIT 1",
+                (session,),
+            )
+        context = await self.unit.get_context(session)
+        offer = (
+            await OrdinaryFlow(self.unit).get_offer(session, context.position.offer_id)
+            if context and context.position.offer_id
+            else None
+        )
+        pacing = await RoundPacing(self.unit).record(session) if context else None
+        revival = await EvolutionFlow(self.unit).revival(session) if context else None
+        round_row = (
+            await _row(
+                self.conn,
+                "SELECT round_number FROM nr_rounds WHERE session_id=? AND round_id=?",
+                (session, context.position.round_id),
+            )
+            if context
+            else None
+        )
+        boundaries = []
+        if context is None and admission.next_deadline:
+            boundaries.append(admission.next_deadline)
+        if offer and offer.stage == "published" and offer.choice_deadline:
+            boundaries.append(offer.choice_deadline.expires_at)
+        if offer and offer.stage == "selected" and offer.effective_at:
+            boundaries.append(offer.effective_at)
+        if pacing and pacing.next_deadline:
+            boundaries.append(pacing.next_deadline)
+        if context and (deadline := await EvolutionFlow(self.unit).next_deadline(session)):
+            boundaries.append(deadline)
+        next_deadline = min(boundaries) if boundaries else None
         async with self.conn.execute(
             "SELECT * FROM nr_participants WHERE session_id=? ORDER BY actor_id LIMIT 11 OFFSET ?",
             (session, page * 10),
@@ -52,7 +112,7 @@ class DiscordStore:
             rows = await cursor.fetchall()
         return DisplayState(
             admission,
-            await self.unit.get_context(session),
+            context,
             (
                 recovery["recovery_id"]
                 if (recovery := await active_recovery(self.unit, session))
@@ -72,6 +132,17 @@ class DiscordStore:
             )
             if admission.hand
             else None,
+            offer,
+            pacing,
+            revival,
+            round_row[0] if round_row else None,
+            next_deadline,
+            bool(
+                offer
+                and offer.stage == "published"
+                and offer.choice_deadline
+                and next_deadline == offer.choice_deadline.expires_at
+            ),
         )
 
     async def route(self, session):
@@ -109,46 +180,80 @@ class DiscordStore:
         self.unit._check()
         if await active_recovery(self.unit, session):
             return None
-        record = await OpeningFlow(self.unit).record(session)
-        kind = {
-            "lobby_prepared": "lobby",
-            "opening_prepared": "offer",
-            "selected": "activation",
-            "ended": "closed",
-        }.get(record.stage if record else None)
-        if kind is None:
-            return None
-        row = await _row(
-            self.conn,
-            """SELECT output_id FROM nr_opening_outputs WHERE session_id=? AND kind=?
-            AND acknowledged_at_utc IS NULL AND retired_at_utc IS NULL""",
-            (session, kind),
-        )
-        return (row[0], kind) if row else None
+        for family, flow in (
+            ("opening", OpeningFlow(self.unit)),
+            ("ordinary", OrdinaryFlow(self.unit)),
+            ("pacing", RoundPacing(self.unit)),
+            ("evolution", EvolutionFlow(self.unit)),
+        ):
+            outputs = await flow.pending_outputs(limit=1, session_id=session)
+            if not outputs:
+                continue
+            output = outputs[0]
+            token = (
+                output.kind
+                if family == "opening"
+                else output.offer_id
+                if family == "ordinary"
+                else output.round_id
+                if family == "pacing"
+                else output.token
+            )
+            if family == "pacing" and output.kind == "revival":
+                revival = await EvolutionFlow(self.unit).revival(session)
+                token = revival.revival_id
+            return PendingOutput(
+                family,
+                output.output_id,
+                output.kind,
+                token,
+                getattr(output, "round_id", None),
+                getattr(output, "attempt", 1),
+            )
+        return None
 
-    async def claim(self, session, output_id, now):
+    async def claim(self, session, output, now):
         self.unit._check(write=True)
-        pending = await self.pending(session)
-        if pending is None or pending[0] != output_id:
+        if await self.pending(session) != output:
             return False
         return bool(
             await _execute(
                 self.conn,
-                "INSERT INTO nr_discord_deliveries(output_id,state,attempted_at_utc) VALUES (?,'sending',?) ON CONFLICT DO NOTHING",
-                (output_id, utc_int(now)),
+                "INSERT INTO nr_discord_deliveries(session_id,family,output_id,state,attempted_at_utc) VALUES (?,?,?,'sending',?) ON CONFLICT DO NOTHING",
+                (session, output.family, output.output_id, utc_int(now)),
             )
         )
 
-    async def delivered(self, output_id, message_id):
+    async def delivered(self, output, message_id, sequence):
         self.unit._check(write=True)
         await _execute(
             self.conn,
-            "UPDATE nr_discord_deliveries SET state='delivered',message_id=? WHERE output_id=? AND state='sending'",
-            (message_id, output_id),
+            "UPDATE nr_discord_deliveries SET state='delivered',message_id=?,ack_sequence=? WHERE family=? AND output_id=? AND state='sending'",
+            (message_id, sequence, output.family, output.output_id),
+        )
+
+    async def control_message(self, session, kind):
+        self.unit._check()
+        state = await self.state(session)
+        if kind == "revive" and state.revival:
+            row = await _row(
+                self.conn,
+                "SELECT message_id FROM nr_pacing_outputs WHERE session_id=? AND round_id=? AND attempt=? AND kind='revival'",
+                (session, state.revival.round_id, state.revival.attempt),
+            )
+            return row[0] if row else None
+        if kind in {"choose", "target"} and state.offer:
+            return await OrdinaryFlow(self.unit).known_message_id(
+                session, state.offer.hand.offer_id, "offer"
+            )
+        return await OpeningFlow(self.unit).known_message_id(
+            session, "lobby" if kind == "join" else "offer"
         )
 
     async def markers(self, session):
         self.unit._check()
+        if await active_recovery(self.unit, session):
+            return ()
         # Never depend on global page position for one session's work.
         async with self.conn.execute(
             "SELECT intent_id,source_id FROM nr_marker_intents WHERE session_id=? ORDER BY intent_id LIMIT 32",

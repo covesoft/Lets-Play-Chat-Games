@@ -1,4 +1,4 @@
-"""SDK translation, capability checks and bounded opening-preview presentation."""
+"""SDK translation, capability checks and bounded ordinary-preview presentation."""
 
 import asyncio
 import re
@@ -7,6 +7,7 @@ import discord
 from discord import app_commands
 
 from lets_play.discord_adapter.lane import LaneUnavailable
+from lets_play.discord_adapter.ordinary_ui import render_ordinary
 from lets_play.new_rules.contracts import (
     AttachmentSnapshot,
     EmojiIdentity,
@@ -25,7 +26,9 @@ COMMAND_START = "start-game"
 COMMAND_NEW_RULES = "new-rules"
 COMMAND_RULES = "rules"
 COMMAND_END = "end-game"
-CONTROL = re.compile(r"nr:([a-f0-9]{32}):(join|pick|results)(?::([0-9]{1,7}))?\Z")
+CONTROL = re.compile(
+    r"nr:([a-f0-9]{32}):(join|pick|target|revive|results)(?::([0-9]{1,7}))?(?::([0-9]{1,7}))?\Z"
+)
 
 
 def capabilities(channel, member, *, marker_verified=False):
@@ -101,14 +104,18 @@ def reaction_snapshot(payload, route, received, *, source_id):
     return ReactionEvent(frame, payload.message_id, identity, payload.member.bot)
 
 
-def button(view, label, session, action, index=None):
+def button(view, label, session, action, index=None, target_index=None):
     suffix = f":{index}" if index is not None else ""
+    if target_index is not None:
+        suffix += f":{target_index}"
     view.add_item(discord.ui.Button(label=label, custom_id=f"nr:{session}:{action}{suffix}"))
 
 
 def render(state, *, kind=None, page=0, presentation=None):
     copy = presentation or default_presentation()
     a = state.admission
+    if state.context is not None and a.stage != "ended":
+        return render_ordinary(state, copy, button, kind=kind)
     session = a.session_id
     view = discord.ui.View(timeout=None)
     embed = discord.Embed(title=copy.text("game.title"), colour=copy.color())
@@ -231,7 +238,11 @@ class DiscordTransport:
         channel = await self.channel(route)
         embed, view = render(state, kind=kind, presentation=self.copy)
         # A lobby expiry edits its invitation instead of leaving active Play controls.
-        if kind == "closed" and state.context is None and state.panel_id:
+        if kind == "evolution_closed_silent" and state.panel_id is None:
+            raise LaneUnavailable("Silent closure has no known panel to edit.")
+        if kind == "evolution_closed_silent" or (
+            kind == "closed" and state.context is None and state.panel_id
+        ):
             await channel.get_partial_message(state.panel_id).edit(
                 embed=embed, view=view, content=None
             )
@@ -255,7 +266,14 @@ class DiscordTransport:
         if state.admission.stage == "ended":
             self.refreshed.pop(route.session_id, None)
             return
-        signature = (state.panel_id, state.admission.stage, state.recovery_id)
+        signature = (
+            state.panel_id,
+            state.admission.stage,
+            state.recovery_id,
+            state.context.position if state.context else None,
+            state.offer.selected_incoming if state.offer else None,
+            (state.revival.stage, state.revival.joined) if state.revival else None,
+        )
         if self.refreshed.get(route.session_id) == signature or state.panel_id is None:
             return
         channel = await self.channel(route)
@@ -365,7 +383,7 @@ class DiscordGame:
         route = self.route(interaction)
         state = await self.runtime.state(route.session_id) if route else None
         if state:
-            embed, view = render(state, presentation=self.copy)
+            embed, view = render(state, kind="rules", presentation=self.copy)
             await interaction.followup.send(embed=embed, ephemeral=True)
         else:
             await interaction.followup.send(
@@ -390,19 +408,20 @@ class DiscordGame:
         match = CONTROL.fullmatch((interaction.data or {}).get("custom_id", ""))
         if not match or interaction.message is None:
             return None
-        session, action, number = match.groups()
-        if session != route.session_id or action not in {"join", "pick"}:
+        session, action, number, target = match.groups()
+        if session != route.session_id or action not in {"join", "pick", "target", "revive"}:
             return None
         facts = capabilities(interaction.channel, interaction.guild.me, marker_verified=True)
         unavailable = not facts.available
         future = self.runtime.submit(
             route,
-            "pause" if unavailable else ("join" if action == "join" else "choose"),
+            "pause" if unavailable else ("choose" if action == "pick" else action),
             actor=interaction.user.id,
             source=str(interaction.id),
             message_id=interaction.message.id,
             capabilities=facts,
             index=int(number) if number else 0,
+            target_index=int(target) if target is not None else -1,
         )
         return future, unavailable
 
@@ -449,7 +468,7 @@ class DiscordGame:
         match = CONTROL.fullmatch((interaction.data or {}).get("custom_id", ""))
         if not match:
             return
-        session, action, number = match.groups()
+        session, action, number, target = match.groups()
         route = self.route(interaction)
         captured = getattr(interaction, "extras", {}).pop("new_rules_receipt", None)
         future, unavailable = captured if captured else (None, False)
@@ -457,7 +476,7 @@ class DiscordGame:
             future is None
             and route
             and route.session_id == session
-            and action in {"join", "pick"}
+            and action in {"join", "pick", "target", "revive"}
             and not interaction.user.bot
             and interaction.message is not None
         ):
@@ -465,12 +484,13 @@ class DiscordGame:
             unavailable = not facts.available
             future = self.runtime.submit(
                 route,
-                "pause" if unavailable else ("join" if action == "join" else "choose"),
+                "pause" if unavailable else ("choose" if action == "pick" else action),
                 actor=interaction.user.id,
                 source=str(interaction.id),
                 message_id=interaction.message.id,
                 capabilities=facts,
                 index=int(number) if number else 0,
+                target_index=int(target) if target is not None else -1,
             )
         await interaction.response.defer(ephemeral=True, thinking=True)
         if (
@@ -490,6 +510,8 @@ class DiscordGame:
                 else:
                     replies = {
                         "joined": self.copy.text("control.joined"),
+                        "revived": self.copy.text("control.revived"),
+                        "needs_target": self.copy.text("control.needs_target"),
                         "already_joined": self.copy.text("control.already_joined"),
                         "opening": self.copy.text("control.opening"),
                         "selected": self.copy.text("control.selected"),

@@ -123,14 +123,14 @@ class RoundPacing:
             row["attempt"],
         )
 
-    async def pending_outputs(self, *, limit=100) -> tuple[PacingOutput, ...]:
+    async def pending_outputs(self, *, limit=100, session_id=None) -> tuple[PacingOutput, ...]:
         self.unit._check()
         _page(limit)
         async with self.conn.execute(
             """SELECT o.output_id,o.session_id,o.round_id,o.kind,o.attempt FROM nr_pacing_outputs AS o
             JOIN nr_sessions AS s USING(session_id)
             JOIN nr_round_pacing AS p ON p.session_id=o.session_id AND p.round_id=o.round_id
-            WHERE o.acknowledged_at_utc IS NULL AND o.retired_at_utc IS NULL
+            WHERE (? IS NULL OR o.session_id=?) AND o.acknowledged_at_utc IS NULL AND o.retired_at_utc IS NULL
             AND NOT EXISTS(SELECT 1 FROM nr_recoveries r WHERE r.session_id=s.session_id AND r.stage IN ('paused','ready','reading'))
             AND s.round_id=o.round_id AND p.attempt=o.attempt AND (
                 (o.kind='warning' AND p.stage='warning_queued' AND s.lifecycle='playing'
@@ -139,7 +139,7 @@ class RoundPacing:
                 OR (o.kind='revival' AND p.stage='revival' AND s.lifecycle='paused' AND s.pause_reason='revival')
                 OR (o.kind='recovery' AND p.stage='cancelled' AND s.lifecycle='paused' AND s.pause_reason='recovery')
             ) ORDER BY o.output_id LIMIT ?""",
-            (limit,),
+            (session_id, session_id, limit),
         ) as cursor:
             return tuple(PacingOutput(*r) for r in await cursor.fetchall())
 

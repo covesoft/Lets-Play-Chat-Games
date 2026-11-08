@@ -5,6 +5,11 @@ from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 
 
+def _observe_result(future):
+    if not future.cancelled():
+        future.exception()
+
+
 class LaneUnavailable(RuntimeError):
     pass
 
@@ -39,6 +44,7 @@ class Lane:
 
     def submit(self, action, **data):
         future = asyncio.get_running_loop().create_future()
+        future.add_done_callback(_observe_result)
         if self.closed or self.fenced:
             future.set_exception(LaneUnavailable("This game is paused or closed."))
             return future

@@ -720,17 +720,17 @@ class EvolutionFlow:
         )
         await self._retire(frame, "nr_evolution_outputs")
 
-    async def pending_outputs(self, *, limit=100):
+    async def pending_outputs(self, *, limit=100, session_id=None):
         self.unit._check()
         _page(limit)
         async with self.conn.execute(
             """SELECT o.output_id,o.session_id,o.token,o.kind FROM nr_evolution_outputs o
             JOIN nr_sessions s USING(session_id) JOIN nr_evolution e USING(session_id)
-            WHERE o.acknowledged_at_utc IS NULL AND o.retired_at_utc IS NULL
+            WHERE (? IS NULL OR o.session_id=?) AND o.acknowledged_at_utc IS NULL AND o.retired_at_utc IS NULL
             AND NOT EXISTS(SELECT 1 FROM nr_recoveries r WHERE r.session_id=s.session_id AND r.stage IN ('paused','ready','reading')) AND
             ((o.kind='held' AND s.lifecycle='playing' AND s.advancement='held' AND e.phase='held' AND e.held_token=o.token)
             OR (o.kind='closed_silent' AND s.lifecycle='ended')) ORDER BY o.output_id LIMIT ?""",
-            (limit,),
+            (session_id, session_id, limit),
         ) as cursor:
             return tuple(EvolutionOutput(*r) for r in await cursor.fetchall())
 

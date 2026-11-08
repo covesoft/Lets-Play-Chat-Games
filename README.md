@@ -3,17 +3,19 @@
 Let’s Play is a Discord chat-game bot. Its first game, **New Rules**, is a party
 conversation game where unusual rules accumulate as people chat.
 
-**Current status: v0.3.2 — development-only opening preview (M2 in progress).**
-M1 is accepted and closed at v0.2.9/schema 8. The new Discord adapter connects
-persisted admission, a public three-human lobby, picker-only choice, scheduled
-first activation, current rules, message/raw-reaction scoring, markers and manager
-ending. Five proven cards are available in this preview. Restart and uncertain
-publication enter a durable pause; a manager can close the saved game.
+**Current status: v0.3.3 — development-only ordinary-round preview (M2 in progress).**
+M1 is accepted and closed at v0.2.9/schema 8. The Discord adapter connects a
+persisted three-human opening, message/raw-reaction scoring, markers, timed
+warnings, picker succession, three-card choices, replacements, and announced
+round changes. Opening hands use five proven templates; later hands use sixteen
+existing ordinary validators without a private phrase dependency. Held play and
+three-person revival preserve the open round. Manager ending posts basic results;
+inactivity ending only edits an existing panel.
 
-This is an opening-path development build. It holds the first rule until manager
-ending. Later-round progression, complete summaries, modes, settings, automatic
-resume, output retry/retention cleanup and broader release checks remain unfinished.
-See [the preview runbook](docs/DISCORD_PREVIEW.md) for setup, limits and live checks.
+Full gated/requested summaries, modes, settings, automatic restart resume,
+output retry/retention cleanup and public-release checks remain unfinished.
+Restart and uncertain publication enter a durable pause; a manager can close the
+saved game. See [the preview runbook](docs/DISCORD_PREVIEW.md) for setup and live checks.
 Offline checks do not certify a human Discord session or Windows execution.
 Public setup and operational documentation is under `docs/`. Private design
 notes are excluded from Git and package distributions.
@@ -78,7 +80,7 @@ See [docs/ORDINARY_FLOW.md](docs/ORDINARY_FLOW.md) for durable publication/cutov
 See [docs/PROGRESSION.md](docs/PROGRESSION.md) for New Rules credit and general resolution APIs.
 See [docs/PACING.md](docs/PACING.md) for ordinary warning and succession APIs.
 See [docs/OPENING.md](docs/OPENING.md) for admission, lobby and first-rule activation APIs.
-The development opening preview invokes the existing transactional evaluators.
+The development ordinary-round preview invokes the existing transactional evaluators.
 
 The guild installation uses `bot` and `applications.commands` with permission
 integer **274878024768**: View Channels, Send Messages, Send Messages in Threads,
@@ -129,7 +131,8 @@ update commands.
 | `tests/` | Configuration, offline startup, SDK boundary, and real SQLite checks |
 | `docs/` | Public configuration, dependency, and storage documentation |
 
-Schema **9** adds a durable Discord send-attempt guard to the schema-8 foundation.
+Schema **10** extends the durable Discord send-attempt guard to later-round
+outputs while preserving schema-9 send claims and existing gameplay data.
 Existing recognized databases upgrade in place
 on `--init-db` or startup. Stop the bot and make a verified SQLite backup before
 upgrading. Read the [database API and backup policy](docs/STORAGE.md).

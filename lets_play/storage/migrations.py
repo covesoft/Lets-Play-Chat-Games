@@ -546,5 +546,26 @@ MIGRATIONS = (
             ) STRICT""",
         ),
     ),
+    Migration(
+        version=10,
+        name="discord_multi_family_delivery_guards",
+        statements=(
+            """ALTER TABLE nr_discord_deliveries RENAME TO nr_discord_deliveries_v9""",
+            """CREATE TABLE nr_discord_deliveries (
+                session_id TEXT NOT NULL REFERENCES nr_admissions ON DELETE CASCADE,
+                family TEXT NOT NULL CHECK(family IN ('opening','ordinary','pacing','evolution')),
+                output_id INTEGER NOT NULL CHECK(output_id>0),
+                state TEXT NOT NULL CHECK(state IN ('sending','delivered','failed')),
+                attempted_at_utc INTEGER NOT NULL,
+                message_id INTEGER CHECK(message_id>0),ack_sequence INTEGER NOT NULL DEFAULT 0,
+                PRIMARY KEY(family,output_id)
+            ) STRICT""",
+            """INSERT INTO nr_discord_deliveries
+                SELECT o.session_id,'opening',d.output_id,d.state,d.attempted_at_utc,d.message_id,0
+                FROM nr_discord_deliveries_v9 d JOIN nr_opening_outputs o USING(output_id)""",
+            "DROP TABLE nr_discord_deliveries_v9",
+            "CREATE INDEX nr_discord_known_panels ON nr_discord_deliveries(session_id,ack_sequence DESC,attempted_at_utc DESC) WHERE message_id IS NOT NULL",
+        ),
+    ),
 )
 SCHEMA_VERSION = MIGRATIONS[-1].version

@@ -57,6 +57,13 @@ and surrounding text without changing application code. Preserve these names:
 | `results.player_entry` | `{player}`, `{detail}` |
 | `results.detail` | `{actual}`, `{ranking}`, `{faults}`, `{opportunities}`, `{ordinary_posts}`, `{reaction_failures}` |
 | `results.footer` | `{page}` |
+| `round.description` | `{round}` |
+| `ordinary.offer_description`, `ordinary.target_description` | `{picker}`, `{deadline}` |
+| `ordinary.deadline`, `ordinary.scheduled_description`, `ordinary.current_until` | `{timestamp}` |
+| `ordinary.replacement` | `{description}`, `{targets}` |
+| `ordinary.current_during_choice` | `{picker}` |
+| `revival.description` | `{joined}` |
+| `cards.NR036.description` | `{phrase}`; legacy display only, not offered by this preview |
 
 Other current strings take no fields. Ordinary literal braces must be doubled as
 `{{` and `}}`. Attribute/index expressions, conversions and nested format fields
@@ -88,3 +95,11 @@ startup diagnostics.
 Result identities belong in field values so Discord can render clickable mentions;
 `results.player_heading` is the separate editable field heading. Final-score
 footers appear only after an actual round exists, not on expired/cancelled lobbies.
+
+The ordinary-round preview adds `warning`, `held` and `revival` colors and
+`ordinary.*` copy. Actual play now uses `round.description` with `{round}`;
+`active.description` remains accepted for older overrides but is no longer the
+live round panel. Move a private customization of that key to `round.description`
+and include `{round}`. The default lobby closing paragraph now explains evolving
+rules. Existing private overrides keep their text, so update any old claim that
+the first rule lasts until manager ending. Validate before restarting.

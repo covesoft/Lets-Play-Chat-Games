@@ -1,7 +1,8 @@
 """Ordered opening, scoring and fail-closed restart integration.
 
 The transport is injected. Every write commits before network work begins.
-This bounded preview does not run later-round succession or automatic summaries.
+Later ordinary rounds share that lane. Automatic summaries and startup resume
+remain separate integration work.
 """
 
 import asyncio
@@ -11,19 +12,30 @@ from random import Random
 from uuid import uuid4
 
 from lets_play.discord_adapter.lane import Lane, LaneUnavailable, ReceiptClock
+from lets_play.new_rules.catalog import CARD_SPECS
 from lets_play.new_rules.contracts import EventEnvelope, EventKind, SessionRoute
 from lets_play.storage.discord_store import DiscordStore
+from lets_play.storage.evolution_flow import EvolutionFlow
 from lets_play.storage.opening_flow import OpeningFlow, OpeningStatus
+from lets_play.storage.ordinary_flow import OrdinaryFlow
+from lets_play.storage.pacing_flow import RoundPacing
 from lets_play.storage.recovery_flow import RecoveryFlow, active_recovery
 
 logger = logging.getLogger(__name__)
 # Deliberately small, proven text/media/reaction slice; no phrase dependency.
 OPENING_CARDS = frozenset({"NR004", "NR006", "NR007", "NR011", "NR034"})
+ORDINARY_CARDS = frozenset(CARD_SPECS) - {"NR036"}
 PUBLISH_KINDS = {
     "lobby": EventKind.LOBBY_PUBLISHED,
     "offer": EventKind.OFFER_PUBLISHED,
     "activation": EventKind.ACTIVATION_PUBLISHED,
     "closed": EventKind.END_PUBLISHED,
+    "ordinary_offer": EventKind.OFFER_PUBLISHED,
+    "ordinary_activation": EventKind.ACTIVATION_PUBLISHED,
+    "pacing_warning": EventKind.WARNING_PUBLISHED,
+    "pacing_revival": EventKind.REVIVAL_PUBLISHED,
+    "evolution_held": EventKind.HELD_PUBLISHED,
+    "evolution_closed_silent": EventKind.SILENT_END_PUBLISHED,
 }
 
 
@@ -36,6 +48,8 @@ class OpeningRuntime:
         self.publishers = {}
         self.timers = {}
         self.dirty = set()
+        self.configured = set()
+        self.work_queued = set()
         self.network_slots = asyncio.Semaphore(4)
         self.lifecycle_lock = asyncio.Lock()
         self.ready = False
@@ -133,13 +147,17 @@ class OpeningRuntime:
             "admit": EventKind.LOBBY_CREATE,
             "join": EventKind.LOBBY_JOIN,
             "choose": EventKind.CHOICE_SUBMIT,
+            "target": EventKind.CHOICE_SUBMIT,
+            "revive": EventKind.REVIVAL_JOIN,
             "tick": EventKind.TIMER,
             "timeout": EventKind.CHOICE_TIMEOUT,
             "end": EventKind.MANAGER_END,
             "pause": EventKind.RECOVERY_BEGIN,
+            "configure": EventKind.ADVANCEMENT_RECHECK,
+            "prepare": EventKind.OFFER_PREPARE,
         }.get(action)
         if action == "publish":
-            kind = PUBLISH_KINDS[d["kind"]]
+            kind = PUBLISH_KINDS[d["output"].ui_kind]
         elif action == "event":
             kind = d["event"].envelope.kind
         async with self.store.transaction() as unit:
@@ -156,7 +174,7 @@ class OpeningRuntime:
             recovery_row = await active_recovery(unit, route.session_id)
             recovery = recovery_row["recovery_id"] if recovery_row else None
             if action == "publish":
-                await DiscordStore(unit).delivered(d["output_id"], d["message_id"])
+                await DiscordStore(unit).delivered(d["output"], d["message_id"], frame.sequence)
             if action == "pause":
                 result = (
                     await RecoveryFlow(unit).begin(frame, uuid4().hex) if not recovery else "paused"
@@ -171,9 +189,7 @@ class OpeningRuntime:
                     ),
                 )
                 result = (
-                    await RecoveryFlow(unit).observe(
-                        frame=event.envelope, recovery_id=recovery, event=event
-                    )
+                    await RecoveryFlow(unit).observe(event.envelope, recovery, event=event)
                     if recovery
                     else await flow.ingest(event)
                 )
@@ -193,63 +209,171 @@ class OpeningRuntime:
                     rng=self.rng,
                     available_templates=OPENING_CARDS,
                 )
-            elif action in {"join", "choose"}:
-                expected = "lobby" if action == "join" else "offer"
-                known = await flow.known_message_id(route.session_id, expected)
-                if known != d["message_id"]:
-                    # Consume rejected controls, preserving ordering and due boundaries.
-                    result = await flow.tick(replace(frame, kind=EventKind.TIMER))
-                    result = "stale"
-                elif action == "join":
-                    result = await flow.join(frame, capabilities=d["capabilities"])
-                    if result is OpeningStatus.ALREADY_DONE and await DiscordStore(
-                        unit
-                    ).is_lobby_member(route.session_id, frame.actor_id):
-                        result = "already_joined"
-                else:
-                    record = await flow.record(route.session_id)
-                    if record.hand is None or not 0 <= d["index"] < 3:
-                        result = await flow.tick(replace(frame, kind=EventKind.TIMER))
-                        result = "stale"
-                    else:
-                        result = await flow.choose(
-                            frame, record.hand.options[d["index"]].incoming.instance_id
-                        )
-            elif action == "publish":
-                result = await flow.publish(frame, d["kind"], message_id=d["message_id"])
-            elif action == "timeout":
-                result = await flow.timeout(frame, rng=self.rng)
-            elif action == "tick":
-                result = await flow.tick(frame)
             else:
-                raise ValueError("Unknown runtime action.")
-        # All returned flow values are now committed. Never send inside the unit.
+                result = await self._normal(unit, route, frame, action, d)
+        self.work_queued.discard(d.get("work_key"))
+        if action == "configure" and not recovery:
+            self.configured.add(route.session_id)
+        await self._followups(route)
         if action not in {"admit", "pause"}:
             self._kick(route)
         await self._schedule(route)
         return result
 
+    async def _normal(self, unit, route, frame, action, d):
+        opening, flow, evolution = OpeningFlow(unit), OrdinaryFlow(unit), EvolutionFlow(unit)
+        context = await unit.get_context(route.session_id)
+
+        async def stale():
+            await opening.tick(replace(frame, kind=EventKind.TIMER))
+            return "stale"
+
+        if action == "configure":
+            return await evolution.recheck(
+                frame, available_templates=d.get("templates", ORDINARY_CARDS)
+            )
+        if action == "prepare":
+            pacing = await RoundPacing(unit).record(route.session_id)
+            if (
+                not context
+                or context.position.round_id != d["round_id"]
+                or not pacing
+                or pacing.attempt != d["attempt"]
+            ):
+                return await stale()
+            return await evolution.prepare_or_hold(frame, offer_id=d["offer_id"])
+        if action in {"join", "choose", "target", "revive"}:
+            known = await DiscordStore(unit).control_message(route.session_id, action)
+            if known != d["message_id"]:
+                return await stale()
+            if action == "join":
+                result = await opening.join(frame, capabilities=d["capabilities"])
+                if result is OpeningStatus.ALREADY_DONE and await DiscordStore(
+                    unit
+                ).is_lobby_member(route.session_id, frame.actor_id):
+                    return "already_joined"
+                return result
+            if action == "revive":
+                revival = await evolution.revival(route.session_id)
+                if not revival:
+                    return await stale()
+                result = await evolution.join_revival(frame, revival.revival_id)
+                return (
+                    "already_joined"
+                    if result == "already_done"
+                    else "revived"
+                    if result == "quorum"
+                    else result
+                )
+            record = (
+                await flow.get_offer(route.session_id, context.position.offer_id)
+                if context and context.position.offer_id
+                else None
+            )
+            hand = record.hand if record else (await opening.record(route.session_id)).hand
+            if hand is None or not 0 <= d["index"] < 3:
+                return await stale()
+            option = hand.options[d["index"]]
+            if record:
+                outgoing = None
+                if action == "target":
+                    target = d.get("target_index", -1)
+                    if (
+                        not 0 <= target < len(option.outgoing_ids)
+                        or record.selected_incoming != option.incoming.instance_id
+                    ):
+                        return await stale()
+                    outgoing = option.outgoing_ids[target]
+                result = await flow.choose(
+                    frame, hand.offer_id, option.incoming.instance_id, outgoing_id=outgoing
+                )
+                return result.status.value
+            return await opening.choose(frame, option.incoming.instance_id)
+        if action == "publish":
+            output, message = d["output"], d["message_id"]
+            if output.family == "opening":
+                return await opening.publish(frame, output.kind, message_id=message)
+            if output.family == "ordinary":
+                method = flow.publish_offer if output.kind == "offer" else flow.publish_activation
+                return await method(frame, output.token, message_id=message)
+            if output.family == "pacing":
+                if output.kind == "warning":
+                    return await RoundPacing(unit).publish_warning(
+                        frame, output.round_id, message_id=message, attempt=output.attempt
+                    )
+                return await evolution.publish_revival(frame, output.token, message_id=message)
+            return await evolution.publish_notice(frame, output.token, message_id=message)
+        if action == "timeout":
+            if context:
+                if context.position.offer_id:
+                    result = await flow.timeout(frame, context.position.offer_id, rng=self.rng)
+                    if result.status.value == "unavailable":
+                        refreshed = await evolution._refresh_entered(
+                            frame, context.position.offer_id
+                        )
+                        if refreshed == "unchanged":
+                            raise LaneUnavailable("A saved timeout has no provable completion.")
+                        return refreshed
+                    return result.status.value
+                return await opening.tick(replace(frame, kind=EventKind.TIMER))
+            return await opening.timeout(frame, rng=self.rng)
+        if action == "tick":
+            return await opening.tick(frame)
+        raise ValueError("Unknown runtime action.")
+
+    async def _followups(self, route):
+        if self.closed:
+            return
+        state = await self.state(route.session_id)
+        if not state or not state.context or state.recovery_id or state.admission.stage == "ended":
+            return
+        session = route.session_id
+        if session not in self.configured:
+            key = (session, "configure")
+            if key not in self.work_queued:
+                self.work_queued.add(key)
+                self.submit(route, "configure", work_key=key).add_done_callback(self._consume)
+        elif (
+            state.pacing
+            and state.pacing.stage == "selected"
+            and not state.context.position.offer_id
+        ):
+            key = (session, state.context.position.round_id, state.pacing.attempt)
+            if key not in self.work_queued:
+                self.work_queued.add(key)
+                self.submit(
+                    route,
+                    "prepare",
+                    round_id=key[1],
+                    attempt=key[2],
+                    offer_id=f"{key[1]}:choice:{key[2]}",
+                    work_key=key,
+                ).add_done_callback(self._consume)
+
     async def _schedule(self, route):
+        if self.closed:
+            return
         state = await self.state(route.session_id)
         old = self.timers.pop(route.session_id, None)
         if old:
             old.cancel()
-        if state is None or state.recovery_id or state.admission.stage == "ended":
+        if self.closed or not state or state.recovery_id or state.admission.stage == "ended":
             return
-        deadline = state.admission.next_deadline
+        deadline = state.next_deadline
         if deadline is None:
             return
-        action = "timeout" if state.admission.stage == "opening_published" else "tick"
+        action = (
+            "timeout"
+            if state.timeout_due or state.admission.stage == "opening_published"
+            else "tick"
+        )
         delay = max(0, (deadline - self.clock.now()).total_seconds())
         self.timers[route.session_id] = asyncio.get_running_loop().call_later(
-            delay,
-            self._timer,
-            route,
-            action,
+            delay, self._timer, route, action
         )
 
     def _timer(self, route, action):
-        if not self.closed:
+        if not self.closed and self.routes.get((route.guild_id, route.channel_id)) == route:
             future = self.submit(route, action)
             future.add_done_callback(self._consume)
 
@@ -274,21 +398,24 @@ class OpeningRuntime:
                     pending = await DiscordStore(unit).pending(route.session_id)
                     markers = await DiscordStore(unit).markers(route.session_id)
                 if pending:
-                    output_id, kind = pending
+                    if pending.kind == "recovery":
+                        await self._fault(route, "flow_recovery")
+                        return
                     async with self.store.transaction() as unit:
                         claimed = await DiscordStore(unit).claim(
-                            route.session_id, output_id, self.clock.now()
+                            route.session_id, pending, self.clock.now()
                         )
                     if not claimed:
+                        async with self.store.transaction(write=False) as unit:
+                            if await DiscordStore(unit).pending(route.session_id) != pending:
+                                continue
                         await self._fault(route, "uncertain_delivery")
                         return
                     state = await self.state(route.session_id)
                     async with self.network_slots, asyncio.timeout(20):
-                        message_id = await self.transport.publish(route, kind, state)
+                        message_id = await self.transport.publish(route, pending.ui_kind, state)
                     await asyncio.shield(
-                        self.submit(
-                            route, "publish", kind=kind, output_id=output_id, message_id=message_id
-                        )
+                        self.submit(route, "publish", output=pending, message_id=message_id)
                     )
                     continue
                 if markers:
@@ -330,6 +457,8 @@ class OpeningRuntime:
         if timer:
             timer.cancel()
         self.dirty.discard(route.session_id)
+        self.configured.discard(route.session_id)
+        self.work_queued = {key for key in self.work_queued if key[0] != route.session_id}
 
     async def _show_pause(self, route):
         try:
@@ -389,3 +518,5 @@ class OpeningRuntime:
         self.lanes.clear()
         self.routes.clear()
         self.timers.clear()
+        self.configured.clear()
+        self.work_queued.clear()

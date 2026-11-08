@@ -1,117 +1,131 @@
-# New Rules opening preview — v0.3.2 / schema 9
+# New Rules ordinary-round preview — v0.3.3 / schema 10
 
-This development build connects the existing engine to Discord. It is not the
-complete game. Run one bot process against a database. No deployment or command
-sync is performed by installing a patch.
+This development build connects the existing ordinary engine to Discord. Run one
+bot process against a database. Full summaries, modes and automatic restart
+resume remain separate work; M2 is still in progress.
 
 ## Install and enable
 
-Stop the old bot, make a verified SQLite backup, then install the updated package
-using the normal README commands. Run `python -m pytest` and `python -m lets_play
---init-db`. The expected schema is 9, with WAL and foreign keys enabled.
-Migrations 1–8 are unchanged; migration 9 appends one output-attempt table.
+Stop the bot and make a verified SQLite backup using the procedure in
+[STORAGE.md](STORAGE.md). Install the updated package using the README commands,
+run offline checks, then `python -m lets_play --init-db`. Expect schema 10, WAL and
+foreign keys enabled. Released migrations 1–9 are unchanged. Migration 10 extends
+the outbound-attempt guard to later-round outputs and preserves every old claim,
+message ID and gameplay row. A failed migration rolls back atomically. To roll
+back after a successful upgrade, stop the bot and restore the verified pre-upgrade
+backup with the matching old code; never downgrade a schema-10 file in place.
 
-Keep the token and owner IDs in the existing local `.env`. Set:
+Keep token, owner IDs and actual emoji markup in the private `.env`:
 
 ```dotenv
 CHATGAMES_DEVELOPMENT_MODE=true
-CHATGAMES_SYNC_COMMANDS=true
+CHATGAMES_SYNC_COMMANDS=false
 CHATGAMES_DING_EMOJI=
 ```
 
-Set `CHATGAMES_DING_EMOJI` privately to your own custom emoji markup before
-starting a game. Real assets and IDs do not belong in examples, fixtures or Git.
-There is no public default or fallback marker.
+Supply your own custom marker privately before starting a game. No bundled asset
+or fallback exists. The three commands remain `/start-game new-rules`, `/rules`
+and `/end-game`; no additional command sync is needed for this increment. For a
+new installation, explicitly enable sync once, then turn it off. Message Content
+Intent must be available. Start normally with `python -m lets_play`.
 
-Command sync registers `/start-game new-rules`, `/rules`, and `/end-game` globally.
-Turn command sync off again after registration. Ensure Message Content intent is
-available to the application. Start normally with `python -m lets_play`.
+Admission checks the exact message-bearing guild channel, including thread send
+permission, then posts a short probe and really adds/removes the configured
+reaction before deleting the probe. A failed reaction prevents admission.
+Archived/locked threads and forum/media containers are refused; start inside an
+accessible post/thread. Administrator is unnecessary. No private phrase list,
+badge map, voice library or additional intent is needed.
 
-The start command checks the exact message-bearing guild channel, including
-thread-specific send permission. Archived/locked threads and forum/media containers
-are refused; start within an accessible post/thread. It briefly posts a test
-message, adds the configured marker, removes its own reaction, and deletes the
-probe. A failed real reaction prevents admission. No Administrator permission is
-needed. Application-owned emoji do not require Use External Emojis; actual
-reaction usability is still established by the probe.
+## Human development check
 
-## Exercise the opening path
+1. Start a game and have two other humans press Play. The starter is already
+   joined; duplicate clicks cannot increase quorum. A no-quorum invitation expires
+   180 seconds after actual publication. All later chat in this exact channel
+   participates, including people who did not press Play. `-# ` whispers are exempt.
+2. The named opening picker chooses one of three cards or times out after the
+   published 60 seconds. Confirm the announced future start and `/rules` after
+   activation. Opening hands still use Unattached, Expressionless, Inside Voice,
+   Are You Sure?, and Roger Wilco.
+3. Chat through the ordinary round. A warning cannot occur before 4:30 after
+   activation. The frozen post target can trigger it thereafter; fallback is at
+   14:30. Only actual warning publication starts its full 30 seconds. A delayed
+   send must not shorten that notice. Picker eligibility uses the saved cutoff
+   snapshot, with at least five ordinary posts; the exactly-at-cutoff body is
+   scored afterward in the old round.
+4. The selected picker receives a new complete three-card hand and the original
+   publication-owned 60-second choice deadline. Later hands use sixteen already
+   implemented non-phrase templates. Choices can add a rule or replace one legal
+   existing occupant. When several outgoing rules are legal, choosing the incoming
+   card reveals the outgoing buttons. The original deadline does not restart;
+   timeout keeps the chosen incoming card and completes a legal outgoing choice.
+5. Confirm old rules remain enforced during the entire choice and announced
+   transition. `/rules` shows those current rules, while the public transition
+   shows the future set and exact effective time. At cutover the old round resolves
+   once, the new rules activate and the new round clock begins. Try unauthorized,
+   duplicate and old-message buttons; they must not change the saved choice.
+6. If nobody qualifies by the cutoff, scoring pauses and Continue is offered.
+   Three distinct humans must click within five minutes of actual publication;
+   the starter is not automatically counted. Quorum preserves the same open round
+   and scores, then offers a choice. If no complete legal hand exists, held play
+   keeps scoring under the same rules; fifteen minutes without a new human message
+   enters revival. Whispers count for this held-idle clock. These states are
+   naturally rare in the small pool and are also exercised with offline fixtures.
+7. On revival expiry, only the existing known panel is edited to game-over results.
+   There is no new-message fallback, including when the panel was deleted. A
+   manager's explicit ending may post normal final results. Check both behaviors.
+8. Restart during an offer/transition/revival. Saved routes enter durable recovery
+   before timers or scoring; the known panel and `/rules` show pause. This build
+   still provides manager ending only. No downtime scoring or automatic resume is
+   inferred. Test animated marker/client rendering and actual channel behavior
+   independently from offline evidence.
 
-1. Start in the development channel. Confirm one public Play invitation, the
-   starter already joined, and an explanation of channel-wide participation and
-   `-# ` whispers. A no-quorum invitation expires 180 seconds after publication.
-2. Have two other humans press Play. Duplicate clicks cannot increase quorum.
-   A public three-card offer names one picker; other humans cannot choose.
-3. Choose a card or wait 60 seconds for automatic selection. The next message
-   shows the selected rule and a future effective time. No scoring starts before
-   the announced time. Confirm `/rules` shows the active first rule afterward.
-4. Try passing and failing messages, media-only posts, a whole-message whisper,
-   and reactions when Expressionless is active. Only infracting message creates
-   receive a marker. Expressionless attributes faults to reacting humans and
-   does not mark the target. Bot/probe/marker traffic is ignored.
-5. Have a non-manager try `/end-game`, then let a server manager end the game.
-   Ending finalizes existing general progression and releases capacity before
-   delivery. Final results show compliance, adjusted score, faults and basic
-   counters, with ten-player pages ordered by ID.
-6. Restart during a lobby, choice, or active first round. All saved routes enter
-   durable recovery before timers or scoring. The known panel is edited to
-   paused when accessible; `/rules` also shows the pause. This build provides
-   manager ending, not automatic resume. Never infer scoring during downtime.
-
-The five offered templates are Unattached, Expressionless, Inside Voice,
-Are You Sure?, and Roger Wilco. An opening hand contains three distinct templates.
-No production phrase list, bank, badge image map, voice library or additional
-intent is needed for this preview.
+Later pool: NR004, NR006, NR007, NR008, NR010, NR011, NR013, NR016, NR017,
+NR019, NR022, NR024, NR025, NR027, NR033 and NR034. NR036 is not offered because
+its phrase-bank integration belongs to a later increment. No new validators are
+introduced here. Legal hands and replacements still require actual-validator
+compatibility witnesses; an incomplete hand is never published.
 
 ## Delivery and ordering
 
-One FIFO per admitted session orders chat, reaction actions, controls,
-publication acknowledgements and timers. SDK dispatch captures message/reaction
-receipts and active control receipts synchronously, before HTTP acknowledgement.
-Raw-reaction identity uses a hash of the pinned SDK Gateway session plus its
-sequence; it never uses target-message age. The separate persistent actor/target
-key still owns the once-per-game reaction fault. No message cache/history scan is
-needed. This Gateway bridge is pinned to discord.py 2.7.1 and must be rechecked
-when upgrading the SDK.
+One bounded FIFO per session orders Gateway chat/reactions, controls, ACKs and
+timers. SDK dispatch captures receipts before async callbacks/HTTP defers. Raw
+reaction identity uses the pinned SDK Gateway session/sequence; actor/target
+fault deduplication remains separate. No history scan or message cache is needed.
+This bridge is pinned to discord.py 2.7.1 and must be reviewed on SDK upgrades.
 
-Receipts use monotonic elapsed time anchored to UTC and never regress below a
-saved watermark. The bounded queue accepts 64 waiting receipts; overload or a
-processing failure fences intake and enters recovery. Four network operations
-can run concurrently; each is bounded to 20 seconds. No HTTP call occurs in a
-SQLite write unit. Content remains transient, including when a queue is idle.
+Receipts use monotonic elapsed time anchored to UTC and the saved watermark. The
+queue holds at most 64 waiting receipts. Overload or processing failure fences
+intake and enters recovery. Four network calls can run concurrently, each bounded
+to 20 seconds. No HTTP wait occurs inside a SQLite write unit. Content remains
+transient, including while the queue is idle.
 
-Before each new public output, a unique persisted send claim commits. Its returned
-message ID and engine acknowledgement then commit together. Cancellation, timeout,
-restart or a missing ACK never authorizes a blind resend. Unknown sends remain
-paused for manager ending. Essential delivery loss also pauses; an already-deleted
-marker target is local and does not reverse its score. Errors are logged by type,
-not by received text or exception payload.
+Every public output commits its unique `(family, output_id)` claim before HTTP.
+The actual returned message ID, ordered ACK sequence and domain acknowledgement
+then commit together. Warning/revival ACKs carry the exact persisted attempt;
+partial choices keep their original publication-owned deadline. Per-session
+pending reads are bounded independently of other sessions' output backlog.
+Cancellation, timeout, restart or a missing ACK never authorizes blind resend.
+Unknown sends and essential feedback loss pause enforcement. Marker work is
+fenced during recovery; a deleted marker target does not reverse its score.
+Errors log types, not received text or exception payloads.
 
-## Deliberate limits
+## Remaining work and editable copy
 
-This is the opening path only. The first ordinary rule remains until manager
-ending; no later warning/succession, replacement, held/revival loop or mode is
-exposed. Full gated/requested summaries, ranking presentation, badge presentation,
-manager settings, owner grants, automatic evidence-based resume and final-output
-retry/24-hour purge workers are not wired. Failed final output leaves durable
-results evidence; ending remains terminal. Do not use this build for public play
-or claim milestone M2 complete. The agreed first mode is implemented separately.
+Basic manager/final standings remain ten-player pages ordered by ID, with
+clickable non-pinging identities and no score footer on preplay closures.
+Full automatic/requested/per-round summaries and their delivery baselines,
+ranking/badge presentation, Drawing Conclusions, settings, owner grants,
+evidence-based restart resume and final-output retry/24-hour cleanup workers are
+not wired. Failed terminal delivery retains durable results evidence. This is a
+development preview, not a public-play release or M2 completion.
 
-Offline transport/SDK/WAL tests exercise the wired path and failures; actual emoji
-rendering, client/channel behavior, Windows execution and a three-human live trial
-remain owner/live checks. Record results independently from simulated evidence.
+All new copy, rule descriptions, button labels and warning/held/revival colors
+are in the existing editable catalog. See [PRESENTATION.md](PRESENTATION.md),
+including the new `round.description` key for custom round text. Private overrides
+keep their existing wording; update any old first-rule-only explanation.
 
-Official references checked for this adapter:
+Official platform references rechecked for this increment:
 
-- [Discord reaction endpoint](https://docs.discord.com/developers/resources/message#create-reaction)
-- [Application-owned emoji](https://docs.discord.com/developers/resources/emoji#application-owned-emoji)
-- [discord.py raw reaction events](https://discordpy.readthedocs.io/en/stable/api.html#discord.on_raw_reaction_add)
-- [Interaction responses](https://discordpy.readthedocs.io/en/stable/interactions/api.html#discord.InteractionResponse.defer)
-
-Sent copy and embed colors are editable independently of this preview’s game
-logic. See [PRESENTATION.md](PRESENTATION.md) for the catalog and private overrides.
-
-The v0.3.2 live-feedback fixes place result mentions in field values (with
-notifications suppressed), use separate no-game/manager/duplicate-join replies,
-and omit score footers from preplay closures. Are You Sure accepts three or more
-consecutive ASCII periods; stored effects are not retrospectively re-evaluated.
+- [Discord embeds and limits](https://docs.discord.com/developers/resources/message#embed-object-embed-limits)
+- [discord.py buttons and views](https://discordpy.readthedocs.io/en/stable/interactions/api.html#discord.ui.Button)
+- [Discord reactions](https://docs.discord.com/developers/resources/message#create-reaction)

@@ -17,6 +17,16 @@ from types import MappingProxyType
 MAX_CATALOG_BYTES = 128 * 1024
 # Only these templates accept arguments. Attribute/index lookups are prohibited.
 TEMPLATE_FIELDS = {
+    "round.description": frozenset({"round"}),
+    "ordinary.offer_description": frozenset({"picker", "deadline"}),
+    "ordinary.target_description": frozenset({"picker", "deadline"}),
+    "ordinary.deadline": frozenset({"timestamp"}),
+    "ordinary.replacement": frozenset({"description", "targets"}),
+    "ordinary.scheduled_description": frozenset({"timestamp"}),
+    "ordinary.current_until": frozenset({"timestamp"}),
+    "ordinary.current_during_choice": frozenset({"picker"}),
+    "revival.description": frozenset({"joined"}),
+    "cards.NR036.description": frozenset({"phrase"}),
     "results.actual": frozenset({"percent"}),
     "results.ranking": frozenset({"percent"}),
     "results.player": frozenset({"actor"}),
@@ -73,7 +83,24 @@ def _validate_strings(strings):
                 raise ValueError
             # Catch inappropriate format specs now, before a send can fail.
             text.format(
-                **{name: ("sample" if name in {"actual", "ranking"} else 1) for name in expected}
+                **{
+                    name: (
+                        "sample"
+                        if name
+                        in {
+                            "actual",
+                            "ranking",
+                            "deadline",
+                            "description",
+                            "targets",
+                            "phrase",
+                            "player",
+                            "detail",
+                        }
+                        else 1
+                    )
+                    for name in expected
+                }
             )
         except (ValueError, KeyError, TypeError, AttributeError) as exc:
             raise PresentationError(f"Invalid presentation placeholders: {key}") from exc

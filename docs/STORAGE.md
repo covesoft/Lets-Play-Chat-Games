@@ -1,7 +1,8 @@
 # SQLite initialization, migration, and event unit of work
 
 The package supplies bootstrap/migration infrastructure and an offline New Rules
-event unit of work. It is not wired to live Discord gameplay.
+event unit of work. The development Discord adapter wires the supported ordinary
+subset; modes and complete summary/recovery services remain unfinished.
 Pure ordinary-subset [hand preparation](HANDS.md) supplies legal result states.
 Schema 3's [ordinary flow](ORDINARY_FLOW.md) persists later-round offers,
 publication acknowledgements, selection, announced cutover and pending-award
@@ -49,6 +50,15 @@ reader locks, not just fabricated exceptions.
   preplay-source records, plus a minimal persisted guild-entitlement fact. Legacy
   sessions reserve their existing slot without inferred lobby/phrase history.
   No gameplay round exists before first activation. See [OPENING.md](OPENING.md).
+* Schema **7** adds held-play configuration, immutable refresh/revival attempts
+  and identifier-only evolution outputs. Schema **8** adds explicit recovery
+  barriers, observed-source guards and publication evidence.
+* Schema **9** adds the opening adapter's durable outbound-attempt guard.
+* Schema **10** extends that guard to opening, ordinary, pacing and evolution
+  outputs, keyed by `(family, output_id)`, with session identity and ordered ACK
+  sequence. All schema-9 attempts, states and actual message IDs survive. Scores,
+  clocks, frozen offers and progress are unchanged. Reusing an output number in
+  another family cannot authorize a duplicate send or block unrelated work.
 * New databases must be empty and unclaimed. Foreign, unrecognized nonempty, and
   newer-version databases fail clearly; there is no automatic downgrade/adoption.
 
@@ -149,16 +159,16 @@ objects never enter the store. Parser/evaluator/score version pins are checked o
 read: mismatches raise `IncompatibleState` and require an explicit recovery policy,
 rather than silently changing live semantics after an upgrade.
 v0.2.3 through v0.2.6 pin `ordinary-subset-2` as the evaluator version. Offline session fixtures
-saved under v0.2.2's `representatives-1` refuse automatic reinterpretation. The
-live shell has not created gameplay sessions. Migration 3 preserves that score schema.
+saved under v0.2.2's `representatives-1` refuse automatic reinterpretation. Recognized old evaluator pins remain explicit; migrations do not reinterpret
+existing scores. Migration 3 preserves that score schema.
 
 Marker intents contain identifiers only and commit with the fault. Read at most
 100 per page; acknowledge only after successful/terminal handling. Acknowledgement
 is idempotent, and monotonically allocated intent IDs prevent a stale
 acknowledgement deleting a later intent. Source IDs are still opaque domain
-identifiers; the future Discord adapter must supply/resolve the actual message
-identity. No sender, lease/retry scheduler, or complete external-delivery outbox is
-implemented. Pending intents may be read again. Internal exactly-once effects do
+identifiers. The development adapter uses actual message IDs and acknowledges
+markers after handling them, with a recovery fence after essential feedback loss.
+A lease/retry scheduler and complete external-delivery outbox remain unfinished. Pending intents may be read again. Internal exactly-once effects do
 not promise exactly-once external delivery.
 
 ## Contention, cancellation, and capacity
@@ -194,11 +204,13 @@ fault-trigger rollback, cancellation at begin/body/commit acknowledgement, bound
 contention/admission, reopen, reader snapshots, exact fraction storage, and FK
 cascades. They are offline correctness checks, not host throughput measurements.
 
-The live shell still only bootstraps the database and logs in. Schema 3 persists
+The development adapter wires the ordinary subset described in
+[DISCORD_PREVIEW.md](DISCORD_PREVIEW.md). Schema 3 persists
 later ordinary offers, publication clocks and ordered activation; use OrdinaryFlow
 ingress once a session has a receipt watermark. Low-level `apply()` then refuses
 to bypass its ordering boundary. Complete mode and specialized failure-recovery services, theme/mode
-resolution, delivery workers and safe ended-session purge remain unimplemented.
+resolution, complete delivery retry workers and safe ended-session purge remain
+unimplemented.
 Schema 4 adds atomic ordinary game credit and once-only general resolution.
 Round-closure rows alone do not certify resolved progress; consult
 `nr_round_resolutions`/`nr_game_finalizations`, which still do not certify future
@@ -206,8 +218,8 @@ mode/theme awards. The general finalizer does not authorize or end a session.
 Schema 5 supplies ordinary pacing/succession over the shared lane; see
 [PACING.md](PACING.md) for publication, snapshot and rotation boundaries.
 Schema 6 supplies opening/admission and ordered first activation. Permission and
-capability facts, grant control, actual publishers/schedulers and full recovery
-remain integration work. Internal legacy seeds are not an admission bypass for a
+capability facts and ordinary publishers/schedulers are wired in the development
+adapter. Owner grant control and full recovery remain integration work. Internal legacy seeds are not an admission bypass for a
 public command.
 Schema 7 adds held/refresh/revival and paused-source guards over the shared lane;
 see [EVOLUTION.md](EVOLUTION.md). Released migrations 1–6 remain unchanged.

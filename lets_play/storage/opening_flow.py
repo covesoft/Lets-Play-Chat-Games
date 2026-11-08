@@ -162,18 +162,18 @@ class OpeningFlow:
             decode_hand(row["hand_json"]) if row["hand_json"] is not None else None,
         )
 
-    async def pending_outputs(self, *, limit=100):
+    async def pending_outputs(self, *, limit=100, session_id=None):
         self.unit._check()
         if type(limit) is not int or not 1 <= limit <= 100:
             raise ValueError("Page limit must be in [1,100].")
         async with self.conn.execute(
             """SELECT o.output_id,o.session_id,o.kind FROM nr_opening_outputs AS o
-            JOIN nr_admissions AS a USING(session_id) WHERE o.acknowledged_at_utc IS NULL
+            JOIN nr_admissions AS a USING(session_id) WHERE (? IS NULL OR o.session_id=?) AND o.acknowledged_at_utc IS NULL
             AND o.retired_at_utc IS NULL AND NOT EXISTS(SELECT 1 FROM nr_recoveries r WHERE r.session_id=a.session_id AND r.stage IN ('paused','ready','reading')) AND ((o.kind='lobby' AND a.stage='lobby_prepared')
             OR (o.kind='offer' AND a.stage='opening_prepared') OR (o.kind='activation' AND a.stage='selected')
             OR (o.kind='recovery' AND a.stage='recovery') OR (o.kind='closed' AND a.stage='ended'))
             ORDER BY o.output_id LIMIT ?""",
-            (limit,),
+            (session_id, session_id, limit),
         ) as cursor:
             return tuple(OpeningOutput(*r) for r in await cursor.fetchall())
 

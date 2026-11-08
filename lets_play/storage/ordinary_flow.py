@@ -161,7 +161,7 @@ class OrdinaryFlow:
             raise ValueError("A phrase key must use shared normalized word identities.")
         return json.dumps(key, ensure_ascii=False, separators=(",", ":"))
 
-    async def pending_outputs(self, *, limit=100) -> tuple[OutputIntent, ...]:
+    async def pending_outputs(self, *, limit=100, session_id=None) -> tuple[OutputIntent, ...]:
         self.unit._check()
         if type(limit) is not int or not 1 <= limit <= 100:
             raise ValueError("Output page size must be an integer in [1,100].")
@@ -169,13 +169,13 @@ class OrdinaryFlow:
             """SELECT x.output_id,x.session_id,x.offer_id,x.kind
             FROM nr_ordinary_outputs x JOIN nr_offers o USING(session_id,offer_id)
             JOIN nr_sessions s USING(session_id)
-            WHERE x.acknowledged_at_utc IS NULL AND x.retired_at_utc IS NULL
+            WHERE (? IS NULL OR x.session_id=?) AND x.acknowledged_at_utc IS NULL AND x.retired_at_utc IS NULL
             AND s.lifecycle<>'ended' AND NOT EXISTS(SELECT 1 FROM nr_recoveries r WHERE r.session_id=s.session_id AND r.stage IN ('paused','ready','reading')) AND
             ((x.kind='offer' AND o.stage='prepared') OR
              (x.kind='activation' AND o.stage='selected') OR
              (x.kind='recovery' AND o.stage='recovery'))
             ORDER BY x.output_id LIMIT ?""",
-            (limit,),
+            (session_id, session_id, limit),
         ) as cursor:
             return tuple(OutputIntent(*row) for row in await cursor.fetchall())
 

@@ -28,7 +28,7 @@ code must validate each dependency before offering it to players.
 | `CHATGAMES_DING_EMOJI` | Private custom marker markup; no default. Missing/blank values prevent game admission; a real reaction probe must succeed |
 | `CHATGAMES_PRESENTATION_PATH` | Optional private JSON copy/palette overrides; omitted uses packaged `lets_play/resources/en-US.json` |
 | `CHATGAMES_BADGE_EMOJI_MAP_PATH` | Optional mapping file path; format/validation implemented with profiles |
-| `CHATGAMES_DEVELOPMENT_MODE` | `false`; `true` enables the restricted opening preview and guild-name startup diagnostics |
+| `CHATGAMES_DEVELOPMENT_MODE` | `false`; `true` enables the restricted ordinary-round preview and guild-name startup diagnostics |
 | `CHATGAMES_SYNC_COMMANDS` | `false`; explicit global command-sync opt-in, with an empty-tree guard |
 | `CHATGAMES_LINK_OTHER_BOTS` | Owner-supplied default: `https://pivot.quest/dbots/` |
 | `CHATGAMES_LINK_THIS_BOT` | Owner-supplied default: `https://pivot.quest/dbots/#lets-play`; availability not certified here |
