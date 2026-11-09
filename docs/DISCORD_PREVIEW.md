@@ -1,4 +1,4 @@
-# New Rules ordinary-round preview — v0.3.10 / schema 12
+# New Rules ordinary-round preview — v0.3.11 / schema 12
 
 This development build connects the existing ordinary engine to Discord. Run one
 bot process against a database. Full summaries, modes and automatic restart
@@ -161,3 +161,17 @@ panel, avoiding premature choices or a premature duplicate disclosure. Partial
 target changes still refresh in place. Missing/uncertain panel edits enter
 recovery without a replacement send. Schema stays 12; no migration or command
 sync is required for this fix.
+
+v0.3.11 uses the same read-only admission gate before probing and again inside
+the authoritative admission transaction. Duplicate creation sources, occupied
+channels and current guild capacity (free/premium, including exact expiry) are
+declined privately before probing. Existing development/readiness/human checks
+and static permission, archived/locked-channel and marker checks already precede
+the public probe. State can still change during actual Discord verification;
+the final write-side gate prevents oversubscription without killing existing
+games. A reaction probe remains necessary to prove actual marker usability.
+
+Automatic mid-round reports now omit the report-ID/traffic block and the scope/
+ordering block, keeping their lead-in, active rules and player entries. Manual
+public reports, private Summary panels and compact round leaderboards retain
+their layouts. Reporting gates, scores and schema 12 are unchanged.

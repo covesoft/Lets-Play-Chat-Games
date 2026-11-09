@@ -253,3 +253,13 @@ Confirmed partial target changes still refresh in place. A missing/uncertain
 edit is not permission for a replacement send; retain existing recovery/send
 claims. Opening choices and acknowledged new-rule disclosures keep their
 existing paths. Schema remains 12 and owner copy is unchanged.
+
+v0.3.11 shares OpeningFlow.admission_gate between read-only startup preflight and
+the authoritative write-side admission check. Reject duplicate creation sources,
+occupied channels and free/premium capacity before the public reaction probe;
+recheck after it to cover races and exact premium expiry. Static permissions,
+marker configuration, readiness and locked/archived channels remain early checks.
+Actual marker usability still requires Discord verification. Automatic interims
+omit capture metadata and scope/order headers; preserve their rules/player entries
+and all manual/private Summary and final/round-result layouts. No reporting/scoring
+gate or schema change is part of this fix. Preserve the latest owner copy/log edits.

@@ -203,6 +203,31 @@ class OpeningFlow:
         )
         return row is not None and row[0] is not None and row[0] > utc_int(now)
 
+    async def admission_gate(self, guild, channel, *, now, source_id):
+        """Read-only eligibility before probing; repeat inside admission's write unit."""
+        self.unit._check()
+        if await _row(
+            self.conn,
+            "SELECT 1 FROM nr_admissions WHERE guild_id=? AND create_source_id=?",
+            (guild, source_id),
+        ):
+            return OpeningStatus.INVALID
+        if await _row(
+            self.conn,
+            "SELECT 1 FROM nr_admissions WHERE channel_id=? AND stage<>'ended'",
+            (channel,),
+        ):
+            return OpeningStatus.CHANNEL_BUSY
+        premium = await self._premium(guild, now)
+        count = await _row(
+            self.conn,
+            "SELECT COUNT(*) FROM nr_admissions WHERE guild_id=? AND stage<>'ended'",
+            (guild,),
+        )
+        if count[0] >= (5 if premium else 1):
+            return OpeningStatus.CAPACITY
+        return None
+
     @staticmethod
     def _context(row, *, picker_revision=None):
         return EvaluationContext(
@@ -244,26 +269,15 @@ class OpeningFlow:
             return (
                 OpeningStatus.ENDED if existing["stage"] == "ended" else OpeningStatus.ALREADY_DONE
             )
-        if await _row(
-            self.conn,
-            "SELECT 1 FROM nr_admissions WHERE guild_id=? AND create_source_id=?",
-            (frame.route.guild_id, frame.source_id),
-        ):
-            return OpeningStatus.INVALID
-        if await _row(
-            self.conn,
-            "SELECT 1 FROM nr_admissions WHERE channel_id=? AND stage<>'ended'",
-            (frame.route.channel_id,),
-        ):
-            return OpeningStatus.CHANNEL_BUSY
-        premium = await self._premium(frame.route.guild_id, frame.received_at)
-        count = await _row(
-            self.conn,
-            "SELECT COUNT(*) FROM nr_admissions WHERE guild_id=? AND stage<>'ended'",
-            (frame.route.guild_id,),
+        gated = await self.admission_gate(
+            frame.route.guild_id,
+            frame.route.channel_id,
+            now=frame.received_at,
+            source_id=frame.source_id,
         )
-        if count[0] >= (5 if premium else 1):
-            return OpeningStatus.CAPACITY
+        if gated:
+            return gated
+        premium = await self._premium(frame.route.guild_id, frame.received_at)
         if not capabilities.available:
             return OpeningStatus.UNAVAILABLE
         templates = frozenset(CARD_SPECS) if available_templates is None else available_templates

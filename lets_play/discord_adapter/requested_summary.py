@@ -18,6 +18,7 @@ def add_button(view, copy, session, *, label="buttons.summary"):
 
 
 def render(page, copy, *, snapshot=None, public=False):
+    automatic = bool(snapshot and snapshot.kind == "automatic")
     embed = discord.Embed(title=copy.text("summary.title"), colour=copy.color("summary"))
     as_of = (
         copy.text("summary.as_of", timestamp=int(page.as_of.timestamp()))
@@ -42,22 +43,23 @@ def render(page, copy, *, snapshot=None, public=False):
             else "summary.live"
         ),
     )
-    if snapshot and snapshot.kind == "automatic":
+    if automatic:
         embed.title = copy.text("reports.mid_title")
         embed.description = copy.text("reports.mid_description", round=page.round_number)
     if snapshot:
-        embed.add_field(
-            name=copy.text("summary.capture_heading"),
-            value=copy.text(
-                "summary.capture_detail",
-                session=snapshot.session_id[:8],
-                game_messages=snapshot.human_messages,
-                game_whispers=snapshot.whispers,
-                round_messages=snapshot.round_messages,
-                round_whispers=snapshot.round_whispers,
-            ),
-            inline=False,
-        )
+        if not automatic:
+            embed.add_field(
+                name=copy.text("summary.capture_heading"),
+                value=copy.text(
+                    "summary.capture_detail",
+                    session=snapshot.session_id[:8],
+                    game_messages=snapshot.human_messages,
+                    game_whispers=snapshot.whispers,
+                    round_messages=snapshot.round_messages,
+                    round_whispers=snapshot.round_whispers,
+                ),
+                inline=False,
+            )
         # Names only here; /rules retains the complete current instructions.
         names = [copy.text(f"cards.{r.card_id}.name") for r in snapshot.rules]
         chunk = ""
@@ -69,11 +71,14 @@ def render(page, copy, *, snapshot=None, public=False):
             chunk += ("\n" if chunk else "") + line
         if chunk:
             embed.add_field(name=copy.text("summary.rules_heading"), value=chunk, inline=False)
-    embed.add_field(
-        name=copy.text("summary.scope_round" if page.scope == "round" else "summary.scope_game"),
-        value=copy.text("summary.order"),
-        inline=False,
-    )
+    if not automatic:
+        embed.add_field(
+            name=copy.text(
+                "summary.scope_round" if page.scope == "round" else "summary.scope_game"
+            ),
+            value=copy.text("summary.order"),
+            inline=False,
+        )
     for actor, score in page.players:
         actual = (
             copy.text("results.unrated")

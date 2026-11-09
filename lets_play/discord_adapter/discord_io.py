@@ -21,7 +21,7 @@ from lets_play.new_rules.contracts import (
 from lets_play.presentation import PresentationError, default_presentation
 from lets_play.storage.discord_store import DiscordStore
 from lets_play.storage.game_store import StoreOverloaded
-from lets_play.storage.opening_flow import OpeningCapabilities, OpeningStatus
+from lets_play.storage.opening_flow import OpeningCapabilities, OpeningFlow, OpeningStatus
 from lets_play.storage.round_reports import RoundReports
 from lets_play.storage.summary_store import SummaryStore
 
@@ -397,13 +397,21 @@ class DiscordGame:
             await interaction.followup.send(self.copy.text("start.unavailable"), ephemeral=True)
             return
         try:
+            replies = {
+                OpeningStatus.ADMITTED: self.copy.text("start.admitted"),
+                OpeningStatus.CHANNEL_BUSY: self.copy.text("start.channel_busy"),
+                OpeningStatus.CAPACITY: self.copy.text("start.capacity"),
+            }
             async with self.runtime.store.transaction(write=False) as unit:
-                occupied = await DiscordStore(unit).channel_busy(
-                    interaction.guild_id, interaction.channel_id
+                gated = await OpeningFlow(unit).admission_gate(
+                    interaction.guild_id,
+                    interaction.channel_id,
+                    now=self.runtime.clock.now(),
+                    source_id=str(interaction.id),
                 )
-            if occupied:
+            if gated:
                 await interaction.followup.send(
-                    self.copy.text("start.channel_busy"), ephemeral=True
+                    replies.get(gated, self.copy.text("start.failed")), ephemeral=True
                 )
                 return
             async with self.runtime.network_slots, asyncio.timeout(20):
@@ -415,11 +423,6 @@ class DiscordGame:
                 str(interaction.id),
                 facts,
             )
-            replies = {
-                OpeningStatus.ADMITTED: self.copy.text("start.admitted"),
-                OpeningStatus.CHANNEL_BUSY: self.copy.text("start.channel_busy"),
-                OpeningStatus.CAPACITY: self.copy.text("start.capacity"),
-            }
             await interaction.followup.send(
                 replies.get(result, self.copy.text("start.failed")),
                 ephemeral=True,
