@@ -1,41 +1,64 @@
 # Let’s Play development
 
-This repository implements the New Rules chat game in the Let’s Play application.
-Owner-provided design notes may be available privately under `design/`. Consult
-them before changing game behavior. Never commit, package, or copy their contents
-into public documentation. The public `docs/` directory contains operational
-documentation only.
+This repository implements New Rules in the Let’s Play application. Read this
+file before changing source. Owner design notes may be provided privately under
+ignored `design/`; consult them before changing behavior. Never commit, package,
+or copy private planning contents into public documentation. Public `docs/`
+contains operational and API documentation only.
+
+## Current implementation
+
+Application v0.3.12 uses schema 12. M1 is accepted and closed at v0.2.9/schema 8;
+M2 is in progress. Preserve the existing domain/storage APIs. This is a
+development-only ordinary-round preview, not a public-release build.
+
+Implemented: persisted three-human opening, message/raw-reaction scoring and
+markers, ordinary warning/picker/choice/replacement/timeout/cutover, held play,
+same-round revival, manager ending, private live scores, requested public reports,
+gated automatic interims, compact round-end boards and ranked final standings.
+Seventeen ordinary predicates exist; opening offers five proven templates and
+later offers sixteen non-phrase templates. NR036 is not offered by the adapter.
+
+Startup/reconnect enters durable recovery before dispatch or timers. The current
+live recovery path permits manager ending only. Offline RecoveryFlow supports
+proof reconciliation, approval and a published 30-second read-in, but the live
+resume workflow is not wired. No modes are integrated. Richer fault/streak views,
+settings/premium/profile interfaces, full catalog/theme/mode awards, final-output
+retry/absolute 24-hour cleanup and operator erasure remain unfinished.
+
+See `docs/DISCORD_PREVIEW.md` for the current runbook, `docs/RECOVERY.md` for
+recovery API boundaries, `docs/REQUESTED_SUMMARY.md` for current-score access and
+`docs/ROUND_REPORTS.md` for automatic/closed-round reporting. Earlier versions'
+proposed next steps are historical; use current source and owner instructions.
+
+## Privacy, presentation and authority
+
+- Never commit `.env`, production word lists, databases/sidecars, transcripts or
+  media. Use harmless synthetic fixtures. Do not log chat, exception payloads,
+  secrets or private list contents. Source hygiene uses NUL-framed Git I/O.
+- Owner emoji artwork, names/markup and IDs are private configuration. Never put
+  actual assets/IDs in public source, defaults, fixtures, examples, logs, docs or
+  distributions. The marker has no fallback and must be supplied privately;
+  markup/permission bits do not prove it can be used. Admission must really react.
+- All public/player-facing copy and embed colors must be owner-editable near the
+  file top or in a dedicated presentation file. Current text, card labels,
+  buttons, command descriptions and colors use stable keys through Presentation
+  in `lets_play/resources/en-US.json`. Preserve owner wording, colors and log
+  edits. Keep protocol/command/card IDs independent of translated text. Validate
+  placeholders/private `CHATGAMES_PRESENTATION_PATH` overrides and package the
+  JSON in wheel/sdist builds. See `docs/PRESENTATION.md`.
+- Do not contact/invite collaborators, push the repository, deploy or run a live
+  bot merely to verify an offline edit. Keep any supplied token/IDs private.
+  Routine implementation is delegated; M2 work is authorized in bounded bites.
+
+## Development and verification
 
 Use Python 3.13. `pyproject.toml` owns dependency pins; update `uv.lock` and both
-requirements exports together. Run the application with `python -m lets_play`
-or the installed `lets-play` command. Use `CHATGAMES_*` configuration names; there
-are no legacy launcher/configuration aliases. No token or external private list
-is required for offline tests.
+requirements exports together. Use `CHATGAMES_*` configuration names, with no
+legacy aliases. Run `python -m lets_play` or the installed `lets-play` command.
+Offline tests require no token or external private list.
 
-Keep the New Rules domain independent of Discord and storage. M1 is accepted and closed at v0.2.9/schema 8. M2 is in progress. Preserve the
-existing engine/storage APIs; v0.3.3 wires the ordinary round loop for sixteen
-proven templates. Full summaries, modes and automatic restart resume remain open. Resolve the relevant open contracts at their designated gates.
-
-Never commit `.env`, production word lists, databases/sidecars, transcripts, or
-media. Use harmless fixtures. Do not contact/invite collaborators or deploy the
-bot without instructions. Do not run the live bot just to verify an offline edit.
-
-Owner emoji assets (including names/markup and IDs) are private configuration.
-Never put actual owner assets/IDs into public source, defaults, fixtures, examples,
-logs, docs or distributions. Use synthetic fixtures only. An absent marker has no
-fallback; it must be supplied privately before admitting a game.
-
-All player/public-facing copy and embed colors must be owner-editable near the
-file top or in a dedicated presentation file. Current sent copy, card display
-labels, buttons, command descriptions and phase colors live in
-`lets_play/resources/en-US.json`; use stable keys through `Presentation`. Preserve
-owner copy edits when refactoring. Keep protocol IDs/command identifiers separate
-from translated text. New strings/colors must follow this boundary. Private
-`CHATGAMES_PRESENTATION_PATH` overrides are validated at startup/config check;
-keep template placeholders stable and include the catalog in wheel/sdist builds.
-See `docs/PRESENTATION.md`.
-
-Run meaningful checks for each change:
+For behavior changes, run meaningful scenarios and the appropriate regression:
 
 ```bash
 python -m pytest
@@ -44,227 +67,145 @@ python -m ruff format --check .
 python -m lets_play --check-config
 ```
 
-For packaging/dependency changes, also run `python -m build` and `python -m pip
-check` (or `uv pip check`). Record actual results and remaining limits in the
-private implementation notes when available. Never report a mock/offline check
-as live Discord or Windows evidence. M2 is authorized in bounded increments.
-The owner verified the earlier v0.1.3 shell live, schema-7/WAL/FK bootstrap, and v0.2.8
-tests on Windows 11 (944 passed in 70.72s). Source hygiene uses NUL-framed Git I/O.
-Later increments still need their own Windows/CI evidence.
+For packaging/dependency changes, also build, check installed dependencies and
+exercise the installed wheel outside the checkout. Verify patch application to
+the current owner base. For documentation-only changes, check diffs, links and
+source/privacy boundaries; do not claim a fresh full-suite run without one.
+Record actual results and limitations in private notes. Linux/mocks/SDK checks
+are not Windows, GitHub Actions or live human evidence. Owner source parity alone
+is not a new numerical test result or M2 sign-off.
 
-Schema 2 is an offline evaluation unit of work, not a transition/admission or
-award service. Keep every guard, aggregate, and marker intent in one transaction;
-ownership updates require monotonic revisions. Never interpret a candidate or
-an uncommitted unit return value as an applied effect. Use bounded store/page
-limits and surface overload/contention explicitly. No network waits inside a
-write unit. Back up an existing database before schema upgrades.
+Every code-patch handoff includes copy-paste Windows repository-root commands:
+`git apply --check`, `git apply`, editable reinstall when needed, checks and
+startup. Back up/verify a stopped existing database before an actual schema
+upgrade. Never rewrite released migrations 1–12. An unchanged schema needs no
+migration or command sync; documentation-only patches need no reinstall/restart.
 
-The ordinary-subset hand API prepares immutable proposals with actual-validator
-witnesses; READY does not activate, consume, publish, resolve a round, or commit.
-Keep a single template ticket regardless of phrase/target variants. Slice the
-authorized phrase window before filtering. Never repair a conflict by removing an
-unrelated rule or use empty/whisper/media bypass as a witness. Bounds may withhold
-unproven states. Unsupported cards/modes remain outside the subset until verified.
+## Engine, persistence and delivery invariants
 
-Schema 3 OrdinaryFlow is a later-round offline coordinator. Use one trusted,
-contiguous server receipt sequence for every flow action, chat/reaction, and timer.
-Never skip a sequence gap or backdate a timer over queued chat. Publication ACKs
-are external facts, not output preparation. Old rules apply until the announced
-whole-second cutover; missing/late ACK requests explicit recovery. Closures retain
-closure evidence; only nr_round_resolutions certifies general progression. The v0.3.3 adapter delivers these ordinary transitions; full summaries and
-automatic restart resume remain open. Schema 7 composes ordinary refresh/held/revival.
+- Keep New Rules independent of Discord/storage. Evaluation returns derived
+  proposals, not committed effects. Guards, score aggregates, marker intents,
+  credit and relevant ownership updates commit atomically. Owner revisions are
+  monotonic and distinct from ruleset versions. Bound reads/queues and surface
+  overload; never wait for network I/O inside a write unit.
+- Use actual-validator witnesses for complete three-template legal hands. One
+  template ticket survives phrase/target variants. Slice the authorized phrase
+  window before filtering. Enforce local caps/slots, never a total-rule ceiling.
+  Replace only a permitted occupant; unrelated removal and empty/whisper/media
+  bypasses cannot repair contradictions. Unsupported cards/modes remain withheld.
+- One trusted contiguous server receipt lane owns controls, chat/reactions, ACKs
+  and timers. Capture Gateway receipts before asynchronous callbacks/HTTP defers.
+  Never skip a gap or let timers overtake queued chat. Raw reaction source IDs
+  use pinned SDK Gateway session/sequence, separate from actor/target offense keys.
+  Support one bot process/database and one bounded FIFO/publisher per live route.
+- Old rules and the old round apply through choice until announced whole-second
+  activation. Preparation is not publication. Only actual warning publication
+  starts its full 30 seconds. Freeze picker evidence before the cutoff receipt
+  body; preserve exact scores/unrated eligibility. Partial selections and refresh
+  retain the original choice clock. Rotation/general resolution commit only at
+  actual activation. Closure evidence alone is not a resolved award.
+- Lobby clocks start at actual publication (180 seconds; first choice 60).
+  Starter plus two distinct humans is quorum; joins alone do not credit a game.
+  Preplay has no fake playing round. First acknowledged activation creates it,
+  consumes its phrase/turn and commits deliberate Rulemaker/pacing together.
+  Preplay source guards prevent ignored sources becoming scored on replay.
+- Held play keeps the same rules/round and scoring. Restoration uses a fresh
+  warning/snapshot; settings changes do not reset held idle. Human messages,
+  including whispers, refresh held idle; reactions/controls/bot output do not.
+  Revival pauses scoring, needs three distinct explicit returners and retains
+  the open round, scores and original publication-owned clock. Quorum itself
+  neither closes the round nor grants another game credit.
+- Credit/live flag/global increment/Familiar Face commit together. Resolve real
+  closures in creation order before final Very Careful evaluation and purge.
+  finalize_ended neither authorizes nor ends a game. Missing evidence/version
+  pins require recovery, never guessed streaks, awards or legacy clock values.
+- Use the shared read-only OpeningFlow.admission_gate before reaction probing;
+  reject duplicate creation sources, occupied channels and current capacity.
+  Recheck in the admission write unit after probing to cover races/exact premium
+  expiry. Existing games survive downgrade. Trusted grants/phrase-window facts
+  are server state; manager/owner authorization and full UI remain separate.
+- Commit a durable send claim before HTTP. Store actual delivered message ID,
+  ordered ACK and flow acknowledgement together. Preserve older namespaced
+  claims. Read bounded pending work per session, never filter a global first page.
+  Unknown/missing ACK, cancellation or timeout never permits blind resend.
+- Later ordinary offers edit the known phase panel (normally the warning).
+  Successful edit ACK binds that same message and owns the choice clock. Refresh
+  cannot reveal prepared offers/selected activations before publication ACK.
+  Partial target changes still edit in place. Missing/uncertain edits require
+  recovery, without replacement sends. Opening choice/new-rule disclosure retain
+  their own publication paths. /rules displays the actually enforced old set.
+- Inactivity ending finalizes normally and edits only the last known panel, with
+  no new-message fallback. Manager ending may post final results. Ended is terminal
+  and releases capacity even if delivery is pending. Never purge earned-progress
+  evidence before finalization; complete retry/TTL cleanup is still future work.
+- Initial joins use control.joined; Continue/revival joins use control.continued,
+  selected by the captured action. Keep already-counted, opening/revival-quorum
+  and rule-choice replies distinct. NR011 accepts at least three consecutive
+  terminal ASCII periods; recorded scores are immutable.
 
-Schema 4 progression is New Rules only. Score qualification, live credit flag,
-global increment and Familiar Face commit together. Resolve actual closures in
-round creation order; never resolve an open/revival round. OrdinaryFlow composes
-general resolution with cutover. Compose finalize_ended with a trusted terminal
-owner update after earlier closures resolve; it neither authorizes nor ends a game.
-Do not purge evidence before general finalization and future mode/theme awards.
-Reconcile legacy pending closures explicitly before further activation. Unknown
-enrollment evidence/version pins require recovery, never guessed streaks/awards.
+## Summary and results invariants
 
-Schema 5 RoundPacing shares the OrdinaryFlow receipt lane. Register real activation
-time/frozen estimate; never guess a used legacy unknown start. Warning preparation
-does not start its 30 seconds: only a successful publication ACK does. Snapshot
-before the first at/after-cutoff receipt is scored; later events remain old-round
-until activation. Preserve exact-score candidate evidence and unrated eligibility.
-Rotation service commits only at valid activation, together with general resolution
-and next-round pacing. Compose ordinary held/refresh/revival through schema 7;
-v0.3.3 wires ordinary scheduler/publisher dispatch. Automatic recovery
-reconciliation remains open.
+Compose SummaryStore writes after actual engine effects in the same receipt
+unit. Initialize from real activation, not a guessed clock. Only actual public
+success advances time/counter baselines; HTTP arrivals remain pending. Known
+success may ACK during pause/end without resuming. Private reads never claim,
+ACK, allocate a receipt or change timers/activity/public baselines.
 
-Schema 6 OpeningFlow reserves real guild/channel capacity before publishing a lobby.
-Lobbies/opening/recovery have no nr_sessions/nr_rounds or score effects. Actual
-publication starts original 180s/60s clocks. Quorum is starter plus two distinct
-humans; joins do not credit a game. First acknowledged activation creates round
-one, consumes its phrase/turn, grants deliberate Rulemaker and initializes pacing
-in one unit. Its receipt hands over to OrdinaryFlow without dropping its body.
-Preplay source guards prevent replayed ignored events becoming scored. Ending
-releases the reservation with general finalization; final delivery remains separate.
-Persisted entitlement facts are trusted server state, not client-supplied capacity.
-Grant authorization/full promotion/settings UI remain M5 work. Legacy slots retain
-unknown phrase allowance rather than guessing a downgrade; frozen offers survive.
+Private Summary uses five-player bounded actor-keyset pages ordered by ID, exact
+session/guild/channel checks and stable old-round identity. Scope/page buttons
+refresh by editing the same ephemeral response with the fresh interaction token.
+Only public entry opens a new private pane. No Refresh button is rendered; retain
+its old catalog key for override compatibility. Summary appears on disclosure
+and /rules, not choice/target menus. Preplay /rules exposes no copied mutations.
 
-Schema 7 EvolutionFlow composes held play, complete refresh and revival over that
-same receipt lane. Configure only trusted phrase-window/template facts. Recheck
-relevant changes before dispatching subsequent choices. Fresh warning/revival
-attempts preserve prior snapshots/ACKs; pass the exact attempt to publish_warning.
-Refreshed offers inherit a running original deadline. Held scoring continues;
-revival pauses scoring and needs three distinct returners, never automatic starter
-credit. Quorum preserves the open round; actual activation or ending resolves it.
-Held idle counts only new human messages (including whispers); settings-only
-restoration does not reset it. Silent expiry releases capacity/general finalization
-atomically and requests only an existing-panel update. O-03 final delivery remains
-wired for the ordinary preview in v0.3.3. The startup adapter enters the
-schema-8 barrier; automatic resume remains open.
-Do not infer missing legacy revival publication times or waive old failure pauses.
+Requested public reports require BOTH 30 seconds since actual prior success AND
+new non-whisper human traffic. Pending requests coalesce; blocked requests do not
+consume traffic/time. Check current scores and legacy nrf controls open live
+private scores. After ACK discard copied scores/rules and older completed summary
+receipts; retain the latest receipt plus unresolved sends. Compact delivered
+legacy archives on startup. Request IDs provide a bounded replay watermark, not
+a growing request cache or historical score browser.
 
-Schema 8 RecoveryFlow is an explicit offline disruption coordinator. Stop dispatch,
-page live routes and enter each barrier BEFORE running overdue timers. Normal flow
-APIs and output reads fence active recoveries. Resolve uncertain publication using
-actual message/time proof or a conclusive never-sent fact; a missing ACK is neither.
-Only a successfully published recovery notice starts the 30-second read-in. Resume
-rebinds ownership without resetting original clocks, partial choices or scores.
-Known lobby/revival expiry still wins while paused. Ignore/guard historical sources
-created before actual resumption; do not backfill missing chat or mode success.
-Old capability/dependency/recovery pauses, legacy clockless revival and unsupported
-modes require specialized policy or explicit authorized ending. The startup adapter enters barriers before dispatch. Automatic
-resume, send reconciliation/leases, recovery announcements and cleanup remain open.
+Automatic interims require BOTH 120 seconds and 25 new ordinary non-whisper posts,
+reset per round. Offending/media posts count; modes/whispers/reactions/controls do
+not. Suppress within 60 seconds of a known warning, throughout warning/choice,
+modes, pause/recovery and ending. Timers work without another post; revalidate
+before claim after acquiring a network slot. Automatic layout omits capture/
+traffic and scope/order headers; manual/private layouts retain their detail.
 
-Schema 9 appends only the Discord outbound-attempt guard. The development preview
-uses one bounded FIFO and one publisher per live session, and one bot process per
-database. Capture Gateway receipts before async SDK callbacks/HTTP defers. Raw
-reaction source IDs use the pinned SDK Gateway session/sequence, independently of
-the actor/target offense guard. Claims commit before HTTP; unknown sends pause and
-are never blindly retried. All startup routes enter recovery before output/timers.
-Current preview recovery permits manager ending only. Do not infer live emoji
-usability from markup or permission bits: the admission probe must really react.
-Schema 10 preserves all schema-9 claims and namespaces new guards by output
-family/identity. Save the actual delivered message and ordered ACK sequence in
-the same transaction as its flow acknowledgement. Each live route reads its own
-bounded pending-output page; never filter a global first page in memory.
+Post compact round leaderboards only at actual activation closure, including
+selection-period scores. Use actual immutable round scores, not copied archives.
+Existing final standings cover ending. Exact adjusted-score descending order,
+unrated last and ID ties applies to round/final boards, not Summary. Rank pages
+scan bounded actor batches of 64, retaining 21 candidates for 20 round entries
+or eleven for ten final entries; never sort rounded floats/cache the full roster.
+Further public-board pages open privately, then edit in place. Mentions go in
+field values with pings suppressed. Only final scores for a played game have a
+footer; preplay/interim/round boards remain footer-free. Old-round delivery never
+consumes new-round ordinary traffic.
 
-v0.3.3 wires warnings, picker snapshot, ordinary offers, single/partial replacement,
-timeouts, cutover and held/revival using the existing engine. Later hands use the
-sixteen existing non-phrase validators; opening remains the five-card pool.
-Keep the original published deadline on partial target choice and the exact
-warning/revival attempt on ACK. /rules shows old enforced rules until cutover,
-even while the public transition announces the future rules. Revival quorum
-preserves the same open round. Silent inactivity expiry edits the last known
-panel only, with no new-message fallback. Modes, full summary baselines,
-automatic resume, final-output retry/24-hour cleanup and public release remain
-future increments.
+## Recovery boundary and next work
 
-v0.3.4/schema 11 added the offline summary capture/ACK foundation. Its capture/ACK writes were not
-called by the live adapter until v0.3.7. v0.3.5 uses only the read-only live_page method. Use SummaryStore inside the same ordered engine write
-unit after actual effects; commit before treating a capture as deliverable.
-Initialize timing from the real first activation, never an inferred legacy clock.
-Automatic preparation needs both 60 seconds and 25 new human traffic messages.
-Only actual public success consumes the frozen counter watermark and advances
-time; arrivals during HTTP remain pending. Persist one send claim before HTTP.
-Unknown sends block new captures/retries pending future explicit reconciliation.
-Same-message ACK replay is a no-op; identity conflicts roll back. Read score pages
-by actor key with bounded limits. Private rendering and controls exist in v0.3.5; exact ranking order, public
-summary scheduling, round/final summary integration and detailed fault/streak UI
-remain separate work.
-See docs/SUMMARY_FOUNDATION.md. Keep the existing runtime and public copy intact.
+Enter every startup barrier before normal dispatch/output/timers. Recovery fences
+normal flow and markers. Reconcile uncertain sends with actual message/time proof
+or conclusive never-sent evidence; missing ACK/deleted messages/partial searches
+prove neither. RecoveryFlow.work covers engine outputs; adapter delivery claims,
+summary outputs and round-report receipts also need explicit review before any
+future live resume. Do not assume the engine work list exhausts outbound state.
 
-v0.3.5 Summary controls are private, read-only, scoped to the exact saved session
-and guild/channel, with no FIFO receipt allocation or state transition. They never
-prepare/claim/ACK a public capture or reset its counter/time baseline. Read at most
-six score rows for a five-player page by actor key. Round navigation retains its
-round number; Current round selects the current owner, and game totals stay live.
-Paging/refresh reads new committed values; do not label them frozen snapshots.
-Keep all copy/colors editable, mentions non-pinging, and private interim views
-footer-free. Preplay /rules must not expose copied mutation buttons. No schema or
-slash-command change is part of this increment. See docs/REQUESTED_SUMMARY.md.
+Only actual recovery-notice publication starts the 30-second read-in. Preserve
+original clocks, partial choices, frozen rules/phrases, rotation, scores and
+fulfilled goals. Known lobby/revival expiry wins while paused. Guard historical
+sources created before actual resume; never backfill missed chat/mode success.
+Old capability/dependency/recovery pauses, unsupported modes and clockless legacy
+revival need explicit policy or authorized ending. No healthy-startup shortcut.
 
-v0.3.6 private menu navigation edits the originating ephemeral response after a
-message-update defer; only a click from a public panel opens a new private reply.
-Use the fresh component interaction token, never edit the public phase panel.
-Scope/page buttons re-read scores and refresh in place; no Refresh button is shown.
-Keep its old catalog key accepted for private-override compatibility.
-Final played-game results sort by exact adjusted score descending, unrated last,
-then ID for exact ties. Summary pages remain ID-ordered. Read result rank pages
-in actor-keyset batches of 64 with at most eleven candidates for ten displayed
-players. Do not sort rounded floats or fetch the full roster. New result controls
-carry rank anchors/page labels; legacy ID-offset controls reopen ranked page one.
-Result paging also edits an existing private response. Scores, progression,
-public-summary baselines and schema remain unchanged.
-
-v0.3.7 introduced an explicit Post summary to channel control in live private
-menus. Capture its receipt before HTTP defer, observe due engine boundaries and
-freeze the report in that same write unit. Scope/page reads remain quiet and
-read-only. Coalesce pending requests and the 15 seconds after actual public
-success; never ACK a private reply or reset the public baseline on a request.
-Public delivery commits one sending claim before HTTP, then ACKs the actual
-returned message ID through the lane. Preserve arrivals during delivery and
-known success during pause/end. Timeout/shutdown/restart retain uncertainty and
-never blindly resend. Prepared reports cannot be sent after ending or through
-recovery. Saved round/game pages use frozen membership/scores/rules and bounded
-actor cursors; they open privately and then edit that menu. All summaries remain
-ID-ordered, mention-safe and footer-free. Automatic/round-end posting, evidence
-reconciliation, resume and richer details remain separate work. Schema stays 11.
-
-v0.3.8 supersedes the saved-report UI/retention policy. Public reports offer Check
-current scores, opening the normal live ephemeral menu. Legacy nrf controls also
-redirect there; remove historical score browsing, not access to current totals.
-Choice and replacement-target menus omit Summary; rules disclosure and /rules
-retain it. After a first report, public requests require BOTH 30 seconds since
-successful delivery AND new non-whisper human traffic beyond its captured totals.
-Whispers, controls and reactions alone cannot unlock a repost. Keep automatic
-60-second/25-human-message gates separate; their sender is still unfinished.
-On successful ACK, discard copied player scores/rules and older completed summary
-receipts atomically with the baseline update. Keep one latest receipt per game
-plus any unresolved send. SDK interaction IDs in request keys provide a bounded
-replay watermark; no growing request cache. Startup compacts v0.3.7 delivered
-archives, including ended games, without touching pending/sending/uncertain proof
-or actual game data. Schema remains 11; no migration is needed. Copy stays editable
-and newer owner wording must be preserved. See docs/REQUESTED_SUMMARY.md.
-
-Patch handoffs must include copy-paste Windows commands from the repository root:
-`git apply --check`, `git apply`, the editable reinstall when needed, the relevant
-checks, and startup. Include migration/backup commands only when the schema
-changes. The owner prefers these commands with every delivered patch.
-
-v0.3.9/schema 12 supersedes earlier automatic-report timing: BOTH 120 seconds and
-25 new ordinary non-whisper human posts, reset per round, including offending/media
-posts and excluding modes/whispers/reactions/controls. Successful public reports
-restart the gates; HTTP arrivals remain pending. Suppress within 60 seconds of
-a known warning, throughout warning/choice, modes, pause/recovery and ending.
-Timers must work without another message. Revalidate before claim after acquiring
-a network slot. Keep manual/private Summary layouts intact and all copy editable.
-After actual activation closes a round, post an exact adjusted-score leaderboard
-with only score headings and mentions. Include selection-period posts; never
-treat warning/selection/held/revival as closure. Existing final game output covers
-game ending, and inactivity stays quiet. Read actual closed-round scores in bounded
-rank pages, with no copied archive. New nr_round_reports receipts claim before
-HTTP and ACK through the lane; unknown sends pause, known success can ACK during
-pause/end, and old-round boards never consume new-round traffic. Preserve older
-send claims and require a verified schema-11 backup before migration 12. Reject
-occupied-channel start commands before reaction probing; admission remains the
-authoritative race guard. See docs/ROUND_REPORTS.md.
-
-v0.3.10 later ordinary offers edit the known phase panel rather than create a
-second choice message. Persist/ACK that same message ID as the authoritative
-offer; successful edit publication owns the original choice deadline. Refresh
-must not reveal a prepared offer or an unacknowledged selected activation.
-Confirmed partial target changes still refresh in place. A missing/uncertain
-edit is not permission for a replacement send; retain existing recovery/send
-claims. Opening choices and acknowledged new-rule disclosures keep their
-existing paths. Schema remains 12 and owner copy is unchanged.
-
-v0.3.11 shares OpeningFlow.admission_gate between read-only startup preflight and
-the authoritative write-side admission check. Reject duplicate creation sources,
-occupied channels and free/premium capacity before the public reaction probe;
-recheck after it to cover races and exact premium expiry. Static permissions,
-marker configuration, readiness and locked/archived channels remain early checks.
-Actual marker usability still requires Discord verification. Automatic interims
-omit capture metadata and scope/order headers; preserve their rules/player entries
-and all manual/private Summary and final/round-result layouts. No reporting/scoring
-gate or schema change is part of this fix. Preserve the latest owner copy/log edits.
-
-v0.3.12 uses the owner's control.continued text for a successful Continue/revival
-join, while initial lobby joins use control.joined. Distinguish by the captured
-control action, not later mutable session state. Preserve already-counted and
-quorum-specific replies, rule-choice copy, all state transitions and schema 12.
+Next bounded bite: read-only manager recovery/status via existing /rules, with
+bounded/scoped data and per-interaction authorization. It must expose blockers
+without changing recovery, claims, clocks or scores. Separate subsequent work
+wires evidence acquisition/reconciliation, notice publication/read-in and explicit
+resume. Keep manager-ending-only behavior until that integration is implemented
+and verified. Drawing Conclusions follows; consult the supplied private policy
+before implementing mode interruption. Richer details and a small real human
+full-loop/mode/restart check remain before M2 exit. Do not rebuild M1, broaden to
+all cards/modes or combine these into one large patch.

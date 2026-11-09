@@ -3,11 +3,14 @@
 Schema 8 `RecoveryFlow(unit)` adds a durable barrier for a disruptive restart or
 reconnect. It coordinates existing ordinary, held, revival, lobby and opening
 state without sending messages or loading channel history. A handle reopen alone
-still does not invoke recovery. The live shell has no game dispatcher yet.
+still does not invoke recovery. The v0.3.12 adapter does enumerate live routes and
+enter these barriers before normal dispatch/timers on startup/reconnect. Its live
+recovery controls currently permit manager ending only; proof reconciliation,
+notice/read-in and resume remain offline APIs, pending adapter integration.
 
 ## Enter before timers
 
-The future adapter must stop normal intake/dispatch, page through `live_routes`
+The adapter must stop normal intake/dispatch, page through `live_routes`
 (`after_session`, limit 1–100), allocate the next trusted receipt per route, and
 call `begin(frame, recovery_id)` **before** overdue timers or chat. One dispatcher
 owns sequence allocation; the returned watermark is not a concurrency allocator.
@@ -30,7 +33,15 @@ consumed there. No paused event scores or counts toward a picker pool.
 
 `work(session, recovery_id)` exposes at most 100 uncertain output identities for
 that session. A larger backlog refuses instead of silently truncating. Reconcile
-all of them with `RECOVERY_RECONCILE` and `reconcile`:
+all of them with `RECOVERY_RECONCILE` and `reconcile`.
+
+This engine work list covers opening/ordinary/pacing/evolution outputs. It does
+not exhaust adapter outbound state: inspect `nr_discord_deliveries`, unresolved
+`nr_summary_outputs` and `nr_round_reports` too. Their claims/actual ACKs must be
+reconciled under their own guards before future live resume. Do not treat an
+empty engine work list as proof that all outbound delivery is known.
+
+Reconciliation facts:
 
 - Supply both the real `message_id` and actual `published_at` when delivery is
   proven. The timestamp must respect known preparation/activation/attempt bounds and
@@ -113,6 +124,10 @@ stopped existing database before schema 8. Migration 8 appends only; released
 migrations 1–7 and existing scores/clock/phrase/profile rows remain unchanged.
 
 Tests use real temporary WAL files, explicit offline delivery facts, multiple
-connections, rollback and cancellation. They do not establish real Discord
-publication, automatic startup wiring, host throughput, or M1 completion. The
-remaining M1 acceptance/scenario audit precedes live M2 integration.
+connections, rollback and cancellation. M1 is closed; the current adapter also
+tests startup/reconnect barriers, pending send fences and manager ending offline.
+These checks do not certify live resume, Discord publication evidence or host
+throughput. The next bite is bounded, authorized read-only manager status through
+`/rules`; it cannot change claims or recovery state. Evidence acquisition,
+reconciliation, notice publication and explicit resume follow separately. See
+[DISCORD_PREVIEW.md](DISCORD_PREVIEW.md) for the current live boundary.

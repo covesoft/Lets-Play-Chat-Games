@@ -1,20 +1,25 @@
 # New Rules ordinary-round preview — v0.3.12 / schema 12
 
 This development build connects the existing ordinary engine to Discord. Run one
-bot process against a database. Full summaries, modes and automatic restart
-resume remain separate work; M2 is still in progress.
+bot process against a database. Private/requested scores, automatic interims and
+compact round-end reports are wired. Modes, explicit evidence-based restart
+resume and richer score details remain separate work; M2 is still in progress.
 
 ## Install and enable
 
-Stop the bot and make a verified SQLite backup using the procedure in
-[STORAGE.md](STORAGE.md). Install the updated package using the README commands,
-run offline checks, then `python -m lets_play --init-db`. Expect schema 11, WAL and
-foreign keys enabled. Released migrations 1–10 are unchanged. Migration 11 appends offline summary
-capture/baseline tables and preserves every old claim, message ID, clock and
-gameplay row. The capture/ACK methods remain offline. The adapter now uses its read-only
-private score-page API. A failed migration rolls back atomically. To roll
-back after a successful upgrade, stop the bot and restore the verified pre-upgrade
-backup with the matching old code; never downgrade a schema-12 file in place.
+The current schema is **12**, with WAL and foreign keys enabled. An existing
+schema-12 installation needs no migration for v0.3.10–v0.3.12. A documentation-only
+patch needs no reinstall, database initialization, command sync or bot restart.
+
+For a new installation, install using the README commands, run offline checks,
+then `python -m lets_play --init-db`. For an actual upgrade from schema 11 or
+older, stop the bot and make a verified SQLite backup using
+[STORAGE.md](STORAGE.md) before installing and initializing. Migration 12 appends
+round-report receipts and reporting watermarks, preserving previous claims,
+message IDs, clocks and gameplay. Released migrations 1–12 are immutable. A
+failed migration rolls back atomically. To roll back an upgrade, restore the
+verified pre-upgrade backup with matching old code; never downgrade a schema-12
+file in place. See [ROUND_REPORTS.md](ROUND_REPORTS.md).
 
 Keep token, owner IDs and actual emoji markup in the private `.env`:
 
@@ -30,9 +35,13 @@ and `/end-game`; no additional command sync is needed for this increment. For a
 new installation, explicitly enable sync once, then turn it off. Message Content
 Intent must be available. Start normally with `python -m lets_play`.
 
-Admission checks the exact message-bearing guild channel, including thread send
-permission, then posts a short probe and really adds/removes the configured
-reaction before deleting the probe. A failed reaction prevents admission.
+Admission first checks development/readiness/human context, static permissions,
+marker configuration, archived/locked state and the shared read-only eligibility
+gate (duplicate creation source, occupied channel and free/premium capacity).
+Passing preflight does not reserve a slot. It then posts a short probe and really
+adds/removes the configured reaction before deleting the probe. A failed reaction
+prevents admission. The write-side admission gate rechecks capacity/expiry and channel ownership after
+the probe to cover concurrent changes; existing games survive premium expiry.
 Archived/locked threads and forum/media containers are refused; start inside an
 accessible post/thread. Administrator is unnecessary. No private phrase list,
 badge map, voice library or additional intent is needed.
@@ -53,10 +62,12 @@ badge map, voice library or additional intent is needed.
    send must not shorten that notice. Picker eligibility uses the saved cutoff
    snapshot, with at least five ordinary posts; the exactly-at-cutoff body is
    scored afterward in the old round.
-4. The selected picker receives a new complete three-card hand and the original
-   publication-owned 60-second choice deadline. Later hands use sixteen already
-   implemented non-phrase templates. Choices can add a rule or replace one legal
-   existing occupant. When several outgoing rules are legal, choosing the incoming
+4. The warning is edited into the selected picker's complete three-card hand;
+   no duplicate choice message is sent. Those original-panel buttons remain
+   authoritative. The successful edit ACK starts its publication-owned 60-second
+   choice deadline. Missing/uncertain edits enter recovery without a fallback send.
+   Later hands use sixteen already implemented non-phrase templates. Choices can
+   add a rule or replace one legal existing occupant. When several outgoing rules are legal, choosing the incoming
    card reveals the outgoing buttons. The original deadline does not restart;
    timeout keeps the chosen incoming card and completes a legal outgoing choice.
 5. Confirm old rules remain enforced during the entire choice and announced
@@ -66,9 +77,11 @@ badge map, voice library or additional intent is needed.
    duplicate and old-message buttons; they must not change the saved choice.
 6. If nobody qualifies by the cutoff, scoring pauses and Continue is offered.
    Three distinct humans must click within five minutes of actual publication;
-   the starter is not automatically counted. Quorum preserves the same open round
-   and scores, then offers a choice. If no complete legal hand exists, held play
-   keeps scoring under the same rules; fifteen minutes without a new human message
+   the starter is not automatically counted. Successful initial lobby joins use
+   `control.joined`; successful revival returners use `control.continued`. Repeat
+   clicks and opening/revival quorum retain their specific replies. Quorum preserves
+   the same open round and scores, then offers a choice. If no complete legal hand
+   exists, held play keeps scoring under the same rules; fifteen minutes without a new human message
    enters revival. Whispers count for this held-idle clock. These states are
    naturally rare in the small pool and are also exercised with offline fixtures.
 7. On revival expiry, only the existing known panel is edited to game-over results.
@@ -115,18 +128,20 @@ Errors log types, not received text or exception payloads.
 Manager/final standings use ten-player pages ordered by exact adjusted score,
 highest first, with unrated players last and ID breaking exact ties. They retain
 clickable non-pinging identities and no score footer on preplay closures.
-Public automatic/requested/per-round summaries and their delivery integration,
-badge presentation, Drawing Conclusions, settings, owner grants,
-evidence-based restart resume and final-output retry/24-hour cleanup workers are
-not wired. Failed terminal delivery retains durable results evidence. This is a
-development preview, not a public-play release or M2 completion.
+Private live scores, requested public reports, automatic interims and actual
+round-end boards are wired. Richer fault/rule/streak and badge presentation,
+Drawing Conclusions, settings, owner grants, profile commands, evidence-based
+restart resume and final-output retry/24-hour cleanup workers remain unfinished.
+Failed terminal delivery retains durable results evidence. This is a development
+preview, not a public-play release or M2 completion.
 
 All new copy, rule descriptions, button labels and warning/held/revival colors
 are in the existing editable catalog. See [PRESENTATION.md](PRESENTATION.md),
 including the new `round.description` key for custom round text. Private overrides
 keep their existing wording; update any old first-rule-only explanation.
 
-Official platform references rechecked for this increment:
+Official references used during earlier adapter work (this documentation-only
+review makes no fresh platform-certification claim):
 
 - [Discord embeds and limits](https://docs.discord.com/developers/resources/message#embed-object-embed-limits)
 - [discord.py buttons and views](https://discordpy.readthedocs.io/en/stable/interactions/api.html#discord.ui.Button)
@@ -147,37 +162,28 @@ and page clicks must remain quiet. Choice/target menus should contain only their
 choice controls; the disclosure panel and `/rules` retain Summary. Earlier saved
 report buttons now open current scores. Delivered copies are removed at ACK and
 older delivered archives are compacted on startup; unresolved send evidence is
-preserved. Automatic/round-end summaries are enabled in v0.3.9; see ROUND_REPORTS.md.
-v0.3.9 upgrades schema 11 to 12. Stop the bot, make and verify a SQLite
-backup, apply/reinstall, then run --init-db before starting. No command sync is
-required. An already occupied channel is rejected before the reaction probe.
+preserved.
 
-v0.3.10 changes later-round offer publication to edit the last known phase panel
-(normally the 30-second warning) instead of posting a second choice message.
-The successful edit ACK binds that same ID to the offer and starts its choice
-clock. Those original-panel buttons remain authoritative. Refresh waits for
-prepared offers and selected activations to be published before changing a
-panel, avoiding premature choices or a premature duplicate disclosure. Partial
-target changes still refresh in place. Missing/uncertain panel edits enter
-recovery without a replacement send. Schema stays 12; no migration or command
-sync is required for this fix.
+Automatic interims require both 120 seconds and 25 new ordinary non-whisper posts
+in the current round. Timers can deliver after chatter stops. They are
+suppressed within 60 seconds of a known warning, throughout warning/choice,
+modes, pause/recovery and ending. Their payload retains the lead-in, active rules
+and player entries while omitting capture/traffic and scope/order headers.
+Manual/private Summary layouts retain their details.
 
-v0.3.11 uses the same read-only admission gate before probing and again inside
-the authoritative admission transaction. Duplicate creation sources, occupied
-channels and current guild capacity (free/premium, including exact expiry) are
-declined privately before probing. Existing development/readiness/human checks
-and static permission, archived/locked-channel and marker checks already precede
-the public probe. State can still change during actual Discord verification;
-the final write-side gate prevents oversubscription without killing existing
-games. A reaction probe remains necessary to prove actual marker usability.
+Actual activation closure posts a compact leaderboard for the completed round,
+ordered by exact adjusted score, with only score headings and mentions. Selection
+traffic is included. Game ending uses its final standings instead; inactivity
+stays quiet. Additional round-board pages open privately, then edit in place.
+See [ROUND_REPORTS.md](ROUND_REPORTS.md) for delivery guards and timing tests.
 
-Automatic mid-round reports now omit the report-ID/traffic block and the scope/
-ordering block, keeping their lead-in, active rules and player entries. Manual
-public reports, private Summary panels and compact round leaderboards retain
-their layouts. Reporting gates, scores and schema 12 are unchanged.
+## Continuity and next bite
 
-v0.3.12 distinguishes successful lobby joins (`control.joined`) from successful
-Continue/revival joins (`control.continued`). Repeat clicks keep the counted reply,
-and the third distinct returner keeps the revival-quorum confirmation. Choice
-confirmation is unchanged. This selects copy from the original control action,
-without changing admission, quorum, recovery or timing. Schema stays 12.
+The next bounded increment is read-only manager recovery/status through existing
+`/rules`, preserving manager-ending-only recovery. It must identify outstanding
+engine publications, adapter claims, summary outputs and round-report receipts
+without changing claims, clocks, scores or enforcement. The engine work list
+alone is not a complete outbound audit. Evidence reconciliation, a published
+30-second read-in and explicit live resume are separate subsequent work, followed
+by Drawing Conclusions. See [RECOVERY.md](RECOVERY.md). No mode or complete human
+M2 loop is certified by the existing offline checks.
