@@ -36,6 +36,14 @@ class Transport:
         self.entered = asyncio.Event()
         self.summaries = []
         self.round_reports = []
+        self.recoveries = []
+
+    async def recovery_capabilities(self, route, panel_id):
+        return CAPS
+
+    async def publish_recovery(self, route, state):
+        self.recoveries.append((route, state))
+        return 20000 + len(self.recoveries)
 
     async def publish_summary(self, route, snapshot, page):
         self.summaries.append((route, snapshot, page))
@@ -277,7 +285,9 @@ async def test_reopen_enters_durable_pause_before_any_output_or_scoring(tmp_path
             score = await unit.get_score(route.session_id, 606)
         assert score.ordinary_posts == 1
         assert not restarted.transport.messages
-        assert restarted.transport.pauses == [route]
+        await until(restarted, route, lambda s: s.recovery_resume_at is not None)
+        assert len(restarted.transport.recoveries) == 1
+        assert not restarted.transport.pauses
         await restarted.submit(route, "end", actor=303, authorized=True)
         assert (await restarted.state(route.session_id)).admission.stage == "ended"
 

@@ -871,7 +871,7 @@ class RecoveryFlow:
             await EvolutionFlow(self.unit)._advance_due(frame)
 
     @_write
-    async def observe(self, frame, recovery_id, *, event=None):
+    async def observe(self, frame, recovery_id, *, event=None, allow_resume=True):
         """Consume queued controls/timers/chat while fenced; never fetch old chat."""
         if frame.kind in (EventKind.MESSAGE_CREATE, EventKind.REACTION_ADD) and event is None:
             raise ValueError("Recovery chat/reaction ingress requires its plain event snapshot.")
@@ -890,7 +890,11 @@ class RecoveryFlow:
             ):
                 await self._guard_event(frame, event)
             return error
-        if row["stage"] == "reading" and utc_int(frame.received_at) >= row["resume_at_utc"]:
+        if (
+            allow_resume
+            and row["stage"] == "reading"
+            and utc_int(frame.received_at) >= row["resume_at_utc"]
+        ):
             await self._resume(frame, row)
             if event is not None and await self.unit.get_context(frame.route.session_id):
                 return await OrdinaryFlow(self.unit)._ingest_entered(event)

@@ -35,6 +35,7 @@ class DisplayState:
     timeout_due: bool = False
     previous_scores: bool = False
     offer_display_ready: bool = True
+    recovery_resume_at: datetime | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -75,10 +76,19 @@ class DiscordStore:
         )
         panel = await _row(
             self.conn,
-            """SELECT message_id FROM nr_discord_deliveries WHERE session_id=? AND message_id IS NOT NULL
+            """SELECT message_id,ack_sequence FROM nr_discord_deliveries WHERE session_id=? AND message_id IS NOT NULL
             ORDER BY ack_sequence DESC,attempted_at_utc DESC,output_id DESC LIMIT 1""",
             (session,),
         )
+        notice = await _row(
+            self.conn,
+            "SELECT notice_message_id,notice_ack_sequence FROM nr_recoveries WHERE session_id=? "
+            "AND notice_message_id IS NOT NULL ORDER BY notice_ack_sequence DESC LIMIT 1",
+            (session,),
+        )
+        if notice and (panel is None or notice[1] > panel[1]):
+            panel = notice
+        recovery = await active_recovery(self.unit, session)
         if panel is None:
             panel = await _row(
                 self.conn,
@@ -130,11 +140,7 @@ class DiscordStore:
         return DisplayState(
             admission,
             context,
-            (
-                recovery["recovery_id"]
-                if (recovery := await active_recovery(self.unit, session))
-                else None
-            ),
+            recovery["recovery_id"] if recovery else None,
             panel[0] if panel else None,
             row[0],
             scores,
@@ -172,6 +178,9 @@ class DiscordStore:
                     is not None
                 )
             ),
+            utc_datetime(recovery["resume_at_utc"])
+            if recovery and recovery["stage"] == "reading" and recovery["resume_at_utc"] is not None
+            else None,
         )
 
     async def _ranked_scores(self, session, anchor, backwards, *, round_id=None, limit=10):

@@ -4,7 +4,7 @@
     "reports.mid_title": "New Rules — round update",
     "reports.mid_description": "Round {round} is underway, here's how you're doing:",
     "reports.round_title": "New Rules — round results",
-    "reports.round_description": "Round {round} is over, here's how you did:",
+    "reports.round_description": "The results for Round {round} are in, here's how you did:",
     "reports.score": "Scoring {percent:.2f}",
     "reports.unrated": "Scoring Unrated",
     "reports.unavailable": "Those round results are no longer available.",
@@ -241,7 +241,12 @@
     "recovery.state.idle": "Idle",
     "recovery.state.warning": "Warning",
     "recovery.state.choosing": "Choosing",
-    "recovery.state.held": "Held"
+    "recovery.state.held": "Held",
+    "reboot.notice_title": "New Rules — picking up where we left off!",
+    "reboot.notice_description": "I’m back! The game will resume in {seconds} seconds. Review the rules below; your scores are saved.",
+    "reboot.reading_description": "The game resumes <t:{timestamp}:R>. Review the rules below; your scores are saved.",
+    "reboot.blocked_description": "The game is paused because I couldn’t finish recovery safely. Scores are saved. Please contact the bot host; a server manager can still use /end-game.",
+    "reboot.retired_status": "That diagnostic view has been retired. Use /rules to see the game’s current status."
   },
   "colors": {
     "round_results": "#8665C7",
@@ -256,6 +261,7 @@
     "held": "#8665C7",
     "revival": "#8665C7",
     "summary": "#8665C7",
-    "recovery": "#c9a66b"
+    "recovery": "#c9a66b",
+    "reboot": "#88c5c7"
   }
 }

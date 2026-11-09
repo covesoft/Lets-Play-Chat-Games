@@ -65,7 +65,7 @@ async def test_upgrade_preserves_schema_four_scores_and_globals_without_starting
         "nr_player_progress",
     )
     before = {table: rows(path, f"SELECT * FROM {table}") for table in tables}
-    assert (await bootstrap.initialize_database(path)).schema_version == SCHEMA_VERSION == 12
+    assert (await bootstrap.initialize_database(path)).schema_version == SCHEMA_VERSION == 13
     for table, snapshot in before.items():
         assert rows(path, f"SELECT * FROM {table}") == snapshot
     assert rows(path, "SELECT ordinary_posts,started_at_utc FROM nr_rounds") == [(6, None)]
