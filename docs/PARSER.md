@@ -140,9 +140,9 @@ Leading whitespace/quote/punctuation may precede a required first word; a leadin
 visible symbol, emoji, or Discord object blocks it. Heading wrappers are already
 handled in the logical view.
 
-The original 73 parser fixtures remain; `ordinary_rule_examples.json` adds 100
-independently specified boundary/applicability/composition examples for these
-eleven additional predicates. This does not implement the remaining catalog.
+The original 73 parser fixtures remain; `ordinary_rule_examples.json` adds comprehensive
+independently specified boundary/applicability/composition examples for the
+fourteen supported text predicates. This does not implement the remaining catalog.
 
 ## Bounds and verification
 
