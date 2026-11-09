@@ -53,7 +53,7 @@
     "control.access_lost": "Essential channel access is unavailable; enforcement is paused.",
     "control.joined": "You're in! Have a great game.",
     "control.opening": "That's enough players to start. Let's play!",
-    "control.selected": "Got it! That's the first rule.",
+    "control.selected": "Got it! Your new rule will soon take effect.",
     "control.unauthorized": "You weren't selected to choose.",
     "control.paused": "Enforcement is paused.",
     "control.stale": "That control is no longer available or was already used, sorry.",
