@@ -1,8 +1,8 @@
 """Ordered opening, scoring and fail-closed restart integration.
 
 The transport is injected. Every write commits before network work begins.
-Later ordinary rounds share that lane. Automatic summaries and startup resume
-remain separate integration work.
+Later ordinary rounds, reports and settled-round automatic reboot recovery share
+that lane. Uncertain sends remain fenced for later proof reconciliation.
 """
 
 import asyncio
@@ -16,9 +16,12 @@ from lets_play.new_rules.catalog import CARD_SPECS
 from lets_play.new_rules.contracts import EventEnvelope, EventKind, SessionRoute
 from lets_play.storage.discord_store import DiscordStore
 from lets_play.storage.evolution_flow import EvolutionFlow
+from lets_play.storage.game_codec import IncompatibleState
+from lets_play.storage.offer_codec import utc_datetime
 from lets_play.storage.opening_flow import OpeningFlow, OpeningStatus
 from lets_play.storage.ordinary_flow import OrdinaryFlow
 from lets_play.storage.pacing_flow import RoundPacing
+from lets_play.storage.reboot_flow import RebootFlow
 from lets_play.storage.recovery_flow import RecoveryFlow, active_recovery
 from lets_play.storage.round_reports import RoundReports
 from lets_play.storage.summary_store import SummaryStore
@@ -52,6 +55,8 @@ class OpeningRuntime:
         self.dirty = set()
         self.configured = set()
         self.work_queued = set()
+        self.recovery_routes = set()
+        self.blocked_recoveries = set()
         self.network_slots = asyncio.Semaphore(4)
         self.lifecycle_lock = asyncio.Lock()
         self.ready = False
@@ -77,6 +82,8 @@ class OpeningRuntime:
 
     async def _initialize(self):
         self.ready = False
+        self.recovery_routes.clear()
+        self.blocked_recoveries.clear()
         for timer in self.timers.values():
             timer.cancel()
         self.timers.clear()
@@ -96,6 +103,7 @@ class OpeningRuntime:
             for saved in page:
                 route = SessionRoute(saved.guild_id, saved.channel_id, saved.session_id)
                 await self._barrier(route, new_disruption=True)
+                self.recovery_routes.add(route.session_id)
                 self.routes[(route.guild_id, route.channel_id)] = route
             cursor = page[-1].session_id
         cursor = 0
@@ -105,9 +113,9 @@ class OpeningRuntime:
             if cursor is None:
                 break
         self.ready = True
-        # No automatic resume or blind re-send. Managers can end saved games.
+        # All barriers exist before recovery publishers or normal work can run.
         for route in tuple(self.routes.values()):
-            await self._show_pause(route)
+            self._kick(route)
 
     async def _frame(self, unit, route, kind, received, actor=None, source=None, created=None):
         last, floor = await DiscordStore(unit).receipt_position(route.session_id)
@@ -121,6 +129,9 @@ class OpeningRuntime:
         async with self.store.transaction() as unit:
             existing = await active_recovery(unit, route.session_id)
             if existing and not new_disruption:
+                if existing["stage"] == "reading":
+                    frame = await self._frame(unit, route, EventKind.TIMER, self.clock.now())
+                    await RebootFlow(unit).block(frame, existing["recovery_id"])
                 return
             frame = await self._frame(unit, route, EventKind.RECOVERY_BEGIN, self.clock.now())
             await RecoveryFlow(unit).begin(frame, uuid4().hex)
@@ -168,6 +179,10 @@ class OpeningRuntime:
             "summary_request": EventKind.TIMER,
             "summary_ack": EventKind.TIMER,
             "round_ack": EventKind.TIMER,
+            "recovery_prepare": EventKind.RECOVERY_APPROVE,
+            "recovery_claim": EventKind.RECOVERY_NOTICE_CLAIM,
+            "recovery_ack": EventKind.RECOVERY_NOTICE_PUBLISHED,
+            "recovery_resume": EventKind.TIMER,
         }.get(action)
         if action == "publish":
             kind = PUBLISH_KINDS[d["output"].ui_kind]
@@ -190,7 +205,26 @@ class OpeningRuntime:
                 await DiscordStore(unit).delivered(d["output"], d["message_id"], frame.sequence)
             if action == "pause":
                 result = (
-                    await RecoveryFlow(unit).begin(frame, uuid4().hex) if not recovery else "paused"
+                    await RecoveryFlow(unit).begin(frame, uuid4().hex)
+                    if not recovery
+                    else await RebootFlow(unit).block(frame, recovery)
+                )
+            elif action == "recovery_prepare":
+                result = await RebootFlow(unit).prepare(
+                    frame,
+                    d["recovery_id"],
+                    capabilities=d["capabilities"],
+                    templates=ORDINARY_CARDS,
+                )
+            elif action == "recovery_claim":
+                result = await RebootFlow(unit).claim(frame, d["recovery_id"])
+            elif action == "recovery_ack":
+                result = await RebootFlow(unit).acknowledge(
+                    frame, d["recovery_id"], d["message_id"]
+                )
+            elif action == "recovery_resume":
+                result = await RebootFlow(unit).resume(
+                    frame, d["recovery_id"], capabilities=d["capabilities"]
                 )
             elif action == "event":
                 event = replace(
@@ -202,7 +236,9 @@ class OpeningRuntime:
                     ),
                 )
                 result = (
-                    await RecoveryFlow(unit).observe(event.envelope, recovery, event=event)
+                    await RecoveryFlow(unit).observe(
+                        event.envelope, recovery, event=event, allow_resume=False
+                    )
                     if recovery
                     else await flow.ingest(event)
                 )
@@ -214,7 +250,7 @@ class OpeningRuntime:
                 )
             elif action in {"summary_ack", "round_ack"}:
                 if recovery:
-                    await RecoveryFlow(unit).observe(frame, recovery)
+                    await RecoveryFlow(unit).observe(frame, recovery, allow_resume=False)
                 else:
                     await flow.tick(frame)
                 if action == "summary_ack":
@@ -229,7 +265,7 @@ class OpeningRuntime:
                         d["report"], message_id=d["message_id"], now=frame.received_at
                     )
             elif recovery:
-                await RecoveryFlow(unit).observe(frame, recovery)
+                await RecoveryFlow(unit).observe(frame, recovery, allow_resume=False)
                 result = "paused"
             elif action == "admit":
                 result = await flow.admit(
@@ -401,13 +437,20 @@ class OpeningRuntime:
                 ).add_done_callback(self._consume)
 
     async def _schedule(self, route):
-        if self.closed:
+        if self.closed or not self.ready:
             return
         state = await self.state(route.session_id)
         old = self.timers.pop(route.session_id, None)
         if old:
             old.cancel()
-        if self.closed or not state or state.recovery_id or state.admission.stage == "ended":
+        if self.closed or not self.ready or not state or state.admission.stage == "ended":
+            return
+        if state.recovery_id:
+            if state.recovery_resume_at and route.session_id not in self.blocked_recoveries:
+                delay = max(0, (state.recovery_resume_at - self.clock.now()).total_seconds())
+                self.timers[route.session_id] = asyncio.get_running_loop().call_later(
+                    delay, self._timer, route, "recovery_resume"
+                )
             return
         deadline = state.next_deadline
         async with self.store.transaction(write=False) as unit:
@@ -434,6 +477,9 @@ class OpeningRuntime:
 
     def _timer(self, route, action):
         if not self.closed and self.routes.get((route.guild_id, route.channel_id)) == route:
+            if action == "recovery_resume":
+                self._kick(route)
+                return
             future = self.submit(route, action)
             future.add_done_callback(self._consume)
 
@@ -444,7 +490,7 @@ class OpeningRuntime:
 
     def _kick(self, route):
         self.dirty.add(route.session_id)
-        if self.closed:
+        if self.closed or not self.ready:
             return
         task = self.publishers.get(route.session_id)
         if task is None or task.done():
@@ -452,11 +498,19 @@ class OpeningRuntime:
 
     async def _publish(self, route):
         try:
-            while not self.closed:
+            while not self.closed and self.ready:
                 self.dirty.discard(route.session_id)
                 async with self.store.transaction(write=False) as unit:
+                    recovery = await active_recovery(unit, route.session_id)
                     pending = await DiscordStore(unit).pending(route.session_id)
                     markers = await DiscordStore(unit).markers(route.session_id)
+                if recovery:
+                    if await self._publish_recovery(route):
+                        continue
+                    state = await self.state(route.session_id)
+                    if state and state.admission.stage == "ended":
+                        continue
+                    return
                 if pending:
                     if pending.kind == "recovery":
                         await self._fault(route, "flow_recovery")
@@ -509,6 +563,56 @@ class OpeningRuntime:
             await self._fault(route, type(exc).__name__)
         finally:
             self.publishers.pop(route.session_id, None)
+
+    async def _publish_recovery(self, route):
+        session = route.session_id
+        if session in self.blocked_recoveries:
+            return False
+        async with self.store.transaction(write=False) as unit:
+            candidate = await RebootFlow(unit).candidate(session)
+        if session not in self.recovery_routes or candidate is None:
+            self.blocked_recoveries.add(session)
+            await self._show_pause(route)
+            return False
+        recovery = candidate["recovery_id"]
+        if candidate["stage"] == "reading":
+            if self.clock.now() < utc_datetime(candidate["resume_at_utc"]):
+                return False
+            state = await self.state(session)
+            async with self.network_slots, asyncio.timeout(20):
+                facts = await self.transport.recovery_capabilities(route, state.panel_id)
+            result = await self.submit(
+                route, "recovery_resume", recovery_id=recovery, capabilities=facts
+            )
+            if result == "resumed":
+                self.recovery_routes.discard(session)
+                return True
+            self.blocked_recoveries.add(session)
+            await self._show_pause(route)
+            return False
+        if candidate["stage"] == "paused":
+            state = await self.state(session)
+            async with self.network_slots, asyncio.timeout(20):
+                facts = await self.transport.recovery_capabilities(route, state.panel_id)
+            if (
+                await self.submit(
+                    route, "recovery_prepare", recovery_id=recovery, capabilities=facts
+                )
+                != "ready"
+            ):
+                self.blocked_recoveries.add(session)
+                await self._show_pause(route)
+                return False
+            return True
+        async with self.network_slots, asyncio.timeout(20):
+            if not await self.submit(route, "recovery_claim", recovery_id=recovery):
+                return False
+            state = await self.state(session)
+            message_id = await self.transport.publish_recovery(route, state)
+            await asyncio.shield(
+                self.submit(route, "recovery_ack", recovery_id=recovery, message_id=message_id)
+            )
+        return False
 
     async def _publish_summary(self, route):
         async with self.store.transaction(write=False) as unit:
@@ -605,8 +709,12 @@ class OpeningRuntime:
             )
 
     async def _fault(self, route, reason):
+        self.blocked_recoveries.add(route.session_id)
         logger.warning("Game recovery required: session=%s reason=%s", route.session_id, reason)
-        state = await self.state(route.session_id)
+        try:
+            state = await self.state(route.session_id)
+        except IncompatibleState:
+            state = None
         if state and state.admission.stage == "ended":
             await self._retire(route)
             return
@@ -652,3 +760,5 @@ class OpeningRuntime:
         self.timers.clear()
         self.configured.clear()
         self.work_queued.clear()
+        self.recovery_routes.clear()
+        self.blocked_recoveries.clear()

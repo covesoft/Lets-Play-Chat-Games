@@ -1,4 +1,4 @@
-# New Rules ordinary-round preview — v0.3.13 / schema 12
+# New Rules ordinary-round preview — v0.3.14 / schema 13
 
 This development build connects the existing ordinary engine to Discord. Run one
 bot process against a database. Private/requested scores, automatic interims and
@@ -7,19 +7,16 @@ resume and richer score details remain separate work; M2 is still in progress.
 
 ## Install and enable
 
-The current schema is **12**, with WAL and foreign keys enabled. An existing
-schema-12 installation needs no migration for v0.3.10–v0.3.13. A documentation-only
-patch needs no reinstall, database initialization, command sync or bot restart.
-
-For a new installation, install using the README commands, run offline checks,
-then `python -m lets_play --init-db`. For an actual upgrade from schema 11 or
-older, stop the bot and make a verified SQLite backup using
-[STORAGE.md](STORAGE.md) before installing and initializing. Migration 12 appends
-round-report receipts and reporting watermarks, preserving previous claims,
-message IDs, clocks and gameplay. Released migrations 1–12 are immutable. A
-failed migration rolls back atomically. To roll back an upgrade, restore the
-verified pre-upgrade backup with matching old code; never downgrade a schema-12
-file in place. See [ROUND_REPORTS.md](ROUND_REPORTS.md).
+The current schema is **13**, with WAL and foreign keys enabled. Apply both
+v0.3.14 patches in order to v0.3.13: retirement/copy/transport preparation, then
+automatic recovery. Stop the bot and make/verify a SQLite backup of its actual
+configured database before the schema-12 upgrade. Install, run offline checks,
+then `python -m lets_play --init-db` (schema 13) and start. No new command sync.
+Schema 13 appends only recovery-notice send/ACK guards and their index; released
+migrations 1–12 and existing game scores/clocks/claims remain unchanged. Failed
+migration steps roll back. To roll back an upgraded database, restore the verified
+schema-12 backup with v0.3.13 source. Never downgrade the schema-13 file in place.
+See [RECOVERY.md](RECOVERY.md) and [STORAGE.md](STORAGE.md).
 
 Keep token, owner IDs and actual emoji markup in the private `.env`:
 
@@ -87,16 +84,17 @@ badge map, voice library or additional intent is needed.
 7. On revival expiry, only the existing known panel is edited to game-over results.
    There is no new-message fallback, including when the panel was deleted. A
    manager's explicit ending may post normal final results. Check both behaviors.
-8. Restart during an offer/transition/revival. Saved routes enter durable recovery
-   before timers or scoring; the known panel and `/rules` show pause. This build
-   offers managers a Recovery status button under /rules. Its private overview
-   shows saved phases/clocks and blockers; its output selector and previous/next
-   buttons edit the same private response. Every click rechecks manager access,
-   exact saved channel/session and recovery generation. It performs no history
-   lookup, receipt allocation, capability probe, reconciliation, retry or resume.
-   Non-managers do not receive the entry. The only live recovery mutation remains
-   manager ending. No downtime scoring or automatic resume is inferred. Test animated marker/client rendering and actual channel behavior
-   independently from offline evidence.
+8. During an ordinary round before warning/choice, stop and restart the bot.
+   The channel receives one resumption notice with current rules and 30 seconds
+   to read in; /rules shows the countdown. Wait without posting or clicking: the
+   game resumes automatically. Check preserved scores/rules/round and verify that
+   read-in posts received no points. The known notice becomes the current panel.
+   An overdue round can proceed to its saved pacing boundary after read-in.
+9. The manager debug pane is retired. Old diagnostic controls reply privately.
+   Interrupted warnings/choices, held/revival/opening/modes and uncertain sends
+   remain paused in this first automatic path, with a brief host-contact notice.
+   Manager ending remains available. Deleted/missing ACK evidence does not allow
+   a blind resend. Actual marker/client/channel behavior still needs human checks.
 
 Later pool: NR004, NR006, NR007, NR008, NR010, NR011, NR013, NR016, NR017,
 NR019, NR022, NR024, NR025, NR027, NR033 and NR034. NR036 is not offered because
@@ -184,11 +182,10 @@ See [ROUND_REPORTS.md](ROUND_REPORTS.md) for delivery guards and timing tests.
 
 ## Continuity and next bite
 
-The next bounded increment is read-only manager recovery/status through existing
-`/rules`, preserving manager-ending-only recovery. It must identify outstanding
-engine publications, adapter claims, summary outputs and round-report receipts
-without changing claims, clocks, scores or enforcement. The engine work list
-alone is not a complete outbound audit. Evidence reconciliation, a published
-30-second read-in and explicit live resume are separate subsequent work, followed
-by Drawing Conclusions. See [RECOVERY.md](RECOVERY.md). No mode or complete human
-M2 loop is certified by the existing offline checks.
+Automatic settled-round reboot recovery is implemented; M2 remains in progress.
+Next extend it to acknowledged ordinary warnings and choices, keeping original
+publication deadlines and partial selections. Cover genuinely uncertain sends
+only after each outbound family's proof/guard contract is implemented. Held,
+revival/opening continuation and Drawing Conclusions follow. Keep recovery
+unattended; technical reconciliation is host/service work. Do not reintroduce a
+manager resume gate or expand retired debug UI. See [RECOVERY.md](RECOVERY.md).

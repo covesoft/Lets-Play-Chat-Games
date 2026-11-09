@@ -622,4 +622,15 @@ MIGRATIONS += (
         ),
     ),
 )
+MIGRATIONS += (
+    Migration(
+        version=13,
+        name="claimed_reboot_notice",
+        statements=(
+            "ALTER TABLE nr_recoveries ADD COLUMN notice_attempted_at_utc INTEGER",
+            "ALTER TABLE nr_recoveries ADD COLUMN notice_ack_sequence INTEGER NOT NULL DEFAULT 0 CHECK(notice_ack_sequence>=0)",
+            "CREATE INDEX nr_unknown_reboot_notice ON nr_recoveries(session_id) WHERE notice_attempted_at_utc IS NOT NULL AND notice_message_id IS NULL",
+        ),
+    ),
+)
 SCHEMA_VERSION = MIGRATIONS[-1].version

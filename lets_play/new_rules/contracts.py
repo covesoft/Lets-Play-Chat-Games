@@ -100,6 +100,7 @@ class EventKind(StrEnum):
     RECOVERY_BEGIN = "recovery_begin"
     RECOVERY_RECONCILE = "recovery_reconcile"
     RECOVERY_APPROVE = "recovery_approve"
+    RECOVERY_NOTICE_CLAIM = "recovery_notice_claim"
     RECOVERY_NOTICE_PUBLISHED = "recovery_notice_published"
 
 

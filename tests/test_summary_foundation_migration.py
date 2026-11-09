@@ -33,7 +33,7 @@ async def test_upgrade_preserves_scores_clocks_and_existing_send_claims(tmp_path
     path = tmp_path / "game.sqlite3"
     await released_ten(path, monkeypatch)
     before = snapshot(path)
-    assert (await bootstrap.initialize_database(path)).schema_version == 12
+    assert (await bootstrap.initialize_database(path)).schema_version == 13
     after = snapshot(path)
     assert {t: after[t] for t in before if t != "schema_migrations"} == {
         t: r for t, r in before.items() if t != "schema_migrations"
@@ -57,4 +57,4 @@ async def test_each_failed_migration_step_restores_exact_schema_ten(tmp_path, mo
             await bootstrap.initialize_database(path)
     assert rows(path, "PRAGMA user_version") == [(10,)]
     assert snapshot(path) == before
-    assert (await bootstrap.initialize_database(path)).schema_version == 12
+    assert (await bootstrap.initialize_database(path)).schema_version == 13

@@ -1,48 +1,70 @@
 # Offline disruption recovery
 
-Schema 8 `RecoveryFlow(unit)` adds a durable barrier for a disruptive restart or
-reconnect. It coordinates existing ordinary, held, revival, lobby and opening
-state without sending messages or loading channel history. A handle reopen alone
-still does not invoke recovery. The v0.3.13 adapter does enumerate live routes and
-enter these barriers before normal dispatch/timers on startup/reconnect. Managers
-can inspect a read-only recovery/status pane under `/rules`; live recovery
-mutations still permit manager ending only. Proof reconciliation,
-notice/read-in and resume remain offline APIs, pending adapter integration.
+`RecoveryFlow(unit)` provides the existing engine barrier and offline recovery
+contracts. v0.3.14/schema 13 adds a bounded live automatic path through
+`RebootFlow(unit)` and the serial adapter publisher. Ordinary reboot needs no
+server-manager approval, Resume button or player message.
 
-## Private manager status
+## Automatic settled-round path
 
-`RecoveryStatusStore(unit).read(route, generation=None, family=0, anchor=0,
-backwards=False)` reads an exact saved session/guild/channel in a read-only unit.
-It returns typed phase/clock/blocker facts without decoding the game context or
-exposing saved payloads, phrases, version values or configured assets. Unsupported
-versions, modes, prior pauses, missing state and legacy revival remain explicit
-blockers. Missing timestamps stay unknown. The opaque generation token invalidates
-controls after a new disruption; ended admissions return no view.
+1. Startup drains admitted work and enters every saved route's barrier before
+   allowing publishers/timers. Work finishing during initialization cannot
+   recreate normal timers or senders.
+2. A candidate has an active ordinary/idle round, waiting pacing, unchanged
+   recovery ownership, no partial choice/transition or prior independent pause,
+   and no unresolved output. Independent scoped existence checks cover all four
+   engine-output families, adapter delivery claims, summary receipts, round-report
+   receipts and older recovery-notice attempts. A complete engine list alone is
+   insufficient. Prepared summaries with no send attempt can wait for resume.
+3. Outside database write units, verify essential channel permissions and really
+   add/remove the configured marker on the existing known panel. No separate
+   start-game probe is posted. Missing panel/access or marker failure stays paused.
+4. Ordered internal approval uses the original RecoveryFlow contracts. Claim the
+   recovery notice durably before its HTTP send. Publish one friendly resumption
+   notice with the preserved rules and a 30-second read-in. Actual successful
+   publication/ACK owns the persisted boundary. No scores or public summary
+   baselines change. The known notice becomes the phase panel in ACK order.
+5. During read-in, /rules shows a concise countdown and the preserved rules.
+   Ingress is guarded without scoring; even a post after the scheduled boundary
+   cannot resume on its own. The timer wakes the publisher, fresh channel/marker
+   access is checked, and an ordered internal receipt performs continuation.
+   Historical-source guards, original round clocks/rules/scores and due-boundary
+   ordering remain the engine's responsibility. Overdue pacing runs after resume.
+   The notice is then refreshed as the current phase panel.
 
-The `/rules` entry appears only for managers with an active recovery. Each status
-interaction rechecks manager authority, saved route and generation. Overview,
-family selection and five-output keyset pages edit the same ephemeral pane;
-publicly invoked controls can only open a new private reply. No new command or
-sync is required. Copy, labels, placeholders and the recovery color are editable
-through the presentation catalog/private overrides.
+Schema 13 appends `notice_attempted_at_utc`, `notice_ack_sequence` and an index to
+`nr_recoveries`. Claims survive lost ACKs, timeout, cancellation and another
+startup. An unknown older notice prevents another send. A new real disruption
+following a known successful notice can create a new generation/notice, preserving
+the same underlying round. A known successful send can ACK after manager ending
+or supersession without resuming the ended/old generation. Ended remains terminal.
 
-Four engine namespaces include current-generation recovery work and outstanding
-outputs, including a missing source row as unknown. Four adapter-delivery
-namespaces, summary receipts and round-report receipts show unresolved rows plus
-their latest complete ACK where retained. IDs remain namespaced; the same send
-may appear in multiple views. Engine found/never-sent evidence never clears an
-adapter claim. Adapter ACK sequence alone establishes no publication timestamp.
-Prepared summaries are identified separately from uncertain sends. Unknown-family
-checks use bounded existence reads independently of the visible page, so a later
-unknown is not hidden by a full earlier page. Pages read at most six records,
-retaining five; no copied scores, transcript or historical payload is loaded.
+The former manager recovery/status pane and its read-model/UI modules are removed.
+Old `nrx` controls receive a private retirement message; no internals are read.
+Keep its old catalog keys accepted for private presentation-override compatibility.
+Technical guards are internal. If this limited path cannot establish safe recovery,
+the known panel and /rules give a brief host-contact explanation and retain
+manager ending. Do not automatically retry a failed/uncertain notice in this build.
 
-This view does **not** allocate a game receipt, advance a timer, claim/ACK output,
-clear/retry delivery, score, change public baselines or approve/resume recovery.
-Fresh essential capability facts are explicitly unknown. An empty engine list or
-an empty page never proves never-sent delivery or readiness to resume. Existing
-`/end-game` remains the authorized mutation. Evidence acquisition/reconciliation,
-notice claim/publication/read-in and live resume are separate future increments.
+## Remaining integration and upgrading
+
+This increment does not continue interrupted warnings, choices/activations, held
+play, revival, preplay or modes automatically. Their engine contracts already
+exist where documented below; wiring their publication proofs and continuation
+is next. No unknown send is inferred healthy, missing/late message proof is not
+never-sent evidence, and no chat history is backfilled for scoring. No new manager
+recovery gate or diagnostic UI is planned. Full mode/retention/erasure/live evidence
+remains open.
+
+Apply the two v0.3.14 patches in order while the bot is stopped: cleanup/preparation,
+then automatic recovery. The second requires **schema 13**. Back up and verify the
+stopped schema-12 database with SQLite's backup API before applying/upgrading;
+use the database path selected by `load_settings()` so private .env overrides are
+honored. Reinstall, run offline checks, then `python -m lets_play --init-db` and
+start. No command sync is needed. Released migrations 1–12 are unchanged; failure
+in any schema-13 statement rolls back completely. Rollback requires the verified
+schema-12 backup and matching v0.3.13 source; do not downgrade a schema-13 file.
+See [STORAGE.md](STORAGE.md) for backup policy.
 
 ## Enter before timers
 
@@ -159,11 +181,9 @@ permit purge. This does not implement TTL cleanup or operator erasure. Back up a
 stopped existing database before schema 8. Migration 8 appends only; released
 migrations 1–7 and existing scores/clock/phrase/profile rows remain unchanged.
 
-Tests use real temporary WAL files, explicit offline delivery facts, multiple
-connections, rollback and cancellation. M1 is closed; the current adapter also
-tests startup/reconnect barriers, pending send fences and manager ending offline.
-These checks do not certify live resume, Discord publication evidence or host
-throughput. The next bite is bounded, authorized read-only manager status through
-`/rules`; it cannot change claims or recovery state. Evidence acquisition,
-reconciliation, notice publication and explicit resume follow separately. See
-[DISCORD_PREVIEW.md](DISCORD_PREVIEW.md) for the current live boundary.
+Tests exercise real temporary WAL files, reopened runtimes, timer callbacks with
+injected clocks, no-message resume, preserved scores/deadlines, all-family
+uncertainty, notice loss/cancellation/reboot and manager-ending races, migration
+rollback and real SDK transport boundaries without login. This is offline evidence;
+actual Windows/client/server observations remain separate. See
+[DISCORD_PREVIEW.md](DISCORD_PREVIEW.md) for the current human check.

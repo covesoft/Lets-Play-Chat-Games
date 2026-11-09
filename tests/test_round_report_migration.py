@@ -43,7 +43,7 @@ async def test_upgrade_keeps_legacy_rows_and_backfills_only_known_delivery_water
             t: [c[1] for c in conn.execute(f"PRAGMA table_info({t})")] for t in snapshot(path)
         }
     before = snapshot(path)
-    assert (await bootstrap.initialize_database(path)).schema_version == 12
+    assert (await bootstrap.initialize_database(path)).schema_version == 13
     for table, values in before.items():
         if table == "schema_migrations":
             continue
@@ -73,4 +73,4 @@ async def test_every_failed_upgrade_statement_rolls_back_to_exact_schema_eleven(
             await bootstrap.initialize_database(path)
     assert rows(path, "PRAGMA user_version") == [(11,)]
     assert snapshot(path) == before
-    assert (await bootstrap.initialize_database(path)).schema_version == 12
+    assert (await bootstrap.initialize_database(path)).schema_version == 13

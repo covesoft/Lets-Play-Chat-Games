@@ -6,7 +6,7 @@ import re
 import discord
 from discord import app_commands
 
-from lets_play.discord_adapter import recovery_ui, requested_summary, round_report_ui
+from lets_play.discord_adapter import requested_summary, round_report_ui
 from lets_play.discord_adapter.lane import LaneUnavailable
 from lets_play.discord_adapter.ordinary_ui import render_ordinary
 from lets_play.new_rules.contracts import (
@@ -23,7 +23,7 @@ from lets_play.storage.discord_store import DiscordStore
 from lets_play.storage.game_codec import IncompatibleState
 from lets_play.storage.game_store import StoreOverloaded
 from lets_play.storage.opening_flow import OpeningCapabilities, OpeningFlow, OpeningStatus
-from lets_play.storage.recovery_status import RecoveryStatusStore
+from lets_play.storage.recovery_flow import RECOVERY_READ_IN_SECONDS
 from lets_play.storage.round_reports import RoundReports
 from lets_play.storage.summary_store import SummaryStore
 
@@ -277,6 +277,29 @@ class DiscordTransport:
         )
         return message.id
 
+    async def recovery_capabilities(self, route, panel_id):
+        channel = await self.channel(route)
+        facts = capabilities(channel, channel.guild.me, marker_verified=True)
+        if not facts.available or self.marker.id is None or panel_id is None:
+            raise LaneUnavailable("Recovery requires essential channel and marker access.")
+        panel = channel.get_partial_message(panel_id)
+        await panel.add_reaction(self.marker)
+        await panel.remove_reaction(self.marker, self.bot.user)
+        return facts
+
+    async def publish_recovery(self, route, state):
+        channel = await self.channel(route)
+        embed, view = render(state, kind="rules", presentation=self.copy)
+        embed.title = self.copy.text("reboot.notice_title")
+        embed.description = self.copy.text(
+            "reboot.notice_description", seconds=RECOVERY_READ_IN_SECONDS
+        )
+        embed.colour = self.copy.color("reboot")
+        message = await channel.send(
+            embed=embed, view=view, allowed_mentions=discord.AllowedMentions.none()
+        )
+        return message.id
+
     async def publish_summary(self, route, snapshot, page):
         embed, view = requested_summary.render(page, self.copy, snapshot=snapshot, public=True)
         channel = await self.channel(route)
@@ -438,91 +461,23 @@ class DiscordGame:
     async def rules(self, interaction: discord.Interaction):
         await interaction.response.defer(ephemeral=True, thinking=True)
         route = self.route(interaction)
-        status = None
-        state = None
         try:
-            if route and not interaction.user.bot and interaction.permissions.manage_guild:
-                async with self.runtime.store.transaction(write=False) as unit:
-                    status = await RecoveryStatusStore(unit).read(route)
             state = await self.runtime.state(route.session_id) if route else None
         except (IncompatibleState, StoreOverloaded):
-            pass
+            await interaction.followup.send(
+                self.copy.text("reboot.blocked_description"), ephemeral=True
+            )
+            return
         if state:
             embed, view = render(state, kind="rules", presentation=self.copy)
             if state.context is None:
                 view.clear_items()
-            if status:
-                recovery_ui.add_button(view, self.copy, status)
-            await interaction.followup.send(
-                embed=embed,
-                view=view,
-                ephemeral=True,
-                allowed_mentions=discord.AllowedMentions.none(),
-            )
-        elif status:
-            # Status deliberately does not depend on decoding a supported game.
-            embed, view = recovery_ui.render(status, self.copy)
-            await interaction.followup.send(
-                embed=embed,
-                view=view,
-                ephemeral=True,
-                allowed_mentions=discord.AllowedMentions.none(),
-            )
+            await interaction.followup.send(embed=embed, view=view, ephemeral=True)
         else:
-            await interaction.followup.send(self.copy.text("rules.explanation"), ephemeral=True)
-
-    async def recovery_status(self, interaction, match):
-        editing = await requested_summary.begin_private(interaction)
-        if (
-            not self.runtime
-            or not self.runtime.ready
-            or not interaction.guild
-            or interaction.user.bot
-            or not interaction.permissions.manage_guild
-        ):
-            await requested_summary.reply_private(
-                interaction, editing, content=self.copy.text("recovery.manager_required")
+            await interaction.followup.send(
+                self.copy.text("rules.explanation"),
+                ephemeral=True,
             )
-            return
-        session, generation, family, anchor, direction = match.groups()
-        status = None
-        if direction == "s":
-            values = (interaction.data or {}).get("values", [])
-            if (
-                not isinstance(values, list)
-                or len(values) != 1
-                or not isinstance(values[0], str)
-                or values[0] not in {str(i) for i in range(1, 11)}
-            ):
-                await requested_summary.reply_private(
-                    interaction, editing, content=self.copy.text("recovery.unavailable")
-                )
-                return
-            family, anchor, direction = values[0], "0", "n"
-        try:
-            async with self.runtime.store.transaction(write=False) as unit:
-                route = await DiscordStore(unit).route(session)
-                if route and (route.guild_id, route.channel_id) == (
-                    interaction.guild_id,
-                    interaction.channel_id,
-                ):
-                    status = await RecoveryStatusStore(unit).read(
-                        route,
-                        generation=generation,
-                        family=int(family),
-                        anchor=int(anchor),
-                        backwards=direction == "p",
-                    )
-            if status:
-                embed, view = recovery_ui.render(status, self.copy)
-        except (StoreOverloaded, ValueError, PresentationError):
-            status = None
-        if status is None:
-            await requested_summary.reply_private(
-                interaction, editing, content=self.copy.text("recovery.unavailable")
-            )
-        else:
-            await requested_summary.reply_private(interaction, editing, embed=embed, view=view)
 
     def capture_control(self, interaction):
         """Called synchronously at SDK dispatch, before HTTP acknowledgement/tasks."""
@@ -605,9 +560,12 @@ class DiscordGame:
             )
 
     async def component(self, interaction):
-        recovery = recovery_ui.CONTROL.fullmatch((interaction.data or {}).get("custom_id", ""))
-        if recovery:
-            await self.recovery_status(interaction, recovery)
+        if (interaction.data or {}).get("custom_id", "").startswith("nrx:"):
+            # Retired diagnostic controls disclose no saved internals.
+            editing = await requested_summary.begin_private(interaction)
+            await requested_summary.reply_private(
+                interaction, editing, content=self.copy.text("reboot.retired_status")
+            )
             return
         leaderboard = round_report_ui.CONTROL.fullmatch(
             (interaction.data or {}).get("custom_id", "")

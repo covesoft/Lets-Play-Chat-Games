@@ -8,7 +8,7 @@ contains operational and API documentation only.
 
 ## Current implementation
 
-Application v0.3.13 uses schema 12. M1 is accepted and closed at v0.2.9/schema 8;
+Application v0.3.14 uses schema 13. M1 is accepted and closed at v0.2.9/schema 8;
 M2 is in progress. Preserve the existing domain/storage APIs. This is a
 development-only ordinary-round preview, not a public-release build.
 
@@ -19,12 +19,21 @@ gated automatic interims, compact round-end boards and ranked final standings.
 Seventeen ordinary predicates exist; opening offers five proven templates and
 later offers sixteen non-phrase templates. NR036 is not offered by the adapter.
 
-Startup/reconnect enters durable recovery before dispatch or timers. Managers can
-inspect read-only recovery status through /rules. The current live recovery path permits manager ending only. Offline RecoveryFlow supports
-proof reconciliation, approval and a published 30-second read-in, but the live
-resume workflow is not wired. No modes are integrated. Richer fault/streak views,
-settings/premium/profile interfaces, full catalog/theme/mode awards, final-output
-retry/absolute 24-hour cleanup and operator erasure remain unfinished.
+Startup/reconnect fences every saved route before publishers/timers. Settled
+ordinary rounds now recover without manager input: fresh channel/marker checks,
+one durably claimed resumption notice, a publication-owned 30-second read-in,
+then a scheduler-owned fresh-access check and automatic continuation. Normal
+paused ingress cannot resume by itself. Scores, original clocks and round stay
+intact; overdue pacing runs after resume. Manager diagnostic UI has been retired;
+old controls reply privately without exposing internal state.
+
+This first path requires an active ordinary/idle round with waiting pacing,
+no partial offer/transition or prior non-recovery pause, and no unresolved engine,
+adapter, summary, round-report or older notice claim. Published warnings/choices,
+held/revival/opening/mode continuation and unknown-result reconciliation remain
+separate increments. Genuine blockers stay paused with a concise host-contact
+notice; manager ending remains available. No modes, complete output retry/TTL,
+operator erasure, full settings/premium/profile UI or release certification yet.
 
 See `docs/DISCORD_PREVIEW.md` for the current runbook, `docs/RECOVERY.md` for
 recovery API boundaries, `docs/REQUESTED_SUMMARY.md` for current-score access and
@@ -78,7 +87,7 @@ is not a new numerical test result or M2 sign-off.
 Every code-patch handoff includes copy-paste Windows repository-root commands:
 `git apply --check`, `git apply`, editable reinstall when needed, checks and
 startup. Back up/verify a stopped existing database before an actual schema
-upgrade. Never rewrite released migrations 1–12. An unchanged schema needs no
+upgrade. Never rewrite released migrations 1–13. An unchanged schema needs no
 migration or command sync; documentation-only patches need no reinstall/restart.
 
 ## Engine, persistence and delivery invariants
@@ -200,17 +209,17 @@ sources created before actual resume; never backfill missed chat/mode success.
 Old capability/dependency/recovery pauses, unsupported modes and clockless legacy
 revival need explicit policy or authorized ending. No healthy-startup shortcut.
 
-Read-only manager recovery/status is implemented under /rules in
-storage/recovery_status.py and discord_adapter/recovery_ui.py. It uses exact
-saved scope/generation, per-interaction manager authorization and bounded keyset
-pages across all four engine output and four adapter claim namespaces, summary
-and round-report receipts. It does not allocate receipts or change clocks,
-claims, scores, baselines or recovery. Unsupported versions remain inspectable.
+Normal reboot recovery is unattended. No manager Resume control or diagnostic
+visit is part of the workflow. RebootFlow composes existing RecoveryFlow rather
+than reimplementing clocks/scoring. Schema 13 appends notice attempt and ACK
+sequence fields; persist the claim before HTTP, never blindly resend an uncertain
+notice (including one from a superseded generation). Known success may ACK after
+ending/supersession without restoring play. Preserve old presentation keys for
+private override compatibility, but do not restore the removed manager debug UI.
 
-Next bounded bite: acquire/reconcile trusted publication/time or conclusive
-never-sent evidence across every outbound family. Keep this separate from the
-later notice claim/publication/ACK, read-in and explicit resume integration. Keep
-manager-ending-only behavior until that integration is implemented and verified. Drawing Conclusions follows; consult the supplied private policy
-before implementing mode interruption. Richer details and a small real human
-full-loop/mode/restart check remain before M2 exit. Do not rebuild M1, broaden to
-all cards/modes or combine these into one large patch.
+Next bite: extend automatic continuation to acknowledged ordinary warnings and
+choices while retaining original deadlines and partial selections. Resolve all
+publication and per-family proof contracts before accepting uncertain sends.
+Then cover held/revival/opening paths, the approved mode, richer details and
+human M2 exit. Keep changes reviewable; owner prefers patches around 50–100 KB.
+No automatic or manual recovery may waive an unsafe/unsupported state.

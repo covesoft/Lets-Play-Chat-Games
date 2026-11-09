@@ -28,7 +28,18 @@ def render_ordinary(state, copy, button, *, kind=None):
     if state.recovery_id or (p.lifecycle == "paused" and p.pause_reason != "revival"):
         embed.title = copy.text("paused.title")
         embed.colour = copy.color("paused")
-        embed.description = copy.text("paused.description")
+        if state.recovery_resume_at:
+            embed.title = copy.text("reboot.notice_title")
+            embed.colour = copy.color("reboot")
+            embed.description = copy.text(
+                "reboot.reading_description", timestamp=int(state.recovery_resume_at.timestamp())
+            )
+        else:
+            embed.description = (
+                copy.text("reboot.blocked_description")
+                if state.recovery_id
+                else copy.text("paused.description")
+            )
         rules(state.context.active_instances)
     elif p.lifecycle == "paused" and p.pause_reason == "revival":
         embed.title = copy.text("revival.title")

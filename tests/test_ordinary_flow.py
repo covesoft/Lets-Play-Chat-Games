@@ -664,7 +664,7 @@ async def test_real_released_schema_two_upgrades_without_touching_score_rows(tmp
             ordinary_posts,ordinary_observations,ordinary_quality_n)
             VALUES ('session',303,1,1,1,'1')""")
     before = rows(path, "SELECT * FROM nr_participants")
-    assert (await initialize_database(path)).schema_version == SCHEMA_VERSION == 12
+    assert (await initialize_database(path)).schema_version == SCHEMA_VERSION == 13
     assert rows(path, "PRAGMA integrity_check") == [("ok",)]
     assert rows(path, "PRAGMA foreign_key_check") == []
     assert rows(path, "SELECT * FROM nr_participants") == before
