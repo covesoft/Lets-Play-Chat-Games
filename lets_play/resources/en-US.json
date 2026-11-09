@@ -4,7 +4,7 @@
     "reports.mid_title": "New Rules — round update",
     "reports.mid_description": "Round {round} is underway, here's how you're doing:",
     "reports.round_title": "New Rules — round results",
-    "reports.round_description": "Round {round} is over, here's how you did:",
+    "reports.round_description": "The results for Round {round} are in, here's how you did:",
     "reports.score": "Scoring {percent:.2f}",
     "reports.unrated": "Scoring Unrated",
     "reports.unavailable": "Those round results are no longer available.",
