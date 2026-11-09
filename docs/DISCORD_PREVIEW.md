@@ -1,4 +1,4 @@
-# New Rules ordinary-round preview — v0.3.12 / schema 12
+# New Rules ordinary-round preview — v0.3.13 / schema 12
 
 This development build connects the existing ordinary engine to Discord. Run one
 bot process against a database. Private/requested scores, automatic interims and
@@ -8,7 +8,7 @@ resume and richer score details remain separate work; M2 is still in progress.
 ## Install and enable
 
 The current schema is **12**, with WAL and foreign keys enabled. An existing
-schema-12 installation needs no migration for v0.3.10–v0.3.12. A documentation-only
+schema-12 installation needs no migration for v0.3.10–v0.3.13. A documentation-only
 patch needs no reinstall, database initialization, command sync or bot restart.
 
 For a new installation, install using the README commands, run offline checks,
@@ -89,8 +89,13 @@ badge map, voice library or additional intent is needed.
    manager's explicit ending may post normal final results. Check both behaviors.
 8. Restart during an offer/transition/revival. Saved routes enter durable recovery
    before timers or scoring; the known panel and `/rules` show pause. This build
-   still provides manager ending only. No downtime scoring or automatic resume is
-   inferred. Test animated marker/client rendering and actual channel behavior
+   offers managers a Recovery status button under /rules. Its private overview
+   shows saved phases/clocks and blockers; its output selector and previous/next
+   buttons edit the same private response. Every click rechecks manager access,
+   exact saved channel/session and recovery generation. It performs no history
+   lookup, receipt allocation, capability probe, reconciliation, retry or resume.
+   Non-managers do not receive the entry. The only live recovery mutation remains
+   manager ending. No downtime scoring or automatic resume is inferred. Test animated marker/client rendering and actual channel behavior
    independently from offline evidence.
 
 Later pool: NR004, NR006, NR007, NR008, NR010, NR011, NR013, NR016, NR017,

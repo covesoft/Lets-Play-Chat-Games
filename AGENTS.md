@@ -8,7 +8,7 @@ contains operational and API documentation only.
 
 ## Current implementation
 
-Application v0.3.12 uses schema 12. M1 is accepted and closed at v0.2.9/schema 8;
+Application v0.3.13 uses schema 12. M1 is accepted and closed at v0.2.9/schema 8;
 M2 is in progress. Preserve the existing domain/storage APIs. This is a
 development-only ordinary-round preview, not a public-release build.
 
@@ -19,8 +19,8 @@ gated automatic interims, compact round-end boards and ranked final standings.
 Seventeen ordinary predicates exist; opening offers five proven templates and
 later offers sixteen non-phrase templates. NR036 is not offered by the adapter.
 
-Startup/reconnect enters durable recovery before dispatch or timers. The current
-live recovery path permits manager ending only. Offline RecoveryFlow supports
+Startup/reconnect enters durable recovery before dispatch or timers. Managers can
+inspect read-only recovery status through /rules. The current live recovery path permits manager ending only. Offline RecoveryFlow supports
 proof reconciliation, approval and a published 30-second read-in, but the live
 resume workflow is not wired. No modes are integrated. Richer fault/streak views,
 settings/premium/profile interfaces, full catalog/theme/mode awards, final-output
@@ -200,12 +200,17 @@ sources created before actual resume; never backfill missed chat/mode success.
 Old capability/dependency/recovery pauses, unsupported modes and clockless legacy
 revival need explicit policy or authorized ending. No healthy-startup shortcut.
 
-Next bounded bite: read-only manager recovery/status via existing /rules, with
-bounded/scoped data and per-interaction authorization. It must expose blockers
-without changing recovery, claims, clocks or scores. Separate subsequent work
-wires evidence acquisition/reconciliation, notice publication/read-in and explicit
-resume. Keep manager-ending-only behavior until that integration is implemented
-and verified. Drawing Conclusions follows; consult the supplied private policy
+Read-only manager recovery/status is implemented under /rules in
+storage/recovery_status.py and discord_adapter/recovery_ui.py. It uses exact
+saved scope/generation, per-interaction manager authorization and bounded keyset
+pages across all four engine output and four adapter claim namespaces, summary
+and round-report receipts. It does not allocate receipts or change clocks,
+claims, scores, baselines or recovery. Unsupported versions remain inspectable.
+
+Next bounded bite: acquire/reconcile trusted publication/time or conclusive
+never-sent evidence across every outbound family. Keep this separate from the
+later notice claim/publication/ACK, read-in and explicit resume integration. Keep
+manager-ending-only behavior until that integration is implemented and verified. Drawing Conclusions follows; consult the supplied private policy
 before implementing mode interruption. Richer details and a small real human
 full-loop/mode/restart check remain before M2 exit. Do not rebuild M1, broaden to
 all cards/modes or combine these into one large patch.

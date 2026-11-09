@@ -17,6 +17,11 @@ from types import MappingProxyType
 MAX_CATALOG_BYTES = 128 * 1024
 # Only these templates accept arguments. Attribute/index lookups are prohibited.
 TEMPLATE_FIELDS = {
+    "recovery.description": frozenset({"generation", "stage"}),
+    "recovery.fact": frozenset({"label", "value"}),
+    "recovery.timestamp": frozenset({"timestamp"}),
+    "recovery.output": frozenset({"number"}),
+    "recovery.output_fact": frozenset({"evidence", "message", "published"}),
     "reports.mid_description": frozenset({"round"}),
     "reports.round_description": frozenset({"round"}),
     "reports.score": frozenset({"percent"}),
@@ -97,6 +102,13 @@ def _validate_strings(strings):
                         "sample"
                         if name
                         in {
+                            "generation",
+                            "stage",
+                            "label",
+                            "value",
+                            "evidence",
+                            "message",
+                            "published",
                             "as_of",
                             "status",
                             "actual",

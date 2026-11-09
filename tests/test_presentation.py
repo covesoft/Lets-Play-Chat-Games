@@ -162,5 +162,5 @@ def test_startup_logging_preserves_owner_intent_and_handles_ctrl_c(tmp_path, mon
     with caplog.at_level(logging.INFO):
         assert main([], base_dir=tmp_path) == 0
     assert "Launching Let's Play Chat Games Discord bot" in caplog.text
-    assert "Bot stopped by intervention." in caplog.text
+    assert "Bot has stopped by intervention." in caplog.text
     assert "private-token-sentinel" not in caplog.text

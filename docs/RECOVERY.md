@@ -3,10 +3,46 @@
 Schema 8 `RecoveryFlow(unit)` adds a durable barrier for a disruptive restart or
 reconnect. It coordinates existing ordinary, held, revival, lobby and opening
 state without sending messages or loading channel history. A handle reopen alone
-still does not invoke recovery. The v0.3.12 adapter does enumerate live routes and
-enter these barriers before normal dispatch/timers on startup/reconnect. Its live
-recovery controls currently permit manager ending only; proof reconciliation,
+still does not invoke recovery. The v0.3.13 adapter does enumerate live routes and
+enter these barriers before normal dispatch/timers on startup/reconnect. Managers
+can inspect a read-only recovery/status pane under `/rules`; live recovery
+mutations still permit manager ending only. Proof reconciliation,
 notice/read-in and resume remain offline APIs, pending adapter integration.
+
+## Private manager status
+
+`RecoveryStatusStore(unit).read(route, generation=None, family=0, anchor=0,
+backwards=False)` reads an exact saved session/guild/channel in a read-only unit.
+It returns typed phase/clock/blocker facts without decoding the game context or
+exposing saved payloads, phrases, version values or configured assets. Unsupported
+versions, modes, prior pauses, missing state and legacy revival remain explicit
+blockers. Missing timestamps stay unknown. The opaque generation token invalidates
+controls after a new disruption; ended admissions return no view.
+
+The `/rules` entry appears only for managers with an active recovery. Each status
+interaction rechecks manager authority, saved route and generation. Overview,
+family selection and five-output keyset pages edit the same ephemeral pane;
+publicly invoked controls can only open a new private reply. No new command or
+sync is required. Copy, labels, placeholders and the recovery color are editable
+through the presentation catalog/private overrides.
+
+Four engine namespaces include current-generation recovery work and outstanding
+outputs, including a missing source row as unknown. Four adapter-delivery
+namespaces, summary receipts and round-report receipts show unresolved rows plus
+their latest complete ACK where retained. IDs remain namespaced; the same send
+may appear in multiple views. Engine found/never-sent evidence never clears an
+adapter claim. Adapter ACK sequence alone establishes no publication timestamp.
+Prepared summaries are identified separately from uncertain sends. Unknown-family
+checks use bounded existence reads independently of the visible page, so a later
+unknown is not hidden by a full earlier page. Pages read at most six records,
+retaining five; no copied scores, transcript or historical payload is loaded.
+
+This view does **not** allocate a game receipt, advance a timer, claim/ACK output,
+clear/retry delivery, score, change public baselines or approve/resume recovery.
+Fresh essential capability facts are explicitly unknown. An empty engine list or
+an empty page never proves never-sent delivery or readiness to resume. Existing
+`/end-game` remains the authorized mutation. Evidence acquisition/reconciliation,
+notice claim/publication/read-in and live resume are separate future increments.
 
 ## Enter before timers
 
