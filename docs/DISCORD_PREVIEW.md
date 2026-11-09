@@ -1,4 +1,4 @@
-# New Rules ordinary-round preview — v0.3.11 / schema 12
+# New Rules ordinary-round preview — v0.3.12 / schema 12
 
 This development build connects the existing ordinary engine to Discord. Run one
 bot process against a database. Full summaries, modes and automatic restart
@@ -175,3 +175,9 @@ Automatic mid-round reports now omit the report-ID/traffic block and the scope/
 ordering block, keeping their lead-in, active rules and player entries. Manual
 public reports, private Summary panels and compact round leaderboards retain
 their layouts. Reporting gates, scores and schema 12 are unchanged.
+
+v0.3.12 distinguishes successful lobby joins (`control.joined`) from successful
+Continue/revival joins (`control.continued`). Repeat clicks keep the counted reply,
+and the third distinct returner keeps the revival-quorum confirmation. Choice
+confirmation is unchanged. This selects copy from the original control action,
+without changing admission, quorum, recovery or timing. Schema stays 12.

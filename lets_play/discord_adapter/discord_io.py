@@ -614,7 +614,9 @@ class DiscordGame:
                     reply = self.copy.text("control.access_lost")
                 else:
                     replies = {
-                        "joined": self.copy.text("control.joined"),
+                        "joined": self.copy.text(
+                            "control.continued" if action == "revive" else "control.joined"
+                        ),
                         "revived": self.copy.text("control.revived"),
                         "needs_target": self.copy.text("control.needs_target"),
                         "already_joined": self.copy.text("control.already_joined"),

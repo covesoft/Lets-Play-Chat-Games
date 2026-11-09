@@ -263,3 +263,8 @@ Actual marker usability still requires Discord verification. Automatic interims
 omit capture metadata and scope/order headers; preserve their rules/player entries
 and all manual/private Summary and final/round-result layouts. No reporting/scoring
 gate or schema change is part of this fix. Preserve the latest owner copy/log edits.
+
+v0.3.12 uses the owner's control.continued text for a successful Continue/revival
+join, while initial lobby joins use control.joined. Distinguish by the captured
+control action, not later mutable session state. Preserve already-counted and
+quorum-specific replies, rule-choice copy, all state transitions and schema 12.
