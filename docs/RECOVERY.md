@@ -1,7 +1,7 @@
 # Offline disruption recovery
 
 `RecoveryFlow(unit)` provides the existing engine barrier and offline recovery
-contracts. v0.3.18/schema 13 extends the bounded live automatic path through
+contracts. v0.3.19/schema 13 extends the bounded live automatic path through
 `RebootFlow(unit)` and the serial adapter publisher. Ordinary reboot needs no
 server-manager approval, Resume button or player message.
 
@@ -93,6 +93,17 @@ round ends through the normal silent closure path.
 A post from before this version may lack the reference. Old, edited, ambiguous
 or capped results leave the claim unresolved.
 
+## Interrupted activation announcements
+
+Opening and ordinary activation announcements carry separate output references.
+Startup checks the original bot-authored post in the exact channel and rechecks
+the saved selection, recovery generation and durable output. It accepts a
+creation timestamp strictly before the recorded cutover only. A post created at
+or after cutover, an edited post, and a post without proof leave the claim
+unresolved. With timely proof, no replacement announcement is sent. The
+existing read-in completes before the original activation is applied once at
+its saved effective time.
+
 ## Remaining integration and upgrading
 
 Modes, unpublished phases and unproven output claims remain fenced.
@@ -101,7 +112,7 @@ never-sent evidence, and no chat history is backfilled for scoring. No new manag
 recovery gate or diagnostic UI is planned. Full mode/retention/erasure/live evidence
 remains open.
 
-Apply v0.3.18 to v0.3.17 while stopped, reinstall, run offline checks and start.
+Apply v0.3.19 to v0.3.18 while stopped, reinstall, run offline checks and start.
 Schema stays **13**; no database initialization, migration or command sync is
 needed. Released migrations 1–13 are unchanged. For an older installation,
 back up and verify the stopped configured database using SQLite's backup API

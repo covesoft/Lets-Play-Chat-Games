@@ -8,7 +8,7 @@ contains operational and API documentation only.
 
 ## Current implementation
 
-Application v0.3.18 uses schema 13. M1 is accepted and closed at v0.2.9/schema 8;
+Application v0.3.19 uses schema 13. M1 is accepted and closed at v0.2.9/schema 8;
 M2 is in progress. Preserve the existing domain/storage APIs. This is a
 development-only ordinary-round preview, not a public-release build.
 
@@ -235,6 +235,11 @@ A startup lookup matches the original bot-authored post and current round/attemp
 Record the proof, clock and ACK together. An overdue warning advances after read-in,
 and an expired revival closes via the normal silent edit. An older post without
 the exact reference cannot authorize recovery.
+
+Opening and ordinary rule activation announcements use the same bounded
+lookup and an exact publication reference. Require the saved selection and
+pending activation to match. Accept actual creation only strictly before the
+original cutover. Equal, late and unverified times keep the claim unresolved.
 
 Next bite: extend positive proof to other new-post families. Edits need
 publication evidence beyond the target message’s creation time. Then cover the

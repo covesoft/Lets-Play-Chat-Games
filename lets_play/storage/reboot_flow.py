@@ -21,11 +21,12 @@ class RebootFlow:
         self.unit, self.conn = unit, unit._conn
 
     async def opening_probe(self, session):
-        """Only first posts with session-specific controls can prove creation."""
+        """Find a claimed opening post for the exact saved admission."""
         self.unit._check()
         return await _row(
             self.conn,
-            """SELECT r.recovery_id,o.output_id,o.kind,d.attempted_at_utc
+            """SELECT r.recovery_id,o.output_id,o.kind,d.attempted_at_utc,
+                      CASE WHEN o.kind='activation' THEN a.effective_at_utc END AS cutover_utc
                FROM nr_recoveries r JOIN nr_admissions a USING(session_id)
                JOIN nr_recovery_work w USING(session_id,recovery_id)
                JOIN nr_opening_outputs o ON o.session_id=a.session_id AND o.output_id=w.output_id
@@ -38,7 +39,9 @@ class RebootFlow:
                AND a.playing_session_id IS NULL AND a.revision=r.owner_revision
                AND a.stage=r.original_stage AND
                ((a.stage='lobby_prepared' AND o.kind='lobby')
-                OR (a.stage='opening_prepared' AND o.kind='offer')) LIMIT 1""",
+                OR (a.stage='opening_prepared' AND o.kind='offer')
+                OR (a.stage='selected' AND o.kind='activation'
+                    AND a.announced_at_utc IS NULL AND a.effective_at_utc IS NOT NULL)) LIMIT 1""",
             (session, RECOVERY_VERSION),
         )
 
@@ -71,18 +74,53 @@ class RebootFlow:
             (session, RECOVERY_VERSION),
         )
 
+    async def ordinary_activation_probe(self, session):
+        self.unit._check()
+        return await _row(
+            self.conn,
+            """SELECT r.recovery_id,o.output_id,o.kind,d.attempted_at_utc,
+                      a.effective_at_utc AS cutover_utc
+               FROM nr_recoveries r JOIN nr_sessions s USING(session_id)
+               JOIN nr_recovery_work w USING(session_id,recovery_id)
+               JOIN nr_activations a ON a.session_id=s.session_id AND a.offer_id=s.offer_id
+               JOIN nr_offers f ON f.session_id=a.session_id AND f.offer_id=a.offer_id
+               JOIN nr_ordinary_outputs o ON o.session_id=a.session_id AND o.offer_id=a.offer_id
+                   AND o.output_id=w.output_id
+               JOIN nr_discord_deliveries d ON d.session_id=o.session_id AND d.output_id=o.output_id
+               WHERE s.session_id=? AND r.stage='paused' AND r.version=? AND r.original_stage='active'
+               AND r.original_lifecycle='playing' AND r.original_pause IS NULL
+               AND s.lifecycle='paused' AND s.pause_reason='recovery' AND s.phase='ordinary'
+               AND s.revision=r.owner_revision AND s.round_id=r.original_round
+               AND s.advancement='choosing' AND s.transition_id=s.offer_id || ':activation'
+               AND f.stage='selected' AND a.stage='prepared' AND a.announced_at_utc IS NULL
+               AND a.owner_revision<s.revision
+               AND w.family='ordinary' AND w.status='unknown' AND w.kind='activation'
+               AND o.kind='activation' AND o.message_id IS NULL
+               AND o.acknowledged_at_utc IS NULL AND o.retired_at_utc IS NULL
+               AND d.family='ordinary' AND d.state='sending' AND d.message_id IS NULL
+               AND d.ack_sequence=0 LIMIT 1""",
+            (session, RECOVERY_VERSION),
+        )
+
     @_write
     async def reconcile_publication(
         self, frame, recovery, family, output_id, message_id, published_at
     ):
         session = frame.route.session_id
-        probe = await {"opening": self.opening_probe, "pacing": self.pacing_probe}[family](session)
+        probe_for = {
+            "opening": self.opening_probe,
+            "pacing": self.pacing_probe,
+            "ordinary": self.ordinary_activation_probe,
+        }[family]
+        probe = await probe_for(session)
+        published = utc_int(published_at)
         flow = RecoveryFlow(self.unit)
         if (
             probe is None
             or probe["recovery_id"] != recovery
             or probe["output_id"] != output_id
-            or not probe["attempted_at_utc"] <= utc_int(published_at) <= utc_int(frame.received_at)
+            or not probe["attempted_at_utc"] <= published <= utc_int(frame.received_at)
+            or (probe["kind"] == "activation" and published >= probe["cutover_utc"])
         ):
             return await flow.observe(frame, recovery, allow_resume=False)
         result = await flow.reconcile(

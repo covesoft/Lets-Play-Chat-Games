@@ -295,8 +295,8 @@ class DiscordTransport:
         return await self.publish(route, output.ui_kind, state, publication_id=output.output_id)
 
     @staticmethod
-    def _pacing_reference(route, kind, output_id):
-        return f"New Rules · {route.session_id}:pacing:{kind}:{output_id}"
+    def _publication_reference(route, family, kind, output_id):
+        return f"New Rules · {route.session_id}:{family}:{kind}:{output_id}"
 
     async def publish(self, route, kind, state, *, publication_id=None):
         channel = await self.channel(route)
@@ -314,9 +314,15 @@ class DiscordTransport:
                 allowed_mentions=discord.AllowedMentions.none(),
             )
             return state.panel_id
-        if publication_id is not None and kind in {"pacing_warning", "pacing_revival"}:
+        reference_kind = {
+            "pacing_warning": ("pacing", "warning"),
+            "pacing_revival": ("pacing", "revival"),
+            "activation": ("opening", "activation"),
+            "ordinary_activation": ("ordinary", "activation"),
+        }.get(kind)
+        if publication_id is not None and reference_kind is not None:
             embed.set_footer(
-                text=self._pacing_reference(route, kind.removeprefix("pacing_"), publication_id)
+                text=self._publication_reference(route, *reference_kind, publication_id)
             )
         message = await channel.send(
             embed=embed, view=view, allowed_mentions=discord.AllowedMentions.none()
@@ -344,7 +350,15 @@ class DiscordTransport:
         return await self._find_original_post(route, attempted_at, matches_controls)
 
     async def find_pacing_publication(self, route, kind, output_id, attempted_at):
-        reference = self._pacing_reference(route, kind, output_id)
+        return await self._find_referenced_post(route, "pacing", kind, output_id, attempted_at)
+
+    async def find_activation_publication(self, route, family, output_id, attempted_at):
+        return await self._find_referenced_post(
+            route, family, "activation", output_id, attempted_at
+        )
+
+    async def _find_referenced_post(self, route, family, kind, output_id, attempted_at):
+        reference = self._publication_reference(route, family, kind, output_id)
 
         def matches_reference(message):
             return len(message.embeds) == 1 and message.embeds[0].footer.text == reference

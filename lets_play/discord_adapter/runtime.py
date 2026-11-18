@@ -571,7 +571,9 @@ class OpeningRuntime:
                                 continue
                             state = await store.state(route.session_id)
                         identified = getattr(self.transport, "publish_identified", None)
-                        if pending.family == "pacing" and identified is not None:
+                        if identified is not None and (
+                            pending.family == "pacing" or pending.kind == "activation"
+                        ):
                             message_id = await identified(route, pending, state)
                         else:
                             message_id = await self.transport.publish(route, pending.ui_kind, state)
@@ -630,20 +632,32 @@ class OpeningRuntime:
         probe = None
         find_opening = getattr(self.transport, "find_opening_publication", None)
         find_pacing = getattr(self.transport, "find_pacing_publication", None)
+        find_activation = getattr(self.transport, "find_activation_publication", None)
         family = "opening"
         async with self.store.transaction(write=False) as unit:
             reboot = RebootFlow(unit)
             candidate = await reboot.candidate(session)
             if candidate is None and session in self.recovery_routes:
-                if find_opening is not None:
+                if find_opening is not None or find_activation is not None:
                     probe = await reboot.opening_probe(session)
+                    if (
+                        probe is not None
+                        and (find_activation if probe["kind"] == "activation" else find_opening)
+                        is None
+                    ):
+                        probe = None
                 if probe is None and find_pacing is not None:
                     family = "pacing"
                     probe = await reboot.pacing_probe(session)
+                if probe is None and find_activation is not None:
+                    family = "ordinary"
+                    probe = await reboot.ordinary_activation_probe(session)
         if probe is not None:
             attempted_at = utc_datetime(probe["attempted_at_utc"])
             async with self.network_slots, asyncio.timeout(20):
-                if family == "opening":
+                if probe["kind"] == "activation":
+                    proof = await find_activation(route, family, probe["output_id"], attempted_at)
+                elif family == "opening":
                     proof = await find_opening(route, probe["kind"], attempted_at)
                 else:
                     proof = await find_pacing(
