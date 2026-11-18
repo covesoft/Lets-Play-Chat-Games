@@ -64,6 +64,8 @@ def render_ordinary(state, copy, button, *, kind=None):
             embed.description = copy.text(
                 "reboot.activation_reading_description"
                 if offer and offer.stage == "selected" and state.offer_display_ready
+                else "reboot.revival_reading"
+                if revival and revival.stage == "published"
                 else "reboot.reading_description",
                 timestamp=int(state.recovery_resume_at.timestamp()),
             )

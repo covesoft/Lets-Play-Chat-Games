@@ -250,7 +250,16 @@
     "reboot.choice_detail": "[Return to your saved cards]({url}). Their original deadline is {deadline}. If it passes while paused, I’ll finish the choice when play resumes.",
     "reboot.choice_resumed": "Play has resumed. [Return to your saved cards]({url}); the original deadline remains {deadline}. Any expired choice will complete automatically.",
     "reboot.activation_description": "I’m back! Your saved rule change will take effect when play resumes in {seconds} seconds. Review the rules below; your scores are saved.",
-    "reboot.activation_reading_description": "Your saved rule change takes effect when play resumes <t:{timestamp}:R>. These are the rules you’ll resume with; your scores are saved."
+    "reboot.activation_reading_description": "Your saved rule change takes effect when play resumes <t:{timestamp}:R>. These are the rules you’ll resume with; your scores are saved.",
+    "reboot.preplay": "I’m back! The game setup continues in {seconds} seconds.",
+    "reboot.preplay_reading": "Game setup continues <t:{timestamp}:R>.",
+    "reboot.opening_activation": "I’m back! The first round starts in {seconds} seconds. Here’s your first rule.",
+    "reboot.opening_activation_reading": "The first round starts <t:{timestamp}:R>. Here’s your first rule.",
+    "reboot.revival": "I’m back! The Continue check reopens in {seconds} seconds. Your round and scores are saved.",
+    "reboot.revival_reading": "The Continue check reopens <t:{timestamp}:R>. Your round and scores are saved.",
+    "reboot.lobby_link": "[Return to the lobby]({url}). The original join deadline is {deadline}.",
+    "reboot.opening_link": "[Return to your opening cards]({url}). The original choice deadline is {deadline}. If it passes during the pause, I’ll finish the choice when setup continues.",
+    "reboot.revival_link": "[Return to the Continue check]({url}). The original deadline is {deadline}."
   },
   "colors": {
     "round_results": "#8665C7",

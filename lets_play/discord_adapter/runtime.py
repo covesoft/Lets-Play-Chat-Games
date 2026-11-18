@@ -164,6 +164,7 @@ class OpeningRuntime:
 
     async def _handle(self, route, request):
         d, action = request.data, request.action
+        restored_evolution = False
         kind = {
             "admit": EventKind.LOBBY_CREATE,
             "join": EventKind.LOBBY_JOIN,
@@ -214,7 +215,9 @@ class OpeningRuntime:
                     frame,
                     d["recovery_id"],
                     capabilities=d["capabilities"],
-                    templates=ORDINARY_CARDS,
+                    templates=ORDINARY_CARDS
+                    if await unit.get_context(route.session_id)
+                    else OPENING_CARDS,
                 )
             elif action == "recovery_claim":
                 result = await RebootFlow(unit).claim(frame, d["recovery_id"])
@@ -223,9 +226,18 @@ class OpeningRuntime:
                     frame, d["recovery_id"], d["message_id"]
                 )
             elif action == "recovery_resume":
+                context = await unit.get_context(route.session_id)
+                # Existing held/revival configuration belongs to the saved round.
+                # Do not bootstrap it again with new-session defaults after resume.
+                preserve_config = context and (
+                    context.position.advancement == "held"
+                    or recovery_row
+                    and recovery_row["original_pause"] == "revival"
+                )
                 result = await RebootFlow(unit).resume(
                     frame, d["recovery_id"], capabilities=d["capabilities"]
                 )
+                restored_evolution = bool(preserve_config and result == "resumed")
             elif action == "event":
                 event = replace(
                     d["event"],
@@ -279,7 +291,7 @@ class OpeningRuntime:
             if not recovery and action not in {"pause", "end", "admit"}:
                 await self._maybe_auto(unit, route, frame)
         self.work_queued.discard(d.get("work_key"))
-        if action == "configure" and not recovery:
+        if restored_evolution or (action == "configure" and not recovery):
             self.configured.add(route.session_id)
         await self._followups(route)
         if action not in {"admit", "pause"}:
@@ -446,10 +458,18 @@ class OpeningRuntime:
         if self.closed or not self.ready or not state or state.admission.stage == "ended":
             return
         if state.recovery_id:
-            if state.recovery_resume_at and route.session_id not in self.blocked_recoveries:
-                delay = max(0, (state.recovery_resume_at - self.clock.now()).total_seconds())
+            deadline = state.terminal_recovery_deadline
+            action = "tick"
+            if (
+                state.recovery_resume_at
+                and route.session_id not in self.blocked_recoveries
+                and (deadline is None or state.recovery_resume_at < deadline)
+            ):
+                deadline, action = state.recovery_resume_at, "recovery_resume"
+            if deadline is not None:
+                delay = max(0, (deadline - self.clock.now()).total_seconds())
                 self.timers[route.session_id] = asyncio.get_running_loop().call_later(
-                    delay, self._timer, route, "recovery_resume"
+                    delay, self._timer, route, action
                 )
             return
         deadline = state.next_deadline
@@ -505,8 +525,17 @@ class OpeningRuntime:
                     pending = await DiscordStore(unit).pending(route.session_id)
                     markers = await DiscordStore(unit).markers(route.session_id)
                 if recovery:
-                    if await self._publish_recovery(route):
-                        continue
+                    await self._schedule(route)
+                    try:
+                        if await self._publish_recovery(route):
+                            continue
+                    except Exception:
+                        # Terminal expiry can win while a recovery probe is in flight.
+                        # Its committed closure still belongs to this publisher.
+                        state = await self.state(route.session_id)
+                        if state and state.admission.stage == "ended":
+                            continue
+                        raise
                     state = await self.state(route.session_id)
                     if state and state.admission.stage == "ended":
                         continue
@@ -544,7 +573,9 @@ class OpeningRuntime:
                 if await self._publish_summary(route):
                     continue
                 state = await self.state(route.session_id)
-                if state and state.admission.stage in {"active", "ended"}:
+                if state and (
+                    state.admission.stage in {"active", "ended"} or state.recovery_notice_id
+                ):
                     async with self.network_slots, asyncio.timeout(20):
                         await self.transport.refresh(route, state)
                 if state and state.admission.stage == "recovery":
@@ -566,8 +597,10 @@ class OpeningRuntime:
 
     async def _recovery_capabilities(self, route, state):
         facts = await self.transport.recovery_capabilities(route, state.panel_id)
-        if state.offer_panel_id and state.offer_panel_id != state.panel_id:
-            control_facts = await self.transport.recovery_capabilities(route, state.offer_panel_id)
+        if state.recovery_control_id and state.recovery_control_id != state.panel_id:
+            control_facts = await self.transport.recovery_capabilities(
+                route, state.recovery_control_id
+            )
             if not control_facts.available:
                 return control_facts
         return facts
@@ -616,6 +649,8 @@ class OpeningRuntime:
             if not await self.submit(route, "recovery_claim", recovery_id=recovery):
                 return False
             state = await self.state(session)
+            if state.recovery_id != recovery:
+                return False
             message_id = await self.transport.publish_recovery(route, state)
             await asyncio.shield(
                 self.submit(route, "recovery_ack", recovery_id=recovery, message_id=message_id)
@@ -736,6 +771,8 @@ class OpeningRuntime:
             await asyncio.shield(lane.submit("pause"))
         else:
             await self._barrier(route)
+            if state and state.terminal_recovery_deadline and (lane is None or not lane.fenced):
+                await self._schedule(route)
         await self._show_pause(route)
 
     async def pause(self, route):

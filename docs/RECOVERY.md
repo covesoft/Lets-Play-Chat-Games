@@ -1,19 +1,19 @@
 # Offline disruption recovery
 
 `RecoveryFlow(unit)` provides the existing engine barrier and offline recovery
-contracts. v0.3.15/schema 13 extends the bounded live automatic path through
+contracts. v0.3.16/schema 13 extends the bounded live automatic path through
 `RebootFlow(unit)` and the serial adapter publisher. Ordinary reboot needs no
 server-manager approval, Resume button or player message.
 
-## Automatic ordinary-phase path
+## Automatic recovery for published phases
 
 1. Startup drains admitted work and enters every saved route's barrier before
    allowing publishers/timers. Work finishing during initialization cannot
    recreate normal timers or senders.
-2. A candidate has an active ordinary round, unchanged recovery ownership, no
-   prior independent pause and no unresolved output. Known phases are idle/waiting,
-   an ACKed warning, published cards (including partial replacement targets), or
-   an ACKed announced activation. Phase-specific proof joins the scoped engine
+2. A candidate has unchanged recovery ownership and no unresolved output. Known
+   phases include ordinary idle/waiting, acknowledged warnings and choices, announced
+   activations, held play, revival, lobby and opening setup. The saved revival is
+   the only prior pause this path restores. Phase-specific proof joins the scoped engine
    output to its adapter receipt: same message, real publication time and positive
    ordered ACK. Warning/activation clocks must match that proof. A refreshed offer
    may inherit an earlier choice clock. Independent scoped existence checks cover
@@ -22,8 +22,8 @@ server-manager approval, Resume button or player message.
    insufficient. Prepared summaries with no send attempt can wait for resume.
 3. Outside database write units, verify essential channel permissions and really
    add/remove the configured marker on the existing known panel. No separate
-   start-game probe is posted. A saved published choice also requires its original
-   card panel to remain accessible, before notice and again before resume.
+   start-game probe is posted. Published lobby, choice and revival controls require their original
+   panel to remain accessible, before notice and again before resume.
    Missing panel/access or marker failure stays paused.
 4. Ordered internal approval uses the original RecoveryFlow contracts. Claim the
    recovery notice durably before its HTTP send. Publish one friendly resumption
@@ -44,7 +44,10 @@ server-manager approval, Resume button or player message.
    notice into a link, without duplicate card buttons or a new choice minute.
    An expired choice runs the normal timeout workflow after read-in; an already
    announced overdue activation commits once with its original effective clock.
-   In other phases the notice is refreshed as the current phase panel.
+   Lobby and revival expiry use an independent timer and take precedence even
+   during read-in or blocked recovery. Revival expiry edits an existing panel
+   and releases capacity. Held play retains its saved idle clock and round.
+   Opening never creates a round before the original activation is due.
 
 Schema 13 appends `notice_attempted_at_utc`, `notice_ack_sequence` and an index to
 `nr_recoveries`. Claims survive lost ACKs, timeout, cancellation and another
@@ -62,15 +65,13 @@ manager ending. Do not automatically retry a failed/uncertain notice in this bui
 
 ## Remaining integration and upgrading
 
-This increment does not continue held play, revival, preplay or modes automatically.
-Prepared/unpublished warnings, choices or activations also remain fenced. Their
-engine contracts already exist where documented below; wiring their publication proofs and continuation
-is next. No unknown send is inferred healthy, missing/late message proof is not
+Modes, unpublished phases and unresolved output claims remain fenced.
+Bounded proof collection and per-family reconciliation are next. No unknown send is inferred healthy, missing/late message proof is not
 never-sent evidence, and no chat history is backfilled for scoring. No new manager
 recovery gate or diagnostic UI is planned. Full mode/retention/erasure/live evidence
 remains open.
 
-Apply v0.3.15 to v0.3.14 while stopped, reinstall, run offline checks and start.
+Apply v0.3.16 to v0.3.15 while stopped, reinstall, run offline checks and start.
 Schema stays **13**; no database initialization, migration or command sync is
 needed. Released migrations 1–13 are unchanged. For an older installation,
 back up and verify the stopped configured database using SQLite's backup API

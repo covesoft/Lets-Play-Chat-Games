@@ -1,4 +1,4 @@
-"""Automatic recovery of acknowledged ordinary phases through the existing engine.
+"""Automatic recovery of acknowledged game phases through the existing engine.
 
 Known warnings, choices and announced transitions keep their original clocks.
 Unpublished work, modes and unknown sends stay fenced. A clean reboot needs no
@@ -6,11 +6,13 @@ human approval. Network work belongs to the adapter.
 """
 
 from lets_play.new_rules.contracts import EventKind
+from lets_play.storage.evolution_flow import REVIVAL_SECONDS
 from lets_play.storage.game_codec import IncompatibleState
 from lets_play.storage.game_store import _execute, _row
 from lets_play.storage.game_store import _unit_mutating as _write
 from lets_play.storage.offer_codec import utc_int
-from lets_play.storage.ordinary_flow import OrdinaryFlow
+from lets_play.storage.opening_flow import LOBBY_SECONDS, OpeningFlow
+from lets_play.storage.ordinary_flow import CHATGAMES_CHOICE_SECONDS, OrdinaryFlow
 from lets_play.storage.recovery_flow import RECOVERY_VERSION, RecoveryFlow, active_recovery
 
 
@@ -25,21 +27,28 @@ class RebootFlow:
             return None
         context = await self.unit.get_context(session)
         if context is None:
-            return None
-        p = context.position
-        if (
-            row["original_stage"] != "active"
-            or row["original_lifecycle"] != "playing"
-            or row["original_pause"] is not None
-            or p.phase != "ordinary"
-            or p.lifecycle != "paused"
-            or p.pause_reason != "recovery"
-            or p.round_id != row["original_round"]
-            or p.revision != row["owner_revision"]
-        ):
-            return None
-        if not await self._known_phase(session, p):
-            return None
+            if not await self._known_opening(session, row):
+                return None
+        else:
+            p = context.position
+            if (
+                row["original_stage"] != "active"
+                or p.phase != "ordinary"
+                or p.lifecycle != "paused"
+                or p.pause_reason != "recovery"
+                or p.round_id != row["original_round"]
+                or p.revision != row["owner_revision"]
+            ):
+                return None
+            if row["original_pause"] == "revival" and row["original_lifecycle"] == "paused":
+                if not await self._known_revival(session, p):
+                    return None
+            elif (
+                row["original_pause"] is not None
+                or row["original_lifecycle"] != "playing"
+                or not await self._known_phase(session, p)
+            ):
+                return None
         # Existence checks are scoped independently of every visible work page.
         # A delivered engine record never clears an unrelated adapter claim.
         for table in (
@@ -101,7 +110,12 @@ class RebootFlow:
         return row
 
     async def _publication(self, session, family, condition, args):
-        table = {"ordinary": "nr_ordinary_outputs", "pacing": "nr_pacing_outputs"}[family]
+        table = {
+            "opening": "nr_opening_outputs",
+            "ordinary": "nr_ordinary_outputs",
+            "pacing": "nr_pacing_outputs",
+            "evolution": "nr_evolution_outputs",
+        }[family]
         return await _row(
             self.conn,
             f"SELECT o.message_id,o.acknowledged_at_utc FROM {table} o "
@@ -113,6 +127,72 @@ class RebootFlow:
             (family, session, *args),
         )
 
+    async def _known_opening(self, session, owner):
+        flow = OpeningFlow(self.unit)
+        row = await flow._record(session)
+        stage = row["stage"]
+        if (
+            stage != owner["original_stage"]
+            or row["revision"] != owner["owner_revision"]
+            or owner["original_lifecycle"] is not None
+        ):
+            return False
+        kind = {
+            "lobby_published": "lobby",
+            "opening_published": "offer",
+            "selected": "activation",
+        }.get(stage)
+        if kind is None:
+            return False
+        proof = await self._publication(session, "opening", "o.kind=?", (kind,))
+        if proof is None:
+            return False
+        published = proof["acknowledged_at_utc"]
+        if kind == "lobby":
+            return (
+                row["lobby_published_at_utc"] == published
+                and row["lobby_deadline_utc"] == published + LOBBY_SECONDS * 1_000_000
+            )
+        if kind == "offer":
+            offer = await flow.record(session)
+            return bool(
+                row["offer_published_at_utc"] == published
+                and offer.choice_deadline
+                and utc_int(offer.choice_deadline.expires_at)
+                == published + CHATGAMES_CHOICE_SECONDS * 1_000_000
+            )
+        return (
+            row["announced_at_utc"] == published
+            and row["effective_at_utc"] is not None
+            and published < row["effective_at_utc"]
+        )
+
+    async def _known_revival(self, session, position):
+        if position.advancement != "idle" or position.offer_id or position.transition_id:
+            return False
+        row = await _row(
+            self.conn,
+            "SELECT r.* FROM nr_revivals r JOIN nr_round_pacing p "
+            "ON p.session_id=r.session_id AND p.round_id=r.round_id AND p.attempt=r.attempt "
+            "JOIN nr_evolution e ON e.session_id=r.session_id AND e.round_id=r.round_id "
+            "WHERE r.session_id=? AND r.round_id=? AND r.stage='published' "
+            "AND p.stage='revival' AND p.owner_revision=r.owner_revision AND e.phase='revival'",
+            (session, position.round_id),
+        )
+        if row is None or row["owner_revision"] >= position.revision:
+            return False
+        proof = await self._publication(
+            session,
+            "pacing",
+            "o.round_id=? AND o.attempt=? AND o.kind='revival'",
+            (position.round_id, row["attempt"]),
+        )
+        return bool(
+            proof
+            and row["published_at_utc"] == proof["acknowledged_at_utc"]
+            and row["deadline_utc"] == row["published_at_utc"] + REVIVAL_SECONDS * 1_000_000
+        )
+
     async def _known_phase(self, session, position):
         pacing = await _row(
             self.conn,
@@ -122,6 +202,22 @@ class RebootFlow:
         )
         if pacing is None:
             return False
+        if position.advancement == "held":
+            if position.offer_id or position.transition_id or pacing["stage"] != "cancelled":
+                return False
+            held = await _row(
+                self.conn,
+                "SELECT held_token,idle_anchor_at_utc FROM nr_evolution "
+                "WHERE session_id=? AND round_id=? AND phase='held'",
+                (session, position.round_id),
+            )
+            return bool(
+                held
+                and held["idle_anchor_at_utc"] is not None
+                and await self._publication(
+                    session, "evolution", "o.token=? AND o.kind='held'", (held["held_token"],)
+                )
+            )
         if position.advancement == "idle":
             return (
                 not position.offer_id

@@ -122,6 +122,20 @@ def button(view, label, session, action, index=None, target_index=None):
     view.add_item(discord.ui.Button(label=label, custom_id=f"nr:{session}:{action}{suffix}"))
 
 
+def phase_recovery_link(state, route, copy):
+    if state.admission.stage == "opening_published":
+        key, deadline = "opening", state.admission.choice_deadline.expires_at
+    elif state.admission.stage == "lobby_published":
+        key, deadline = "lobby", state.admission.lobby_deadline
+    else:
+        key, deadline = "revival", state.revival.deadline
+    return copy.text(
+        f"reboot.{key}_link",
+        url=f"https://discord.com/channels/{route.guild_id}/{route.channel_id}/{state.phase_control_id}",
+        deadline=copy.text("ordinary.deadline", timestamp=int(deadline.timestamp())),
+    )
+
+
 def render(state, *, kind=None, page=0, presentation=None):
     copy = presentation or default_presentation()
     a = state.admission
@@ -189,7 +203,23 @@ def render(state, *, kind=None, page=0, presentation=None):
     elif state.recovery_id or a.stage == "recovery":
         embed.colour = copy.color("paused")
         embed.title = copy.text("paused.title")
-        embed.description = copy.text("paused.description")
+        embed.description = copy.text("reboot.blocked_description")
+        if state.recovery_resume_at:
+            embed.colour = copy.color("reboot")
+            embed.title = copy.text("reboot.notice_title")
+            embed.description = copy.text(
+                "reboot.opening_activation_reading"
+                if a.stage == "selected"
+                else "reboot.preplay_reading",
+                timestamp=int(state.recovery_resume_at.timestamp()),
+            )
+            if a.stage == "selected" and state.selected_card:
+                card = state.selected_card
+                embed.add_field(
+                    name=copy.text(f"cards.{card}.name"),
+                    value=copy.text(f"cards.{card}.description"),
+                    inline=False,
+                )
     elif kind == "lobby" or a.stage.startswith("lobby"):
         embed.colour = copy.color("lobby")
         embed.description = copy.text("lobby.description")
@@ -296,21 +326,34 @@ class DiscordTransport:
         channel = await self.channel(route)
         embed, view = render(state, kind="rules", presentation=self.copy)
         embed.title = self.copy.text("reboot.notice_title")
-        embed.description = self.copy.text(
-            "reboot.activation_description"
-            if state.offer and state.offer.stage == "selected" and state.offer_display_ready
-            else "reboot.notice_description",
-            seconds=RECOVERY_READ_IN_SECONDS,
-        )
         embed.clear_fields()
-        for instance in resumption_rules(state):
-            embed.add_field(
-                name=self.copy.text(f"cards.{instance.card_id}.name"),
-                value=rule_text(self.copy, instance),
-                inline=False,
-            )
-        if state.offer and state.offer.stage == "published" and state.offer_panel_id:
+        if state.context is None:
+            selected = state.admission.stage == "selected"
+            key = "reboot.opening_activation" if selected else "reboot.preplay"
+            if selected and state.selected_card:
+                card = state.selected_card
+                embed.add_field(
+                    name=self.copy.text(f"cards.{card}.name"),
+                    value=self.copy.text(f"cards.{card}.description"),
+                    inline=False,
+                )
+        else:
+            key = "reboot.notice_description"
+            if state.revival and state.revival.stage == "published":
+                key = "reboot.revival"
+            elif state.offer and state.offer.stage == "selected" and state.offer_display_ready:
+                key = "reboot.activation_description"
+            for instance in resumption_rules(state):
+                embed.add_field(
+                    name=self.copy.text(f"cards.{instance.card_id}.name"),
+                    value=rule_text(self.copy, instance),
+                    inline=False,
+                )
+        embed.description = self.copy.text(key, seconds=RECOVERY_READ_IN_SECONDS)
+        if state.offer_panel_id:
             embed.description += "\n\n" + choice_detail(state, self.copy)
+        elif state.phase_control_id:
+            embed.description += "\n\n" + phase_recovery_link(state, route, self.copy)
         embed.colour = self.copy.color("reboot")
         message = await channel.send(
             embed=embed, view=view, allowed_mentions=discord.AllowedMentions.none()
@@ -368,12 +411,16 @@ class DiscordTransport:
         if (
             state.recovery_notice_id
             and state.recovery_notice_id != state.panel_id
-            and state.offer
-            and state.offer.stage == "published"
+            and state.recovery_control_id
             and not state.recovery_id
         ):
             notice, notice_view = render(state, kind="rules", presentation=self.copy)
-            notice.description = choice_detail(state, self.copy, resumed=True)
+            if state.offer_panel_id:
+                notice.description = choice_detail(state, self.copy, resumed=True)
+            else:
+                notice.description = phase_recovery_link(state, route, self.copy)
+                # Lobby, opening and revival buttons belong to the saved panel.
+                notice_view.clear_items()
             await channel.get_partial_message(state.recovery_notice_id).edit(
                 embed=notice, view=notice_view, allowed_mentions=discord.AllowedMentions.none()
             )

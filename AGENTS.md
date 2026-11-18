@@ -8,7 +8,7 @@ contains operational and API documentation only.
 
 ## Current implementation
 
-Application v0.3.15 uses schema 13. M1 is accepted and closed at v0.2.9/schema 8;
+Application v0.3.16 uses schema 13. M1 is accepted and closed at v0.2.9/schema 8;
 M2 is in progress. Preserve the existing domain/storage APIs. This is a
 development-only ordinary-round preview, not a public-release build.
 
@@ -34,8 +34,10 @@ announced activation commits once with its original clock. Published cards retai
 their original ACK-bound message; the resumption notice links there, without new
 card buttons. Verify both panels before continuation. Prior non-recovery pauses
 and unresolved engine, adapter, summary, round-report or older notice claims stay
-fenced. Held/revival/opening/mode continuation and unknown-result reconciliation
-remain separate increments. Genuine blockers stay paused with a concise host-contact
+fenced. Published held play, revival, lobby, opening choices and announced first
+activation use the same unattended recovery. Original join and Continue buttons
+remain authoritative, and terminal lobby/revival deadlines win during read-in.
+Mode recovery and unknown-result reconciliation remain separate increments. Genuine blockers stay paused with a concise host-contact
 notice; manager ending remains available. No modes, complete output retry/TTL,
 operator erasure, full settings/premium/profile UI or release certification yet.
 
@@ -221,9 +223,8 @@ notice (including one from a superseded generation). Known success may ACK after
 ending/supersession without restoring play. Preserve old presentation keys for
 private override compatibility, but do not restore the removed manager debug UI.
 
-Next bite: extend automatic continuation to held/revival/opening paths, preserving
-original clocks and terminal expiry. Resolve all publication and per-family proof
-contracts before accepting uncertain sends. Then cover the approved mode, richer
+Next bite: define and implement bounded publication proof reconciliation for
+uncertain sends while preserving each output family’s delivery guards. Then cover the approved mode, richer
 details and human M2 exit. Keep changes reviewable; the owner's soft patch-size
 limit is 200 KB.
 No automatic or manual recovery may waive an unsafe/unsupported state.

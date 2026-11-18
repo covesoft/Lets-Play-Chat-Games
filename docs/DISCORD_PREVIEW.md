@@ -1,4 +1,4 @@
-# New Rules ordinary-round preview — v0.3.15 / schema 13
+# New Rules ordinary-round preview — v0.3.16 / schema 13
 
 This development build connects the existing ordinary engine to Discord. Run one
 bot process against a database. Private/requested scores, automatic interims and
@@ -8,8 +8,8 @@ score details remain separate work; M2 is still in progress.
 
 ## Install and enable
 
-The current schema is **13**, with WAL and foreign keys enabled. Apply v0.3.15
-to v0.3.14 while stopped, reinstall, run offline checks and start. No migration,
+The current schema is **13**, with WAL and foreign keys enabled. Apply v0.3.16
+to v0.3.15 while stopped, reinstall, run offline checks and start. No migration,
 database initialization or command sync is needed for this increment. Released
 migrations 1–13 and existing scores/clocks/claims remain unchanged. For an older
 installation, make and verify a SQLite backup of the actual configured database
@@ -98,8 +98,12 @@ badge map, voice library or additional intent is needed.
    during the pause, timeout completes the choice automatically after read-in.
    Announced transitions show the incoming rules during read-in, take effect at
    resume once, and retain their saved round clock.
-10. The manager debug pane is retired. Old diagnostic controls reply privately.
-    Held/revival/opening/modes, unpublished phases and uncertain sends
+10. Reboot during held play, a Continue check, a lobby, or opening cards. Check
+    that the original panel remains the place to click. If the lobby or Continue
+    deadline lands during read-in, it ends on that deadline. Held idle time
+    carries over, and an expired opening choice finishes automatically.
+11. The manager debug pane is retired. Old diagnostic controls reply privately.
+    Modes, unpublished phases and uncertain sends
     remain paused, with a brief host-contact notice.
     Manager ending remains available. Deleted/missing ACK evidence does not allow
     a blind resend. Actual marker/client/channel behavior still needs human checks.
@@ -191,9 +195,8 @@ See [ROUND_REPORTS.md](ROUND_REPORTS.md) for delivery guards and timing tests.
 
 ## Continuity and next bite
 
-Automatic acknowledged ordinary-phase reboot recovery is implemented; M2 remains
-in progress. Next cover held/revival/opening continuation, preserving clocks and
-terminal expiry. Cover genuinely uncertain sends only after each outbound family's
+Acknowledged ordinary, held, revival and opening phases recover automatically.
+M2 continues with genuinely uncertain sends once each outbound family’s
 proof/guard contract is implemented. Drawing Conclusions follows recovery. Keep
 recovery unattended; technical reconciliation is host/service work. Do not reintroduce a
 manager resume gate or expand retired debug UI. See [RECOVERY.md](RECOVERY.md).

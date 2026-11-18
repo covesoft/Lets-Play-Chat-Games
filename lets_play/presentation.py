@@ -17,6 +17,15 @@ from types import MappingProxyType
 MAX_CATALOG_BYTES = 128 * 1024
 # Only these templates accept arguments. Attribute/index lookups are prohibited.
 TEMPLATE_FIELDS = {
+    "reboot.preplay": frozenset({"seconds"}),
+    "reboot.preplay_reading": frozenset({"timestamp"}),
+    "reboot.opening_activation": frozenset({"seconds"}),
+    "reboot.opening_activation_reading": frozenset({"timestamp"}),
+    "reboot.revival": frozenset({"seconds"}),
+    "reboot.revival_reading": frozenset({"timestamp"}),
+    "reboot.lobby_link": frozenset({"url", "deadline"}),
+    "reboot.opening_link": frozenset({"url", "deadline"}),
+    "reboot.revival_link": frozenset({"url", "deadline"}),
     "reboot.choice_detail": frozenset({"url", "deadline"}),
     "reboot.choice_resumed": frozenset({"url", "deadline"}),
     "reboot.activation_description": frozenset({"seconds"}),

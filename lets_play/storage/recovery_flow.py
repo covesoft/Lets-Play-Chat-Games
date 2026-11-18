@@ -339,6 +339,7 @@ class RecoveryFlow:
         if admission["playing_session_id"] is None:
             if (
                 admission["stage"] == "lobby_published"
+                and admission["lobby_deadline_utc"] is not None
                 and utc_int(frame.received_at) >= admission["lobby_deadline_utc"]
             ):
                 from lets_play.storage.opening_flow import OpeningFlow

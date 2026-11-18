@@ -38,6 +38,19 @@ class DisplayState:
     recovery_resume_at: datetime | None = None
     offer_panel_id: int | None = None
     recovery_notice_id: int | None = None
+    phase_control_id: int | None = None
+
+    @property
+    def recovery_control_id(self):
+        return self.offer_panel_id or self.phase_control_id
+
+    @property
+    def terminal_recovery_deadline(self):
+        if self.admission.stage == "lobby_published":
+            return self.admission.lobby_deadline
+        if self.revival and self.revival.stage == "published":
+            return self.revival.deadline
+        return None
 
 
 @dataclass(frozen=True, slots=True)
@@ -109,12 +122,17 @@ class DiscordStore:
             else None
         )
         recovery_notice_id = notice[0] if notice and panel and panel[0] == notice[0] else None
-        if offer_panel_id and not recovery and context.position.lifecycle == "playing":
-            # A resumption notice is not a second publication of these cards.
-            # Restore the original ACK-bound panel and its still-running clock.
-            panel = (offer_panel_id,)
         pacing = await RoundPacing(self.unit).record(session) if context else None
         revival = await EvolutionFlow(self.unit).revival(session) if context else None
+        phase_control_id = None
+        if admission.stage in {"lobby_published", "opening_published"}:
+            kind = "lobby" if admission.stage == "lobby_published" else "offer"
+            phase_control_id = await OpeningFlow(self.unit).known_message_id(session, kind)
+        elif revival and revival.stage == "published" and admission.stage == "active":
+            phase_control_id = await self._revival_message(session, revival)
+        if not recovery and recovery_notice_id and (control := offer_panel_id or phase_control_id):
+            # The notice never takes ownership of previously published buttons.
+            panel = (control,)
         round_row = (
             await _row(
                 self.conn,
@@ -195,6 +213,7 @@ class DiscordStore:
             else None,
             offer_panel_id,
             recovery_notice_id,
+            phase_control_id,
         )
 
     async def _ranked_scores(self, session, anchor, backwards, *, round_id=None, limit=10):
@@ -338,16 +357,19 @@ class DiscordStore:
             (message_id, sequence, output.family, output.output_id),
         )
 
+    async def _revival_message(self, session, revival):
+        row = await _row(
+            self.conn,
+            "SELECT message_id FROM nr_pacing_outputs WHERE session_id=? AND round_id=? AND attempt=? AND kind='revival'",
+            (session, revival.round_id, revival.attempt),
+        )
+        return row[0] if row else None
+
     async def control_message(self, session, kind):
         self.unit._check()
         state = await self.state(session)
         if kind == "revive" and state.revival:
-            row = await _row(
-                self.conn,
-                "SELECT message_id FROM nr_pacing_outputs WHERE session_id=? AND round_id=? AND attempt=? AND kind='revival'",
-                (session, state.revival.round_id, state.revival.attempt),
-            )
-            return row[0] if row else None
+            return await self._revival_message(session, state.revival)
         if kind in {"choose", "target"} and state.offer:
             return await OrdinaryFlow(self.unit).known_message_id(
                 session, state.offer.hand.offer_id, "offer"
