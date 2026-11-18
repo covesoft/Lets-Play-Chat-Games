@@ -312,6 +312,40 @@ class DiscordTransport:
         )
         return message.id
 
+    async def find_opening_publication(self, route, kind, attempted_at):
+        # These controls identify a unique new post. An edit has no provable
+        # creation timestamp for the publication it replaced.
+        prefix = f"nr:{route.session_id}:"
+        expected = {
+            "lobby": {prefix + "join"},
+            "offer": {prefix + f"pick:{i}" for i in range(3)},
+        }[kind]
+        channel = await self.channel(route)
+        matches = []
+        limit = 50
+        count = 0
+        async for message in channel.history(limit=limit, after=attempted_at, oldest_first=True):
+            count += 1
+            if (
+                message.author.id != self.bot.user.id
+                or message.webhook_id is not None
+                or message.edited_at is not None
+                or message.created_at < attempted_at
+                or message.channel.id != route.channel_id
+            ):
+                continue
+            controls = [
+                component.custom_id
+                for row in message.components
+                for component in row.children
+                if isinstance(component, discord.Button)
+            ]
+            if len(controls) == len(expected) and set(controls) == expected:
+                matches.append((message.id, message.created_at))
+                if len(matches) > 1:
+                    return None
+        return matches[0] if count < limit and len(matches) == 1 else None
+
     async def recovery_capabilities(self, route, panel_id):
         channel = await self.channel(route)
         facts = capabilities(channel, channel.guild.me, marker_verified=True)

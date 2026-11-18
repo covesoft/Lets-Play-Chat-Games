@@ -20,6 +20,54 @@ class RebootFlow:
     def __init__(self, unit):
         self.unit, self.conn = unit, unit._conn
 
+    async def opening_probe(self, session):
+        """Only first posts with session-specific controls can prove creation."""
+        self.unit._check()
+        return await _row(
+            self.conn,
+            """SELECT r.recovery_id,o.output_id,o.kind,d.attempted_at_utc
+               FROM nr_recoveries r JOIN nr_admissions a USING(session_id)
+               JOIN nr_recovery_work w USING(session_id,recovery_id)
+               JOIN nr_opening_outputs o ON o.session_id=a.session_id AND o.output_id=w.output_id
+               JOIN nr_discord_deliveries d ON d.session_id=o.session_id AND d.output_id=o.output_id
+               WHERE a.session_id=? AND r.stage='paused' AND r.version=?
+               AND w.family='opening' AND w.status='unknown' AND w.kind=o.kind
+               AND d.family='opening' AND d.state='sending' AND d.message_id IS NULL
+               AND d.ack_sequence=0 AND o.message_id IS NULL
+               AND o.acknowledged_at_utc IS NULL AND o.retired_at_utc IS NULL
+               AND a.playing_session_id IS NULL AND a.revision=r.owner_revision
+               AND a.stage=r.original_stage AND
+               ((a.stage='lobby_prepared' AND o.kind='lobby')
+                OR (a.stage='opening_prepared' AND o.kind='offer')) LIMIT 1""",
+            (session, RECOVERY_VERSION),
+        )
+
+    @_write
+    async def reconcile_opening(self, frame, recovery, output_id, message_id, published_at):
+        session = frame.route.session_id
+        probe = await self.opening_probe(session)
+        flow = RecoveryFlow(self.unit)
+        if (
+            probe is None
+            or probe["recovery_id"] != recovery
+            or probe["output_id"] != output_id
+            or not probe["attempted_at_utc"] <= utc_int(published_at) <= utc_int(frame.received_at)
+        ):
+            return await flow.observe(frame, recovery, allow_resume=False)
+        result = await flow.reconcile(
+            frame, recovery, "opening", output_id, message_id=message_id, published_at=published_at
+        )
+        if result == "found":
+            changed = await _execute(
+                self.conn,
+                """UPDATE nr_discord_deliveries SET state='delivered',message_id=?,ack_sequence=?
+                   WHERE session_id=? AND family='opening' AND output_id=? AND state='sending'""",
+                (message_id, frame.sequence, session, output_id),
+            )
+            if not changed:
+                raise IncompatibleState("Opening proof lost its adapter claim.")
+        return result
+
     async def candidate(self, session):
         self.unit._check()
         row = await active_recovery(self.unit, session)
@@ -131,11 +179,7 @@ class RebootFlow:
         flow = OpeningFlow(self.unit)
         row = await flow._record(session)
         stage = row["stage"]
-        if (
-            stage != owner["original_stage"]
-            or row["revision"] != owner["owner_revision"]
-            or owner["original_lifecycle"] is not None
-        ):
+        if row["revision"] != owner["owner_revision"] or owner["original_lifecycle"] is not None:
             return False
         kind = {
             "lobby_published": "lobby",
@@ -147,6 +191,27 @@ class RebootFlow:
         proof = await self._publication(session, "opening", "o.kind=?", (kind,))
         if proof is None:
             return False
+        if stage != owner["original_stage"]:
+            # Keep the original snapshot even after proof advances a prepared stage.
+            expected = {"lobby": "lobby_prepared", "offer": "opening_prepared"}.get(kind)
+            if (
+                expected is None
+                or owner["original_stage"] != expected
+                or not await _row(
+                    self.conn,
+                    """SELECT 1 FROM nr_recovery_work WHERE session_id=? AND recovery_id=?
+                   AND family='opening' AND kind=? AND status='found'
+                   AND message_id=? AND published_at_utc=?""",
+                    (
+                        session,
+                        owner["recovery_id"],
+                        kind,
+                        proof["message_id"],
+                        proof["acknowledged_at_utc"],
+                    ),
+                )
+            ):
+                return False
         published = proof["acknowledged_at_utc"]
         if kind == "lobby":
             return (

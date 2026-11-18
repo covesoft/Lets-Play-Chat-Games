@@ -180,6 +180,7 @@ class OpeningRuntime:
             "summary_request": EventKind.TIMER,
             "summary_ack": EventKind.TIMER,
             "round_ack": EventKind.TIMER,
+            "recovery_reconcile_opening": EventKind.RECOVERY_RECONCILE,
             "recovery_prepare": EventKind.RECOVERY_APPROVE,
             "recovery_claim": EventKind.RECOVERY_NOTICE_CLAIM,
             "recovery_ack": EventKind.RECOVERY_NOTICE_PUBLISHED,
@@ -209,6 +210,10 @@ class OpeningRuntime:
                     await RecoveryFlow(unit).begin(frame, uuid4().hex)
                     if not recovery
                     else await RebootFlow(unit).block(frame, recovery)
+                )
+            elif action == "recovery_reconcile_opening":
+                result = await RebootFlow(unit).reconcile_opening(
+                    frame, d["recovery_id"], d["output_id"], d["message_id"], d["published_at"]
                 )
             elif action == "recovery_prepare":
                 result = await RebootFlow(unit).prepare(
@@ -609,8 +614,27 @@ class OpeningRuntime:
         session = route.session_id
         if session in self.blocked_recoveries:
             return False
+        probe = None
+        find = getattr(self.transport, "find_opening_publication", None)
         async with self.store.transaction(write=False) as unit:
-            candidate = await RebootFlow(unit).candidate(session)
+            reboot = RebootFlow(unit)
+            candidate = await reboot.candidate(session)
+            if candidate is None and session in self.recovery_routes and find is not None:
+                probe = await reboot.opening_probe(session)
+        if probe is not None:
+            async with self.network_slots, asyncio.timeout(20):
+                proof = await find(route, probe["kind"], utc_datetime(probe["attempted_at_utc"]))
+            if proof is not None:
+                result = await self.submit(
+                    route,
+                    "recovery_reconcile_opening",
+                    recovery_id=probe["recovery_id"],
+                    output_id=probe["output_id"],
+                    message_id=proof[0],
+                    published_at=proof[1],
+                )
+                if result == "found":
+                    return True
         if session not in self.recovery_routes or candidate is None:
             self.blocked_recoveries.add(session)
             await self._show_pause(route)

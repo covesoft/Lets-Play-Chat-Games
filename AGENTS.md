@@ -8,7 +8,7 @@ contains operational and API documentation only.
 
 ## Current implementation
 
-Application v0.3.16 uses schema 13. M1 is accepted and closed at v0.2.9/schema 8;
+Application v0.3.17 uses schema 13. M1 is accepted and closed at v0.2.9/schema 8;
 M2 is in progress. Preserve the existing domain/storage APIs. This is a
 development-only ordinary-round preview, not a public-release build.
 
@@ -223,8 +223,14 @@ notice (including one from a superseded generation). Known success may ACK after
 ending/supersession without restoring play. Preserve old presentation keys for
 private override compatibility, but do not restore the removed manager debug UI.
 
-Next bite: define and implement bounded publication proof reconciliation for
-uncertain sends while preserving each output family’s delivery guards. Then cover the approved mode, richer
-details and human M2 exit. Keep changes reviewable; the owner's soft patch-size
-limit is 200 KB.
-No automatic or manual recovery may waive an unsafe/unsupported state.
+Uncertain lobby and opening-card sends can recover on startup from a bounded
+positive Discord creation check. Match the exact route, bot author and original
+session controls, and require an unedited message with its original creation
+time. Commit proof, original clock and adapter ACK in the receipt lane. Empty,
+ambiguous and capped lookups preserve the unresolved claim. Never inspect or
+retain chat bodies in this path.
+
+Next bite: extend positive proof to other new-post families. Edits need
+publication evidence beyond the target message’s creation time. Then cover the
+approved mode, richer details and human M2 exit. The owner's soft patch-size
+limit is 200 KB. No recovery may waive an unsafe or unsupported state.

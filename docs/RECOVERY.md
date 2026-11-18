@@ -1,7 +1,7 @@
 # Offline disruption recovery
 
 `RecoveryFlow(unit)` provides the existing engine barrier and offline recovery
-contracts. v0.3.16/schema 13 extends the bounded live automatic path through
+contracts. v0.3.17/schema 13 extends the bounded live automatic path through
 `RebootFlow(unit)` and the serial adapter publisher. Ordinary reboot needs no
 server-manager approval, Resume button or player message.
 
@@ -63,15 +63,31 @@ Technical guards are internal. If this limited path cannot establish safe recove
 the known panel and /rules give a brief host-contact explanation and retain
 manager ending. Do not automatically retry a failed/uncertain notice in this build.
 
+## Interrupted lobby and opening-card sends
+
+At startup, an unresolved durable lobby or opening-card send can be matched
+against one bounded lookup in its exact channel. Inspect the oldest messages
+after the saved attempt time, up to 50. Require a single unedited post by this
+bot with the exact saved session's Join button or its three opening-card
+controls. An empty, ambiguous, inaccessible or capped lookup leaves the claim
+unresolved. This lookup uses publication metadata and controls without reading
+or retaining chat bodies.
+
+An ordered receipt rechecks the original claim and recovery generation. It
+commits the engine proof and adapter acknowledgement together. Discord's
+original message creation time starts the original lobby or choice clock.
+An expired lobby closes immediately. An expired opening choice completes via
+normal timeout after read-in. Confirmed posts keep their original buttons.
+
 ## Remaining integration and upgrading
 
-Modes, unpublished phases and unresolved output claims remain fenced.
-Bounded proof collection and per-family reconciliation are next. No unknown send is inferred healthy, missing/late message proof is not
+Modes, unpublished phases and unproven output claims remain fenced.
+Proof for other newly created messages and edits is separate work. No unknown send is inferred healthy, missing/late message proof is not
 never-sent evidence, and no chat history is backfilled for scoring. No new manager
 recovery gate or diagnostic UI is planned. Full mode/retention/erasure/live evidence
 remains open.
 
-Apply v0.3.16 to v0.3.15 while stopped, reinstall, run offline checks and start.
+Apply v0.3.17 to v0.3.16 while stopped, reinstall, run offline checks and start.
 Schema stays **13**; no database initialization, migration or command sync is
 needed. Released migrations 1–13 are unchanged. For an older installation,
 back up and verify the stopped configured database using SQLite's backup API
