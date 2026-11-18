@@ -41,6 +41,11 @@ CONTROL = re.compile(
     r"nr:([a-f0-9]{32}):(join|pick|target|revive|results)(?::([0-9]{1,7}))?(?::([0-9]{1,7}))?\Z"
 )
 
+PUBLICATION_CONTROL = re.compile(
+    r"nrq:([a-f0-9]{32}):(?:score:(summary|round):([1-9][0-9]{0,18})|"
+    r"recovery:([a-f0-9]{32}))\Z"
+)
+
 
 def capabilities(channel, member, *, marker_verified=False):
     if channel is None or member is None or not callable(getattr(channel, "send", None)):
@@ -362,9 +367,31 @@ class DiscordTransport:
         return await self._find_referenced_post(route, "evolution", "held", output_id, attempted_at)
 
     async def find_recovery_publication(self, route, recovery_id, attempted_at):
-        return await self._find_referenced_post(
-            route, "recovery", "notice", recovery_id, attempted_at
+        return await self._find_control_post(
+            route,
+            f"nrq:{route.session_id}:recovery:{recovery_id}",
+            attempted_at,
+            legacy_footer=self._publication_reference(route, "recovery", "notice", recovery_id),
         )
+
+    async def find_score_publication(self, route, family, output_id, attempted_at):
+        return await self._find_control_post(
+            route, f"nrq:{route.session_id}:score:{family}:{output_id}", attempted_at
+        )
+
+    async def _find_control_post(self, route, control, attempted_at, *, legacy_footer=None):
+        def matches(message):
+            return any(
+                isinstance(component, discord.Button) and component.custom_id == control
+                for row in message.components
+                for component in row.children
+            ) or bool(
+                legacy_footer
+                and len(message.embeds) == 1
+                and message.embeds[0].footer.text == legacy_footer
+            )
+
+        return await self._find_original_post(route, attempted_at, matches)
 
     async def _find_referenced_post(self, route, family, kind, output_id, attempted_at):
         reference = self._publication_reference(route, family, kind, output_id)
@@ -438,9 +465,12 @@ class DiscordTransport:
         elif state.phase_control_id:
             embed.description += "\n\n" + phase_recovery_link(state, route, self.copy)
         embed.colour = self.copy.color("reboot")
-        embed.set_footer(
-            #text=self._publication_reference(route, "recovery", "notice", state.recovery_id)
-            text=self.copy.text("reboot.recovery_footer")
+        embed.set_footer(text=self.copy.text("reboot.recovery_footer"))
+        view.add_item(
+            discord.ui.Button(
+                label=self.copy.text("buttons.game_status"),
+                custom_id=f"nrq:{route.session_id}:recovery:{state.recovery_id}",
+            )
         )
         message = await channel.send(
             embed=embed, view=view, allowed_mentions=discord.AllowedMentions.none()
@@ -448,7 +478,13 @@ class DiscordTransport:
         return message.id
 
     async def publish_summary(self, route, snapshot, page):
-        embed, view = requested_summary.render(page, self.copy, snapshot=snapshot, public=True)
+        embed, view = requested_summary.render(
+            page,
+            self.copy,
+            snapshot=snapshot,
+            public=True,
+            publication_control=f"nrq:{route.session_id}:score:summary:{snapshot.summary_id}",
+        )
         channel = await self.channel(route)
         message = await channel.send(
             embed=embed, view=view, allowed_mentions=discord.AllowedMentions.none()
@@ -457,6 +493,12 @@ class DiscordTransport:
 
     async def publish_round(self, route, report, page):
         embed, view = round_report_ui.render(route.session_id, report.round_number, page, self.copy)
+        view.add_item(
+            discord.ui.Button(
+                label=self.copy.text("buttons.summary_current"),
+                custom_id=f"nrq:{route.session_id}:score:round:{report.round_number}",
+            )
+        )
         channel = await self.channel(route)
         message = await channel.send(
             embed=embed, view=view, allowed_mentions=discord.AllowedMentions.none()
@@ -623,8 +665,10 @@ class DiscordGame:
             )
 
     async def rules(self, interaction: discord.Interaction):
+        await self._show_rules(interaction, self.route(interaction))
+
+    async def _show_rules(self, interaction, route):
         await interaction.response.defer(ephemeral=True, thinking=True)
-        route = self.route(interaction)
         try:
             state = await self.runtime.state(route.session_id) if route else None
         except (IncompatibleState, StoreOverloaded):
@@ -730,6 +774,18 @@ class DiscordGame:
             await requested_summary.reply_private(
                 interaction, editing, content=self.copy.text("reboot.retired_status")
             )
+            return
+        publication = PUBLICATION_CONTROL.fullmatch((interaction.data or {}).get("custom_id", ""))
+        if publication:
+            session, _, _, recovery_id = publication.groups()
+            if recovery_id:
+                # The status button is read-only and cannot act on a replacement game.
+                route = self.route(interaction)
+                if route and route.session_id == session and not interaction.user.bot:
+                    await self._show_rules(interaction, route)
+            else:
+                current = requested_summary.CONTROL.fullmatch(f"nrs:{session}:round:0:0:n")
+                await self.private_summary(interaction, current)
             return
         leaderboard = round_report_ui.CONTROL.fullmatch(
             (interaction.data or {}).get("custom_id", "")

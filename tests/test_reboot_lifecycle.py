@@ -183,7 +183,9 @@ async def test_sdk_notice_links_lobby_without_copying_controls(tmp_path, monkeyp
         notice = channel.send.call_args.kwargs
         assert "game setup continues" in notice["embed"].description
         assert f"/{original.panel_id}" in notice["embed"].description
-        assert not notice["view"].children
+        assert [item.custom_id for item in notice["view"].children] == [
+            f"nrq:{route.session_id}:recovery:{saved.recovery_id}"
+        ]
         await fire(runtime, route, saved.recovery_resume_at)
         state = await runtime.state(route.session_id)
         await sdk.refresh(route, state)

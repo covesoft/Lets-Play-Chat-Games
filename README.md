@@ -3,7 +3,7 @@
 Let’s Play is a Discord chat-game bot. Its first game, **New Rules**, is a party
 conversation game where unusual rules accumulate as people chat.
 
-**Current status: v0.3.20 — development-only ordinary-round preview (M2 in progress).**
+**Current status: v0.3.21 — development-only ordinary-round preview (M2 in progress).**
 M1 is accepted and closed at v0.2.9/schema 8. The Discord adapter connects a
 persisted three-human opening, message/raw-reaction scoring, markers, timed
 warnings, picker succession, three-card choices, replacements, and announced
@@ -27,7 +27,8 @@ expired choices complete automatically after read-in. Published held, revival an
 opening phases also continue, with the original deadlines and controls. An interrupted lobby or opening-card
 send, warning, revival notice, held notice, or timely activation announcement
 can be recovered if its original published post is verified. A verified
-recovery notice from an earlier restart also clears its uncertain send. Broader unknown-send reconciliation, modes, settings, complete retry/retention cleanup and
+recovery notice from an earlier restart also clears its uncertain send. Public
+score posts can reconcile against their original current-scores control. Broader unknown-send reconciliation, modes, settings, complete retry/retention cleanup and
 public-release checks remain unfinished.
 Restart and uncertain publication enter a durable pause; a manager can close the
 saved game. See [the preview runbook](docs/DISCORD_PREVIEW.md) for setup and live checks.
@@ -147,8 +148,8 @@ update commands.
 | `docs/` | Public configuration, dependency, and storage documentation |
 
 Schema **13** adds recovery-notice send/ACK guards; schema 12 added round-report
-delivery receipts and round-local reporting watermarks. v0.3.20 needs no migration
-from v0.3.19/schema 13. Existing clocks, scores and delivery claims are preserved.
+delivery receipts and round-local reporting watermarks. v0.3.21 needs no migration
+from v0.3.20/schema 13. Existing clocks, scores and delivery claims are preserved.
 The Discord preview continues to use the v0.3.3 ordinary loop, with v0.3.9 live private score
 pages, quiet requested reports, gated interim updates and compact round leaderboards.
 See [round reporting](docs/ROUND_REPORTS.md) for policy and upgrade checks.

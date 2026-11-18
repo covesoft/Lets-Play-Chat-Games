@@ -17,7 +17,7 @@ def add_button(view, copy, session, *, label="buttons.summary"):
     view.add_item(discord.ui.Button(label=copy.text(label), custom_id=f"nrs:{session}:round:0:0:n"))
 
 
-def render(page, copy, *, snapshot=None, public=False):
+def render(page, copy, *, snapshot=None, public=False, publication_control=None):
     automatic = bool(snapshot and snapshot.kind == "automatic")
     embed = discord.Embed(title=copy.text("summary.title"), colour=copy.color("summary"))
     as_of = (
@@ -122,7 +122,12 @@ def render(page, copy, *, snapshot=None, public=False):
         )
 
     if public:
-        add_button(view, copy, page.session_id, label="buttons.summary_current")
+        view.add_item(
+            discord.ui.Button(
+                label=copy.text("buttons.summary_current"),
+                custom_id=publication_control or f"nrs:{page.session_id}:round:0:0:n",
+            )
+        )
     else:
         button("buttons.summary_round", "round")
         button("buttons.summary_game", "game")

@@ -182,6 +182,7 @@ class OpeningRuntime:
             "round_ack": EventKind.TIMER,
             "recovery_reconcile_publication": EventKind.RECOVERY_RECONCILE,
             "recovery_reconcile_notice": EventKind.RECOVERY_RECONCILE,
+            "recovery_reconcile_score": EventKind.RECOVERY_RECONCILE,
             "recovery_prepare": EventKind.RECOVERY_APPROVE,
             "recovery_claim": EventKind.RECOVERY_NOTICE_CLAIM,
             "recovery_ack": EventKind.RECOVERY_NOTICE_PUBLISHED,
@@ -224,6 +225,15 @@ class OpeningRuntime:
             elif action == "recovery_reconcile_notice":
                 result = await RebootFlow(unit).reconcile_superseded_notice(
                     frame, d["recovery_id"], d["superseded"], d["message_id"], d["published_at"]
+                )
+            elif action == "recovery_reconcile_score":
+                result = await RebootFlow(unit).reconcile_score(
+                    frame,
+                    d["recovery_id"],
+                    d["family"],
+                    d["output_id"],
+                    d["message_id"],
+                    d["published_at"],
                 )
             elif action == "recovery_prepare":
                 result = await RebootFlow(unit).prepare(
@@ -634,12 +644,13 @@ class OpeningRuntime:
         session = route.session_id
         if session in self.blocked_recoveries:
             return False
-        probe = notice = None
+        probe = notice = score = None
         find_opening = getattr(self.transport, "find_opening_publication", None)
         find_pacing = getattr(self.transport, "find_pacing_publication", None)
         find_activation = getattr(self.transport, "find_activation_publication", None)
         find_held = getattr(self.transport, "find_held_publication", None)
         find_notice = getattr(self.transport, "find_recovery_publication", None)
+        find_score = getattr(self.transport, "find_score_publication", None)
         family = "opening"
         async with self.store.transaction(write=False) as unit:
             reboot = RebootFlow(unit)
@@ -666,6 +677,30 @@ class OpeningRuntime:
                     notice = await reboot.superseded_notice_probe(session)
                     if notice is not None:
                         current = await active_recovery(unit, session)
+                if probe is None and notice is None and find_score is not None:
+                    score = await reboot.score_probe(session)
+                    if score is not None:
+                        score_recovery = await active_recovery(unit, session)
+        if score is not None:
+            async with self.network_slots, asyncio.timeout(20):
+                proof = await find_score(
+                    route,
+                    score["family"],
+                    score["output_id"],
+                    utc_datetime(score["attempted_at_utc"]),
+                )
+            if proof is not None:
+                result = await self.submit(
+                    route,
+                    "recovery_reconcile_score",
+                    recovery_id=score_recovery["recovery_id"],
+                    family=score["family"],
+                    output_id=score["output_id"],
+                    message_id=proof[0],
+                    published_at=proof[1],
+                )
+                if result == "found":
+                    return True
         if notice is not None:
             async with self.network_slots, asyncio.timeout(20):
                 proof = await find_notice(

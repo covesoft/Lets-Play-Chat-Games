@@ -1,4 +1,4 @@
-# New Rules ordinary-round preview — v0.3.20 / schema 13
+# New Rules ordinary-round preview — v0.3.21 / schema 13
 
 This development build connects the existing ordinary engine to Discord. Run one
 bot process against a database. Private/requested scores, automatic interims and
@@ -8,8 +8,8 @@ score details remain separate work; M2 is still in progress.
 
 ## Install and enable
 
-The current schema is **13**, with WAL and foreign keys enabled. Apply v0.3.20
-to v0.3.19 while stopped, reinstall, run offline checks and start. No migration,
+The current schema is **13**, with WAL and foreign keys enabled. Apply v0.3.21
+to v0.3.20 while stopped, reinstall, run offline checks and start. No migration,
 database initialization or command sync is needed for this increment. Released
 migrations 1–13 and existing scores/clocks/claims remain unchanged. For an older
 installation, make and verify a SQLite backup of the actual configured database
@@ -203,6 +203,7 @@ with proof for other output families. Activation announcements also carry a
 reference and require creation strictly before the saved cutover. Held and
 recovery notices also carry exact references. A verified recovery notice from
 a superseded restart clears the old uncertainty. The latest restart gets its
-own announcement and read-in. Drawing Conclusions follows recovery. Keep
+own announcement and read-in. Recovery notices use a read-only Game status
+button. Public score posts use Check current scores and remain footer-free. Drawing Conclusions follows recovery. Keep
 recovery unattended; technical reconciliation is host/service work. Do not reintroduce a
 manager resume gate or expand retired debug UI. See [RECOVERY.md](RECOVERY.md).

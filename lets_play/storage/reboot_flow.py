@@ -14,6 +14,8 @@ from lets_play.storage.offer_codec import utc_int
 from lets_play.storage.opening_flow import LOBBY_SECONDS, OpeningFlow
 from lets_play.storage.ordinary_flow import CHATGAMES_CHOICE_SECONDS, OrdinaryFlow
 from lets_play.storage.recovery_flow import RECOVERY_VERSION, RecoveryFlow, active_recovery
+from lets_play.storage.round_reports import RoundReport, RoundReports
+from lets_play.storage.summary_store import SummaryStore
 
 
 class RebootFlow:
@@ -209,6 +211,61 @@ class RebootFlow:
             if not changed:
                 raise IncompatibleState("Publication proof lost its adapter claim.")
         return result
+
+    async def score_probe(self, session):
+        self.unit._check()
+        current = await active_recovery(self.unit, session)
+        if (
+            current is None
+            or current["stage"] != "paused"
+            or current["version"] != RECOVERY_VERSION
+        ):
+            return None
+        return await _row(
+            self.conn,
+            """SELECT * FROM (
+                   SELECT 'summary' AS family,summary_id AS output_id,output_key AS durable_key,
+                          round_number,state,attempted_at_utc
+                   FROM nr_summary_outputs WHERE session_id=? AND state IN ('sending','uncertain')
+                       AND attempted_at_utc IS NOT NULL AND message_id IS NULL AND delivered_at_utc IS NULL
+                   UNION ALL
+                   SELECT 'round',r.round_number,r.round_id,r.round_number,o.state,o.attempted_at_utc
+                   FROM nr_round_reports o JOIN nr_round_resolutions r USING(session_id,round_id)
+                   WHERE o.session_id=? AND r.kind='activation' AND o.state IN ('sending','uncertain')
+                       AND o.message_id IS NULL AND o.delivered_at_utc IS NULL
+               ) ORDER BY attempted_at_utc,family,output_id LIMIT 1""",
+            (session, session),
+        )
+
+    @_write
+    async def reconcile_score(self, frame, recovery, family, output_id, message_id, published_at):
+        session = frame.route.session_id
+        probe = await self.score_probe(session)
+        result = await RecoveryFlow(self.unit).observe(frame, recovery, allow_resume=False)
+        if result != "paused":
+            return result
+        if (
+            probe is None
+            or (probe["family"], probe["output_id"]) != (family, output_id)
+            or not probe["attempted_at_utc"] <= utc_int(published_at) <= utc_int(frame.received_at)
+        ):
+            return "unproven"
+        if family == "summary":
+            await SummaryStore(self.unit).acknowledge(
+                session,
+                probe["durable_key"],
+                message_id=message_id,
+                now=published_at,
+                reconciled=True,
+            )
+        else:
+            report = RoundReport(
+                session, probe["durable_key"], probe["round_number"], probe["state"]
+            )
+            await RoundReports(self.unit).acknowledge(
+                report, message_id=message_id, now=published_at, reconciled=True
+            )
+        return "found"
 
     async def candidate(self, session):
         self.unit._check()

@@ -88,7 +88,7 @@ class RoundReports:
         )
 
     @_write
-    async def acknowledge(self, report, *, message_id, now):
+    async def acknowledge(self, report, *, message_id, now, reconciled=False):
         if type(message_id) is not int or not 0 < message_id < 2**63:
             raise ValueError("Invalid round report message identity.")
         row = await _row(
@@ -100,7 +100,11 @@ class RoundReports:
             if row["message_id"] != message_id:
                 raise ValueError("Conflicting round report acknowledgement.")
             return False
-        if row is None or row["state"] != "sending" or utc_int(now) < row["attempted_at_utc"]:
+        if (
+            row is None
+            or row["state"] not in ({"sending", "uncertain"} if reconciled else {"sending"})
+            or utc_int(now) < row["attempted_at_utc"]
+        ):
             raise ValueError("Round report acknowledgement requires a known send.")
         await _execute(
             self.conn,

@@ -1,7 +1,7 @@
 # Offline disruption recovery
 
 `RecoveryFlow(unit)` provides the existing engine barrier and offline recovery
-contracts. v0.3.20/schema 13 extends the bounded live automatic path through
+contracts. v0.3.21/schema 13 extends the bounded live automatic path through
 `RebootFlow(unit)` and the serial adapter publisher. Ordinary reboot needs no
 server-manager approval, Resume button or player message.
 
@@ -116,6 +116,20 @@ reference. Recording that proof clears only its old claim. Before the game
 can resume, the current generation still checks access, publishes its own
 announcement and observes its own read-in.
 
+## Interrupted public score posts
+
+Requested summaries, automatic interims and round leaderboards carry the
+durable output identity on the Check current scores button. The bounded
+lookup checks the original bot-authored post and its exact control. It
+acknowledges only the matching active claim in the ordered lane, using the
+original publication time and that claim’s saved traffic watermark. The existing
+public score rendering remains footer-free. A round leaderboard includes the
+same private current-scores entry point as a summary.
+
+New recovery notices identify their generation through the read-only Game
+status button, so the visible footer can be customized. The lookup also accepts
+the exact reference on older notices that originally carried it in their footer.
+
 ## Remaining integration and upgrading
 
 Modes, unpublished phases and unproven output claims remain fenced.
@@ -124,7 +138,7 @@ never-sent evidence, and no chat history is backfilled for scoring. No new manag
 recovery gate or diagnostic UI is planned. Full mode/retention/erasure/live evidence
 remains open.
 
-Apply v0.3.20 to v0.3.19 while stopped, reinstall, run offline checks and start.
+Apply v0.3.21 to v0.3.20 while stopped, reinstall, run offline checks and start.
 Schema stays **13**; no database initialization, migration or command sync is
 needed. Released migrations 1–13 are unchanged. For an older installation,
 back up and verify the stopped configured database using SQLite's backup API

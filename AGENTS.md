@@ -8,7 +8,7 @@ contains operational and API documentation only.
 
 ## Current implementation
 
-Application v0.3.20 uses schema 13. M1 is accepted and closed at v0.2.9/schema 8;
+Application v0.3.21 uses schema 13. M1 is accepted and closed at v0.2.9/schema 8;
 M2 is in progress. Preserve the existing domain/storage APIs. This is a
 development-only ordinary-round preview, not a public-release build.
 
@@ -246,8 +246,12 @@ A verified held post leaves the idle clock in place. Proof of a superseded
 recovery notice clears that generation’s uncertain send. The current generation
 still requires its own access verification, announcement, and read-in.
 
-Next bite: extend positive proof to public score posts while keeping the existing
-footer-free presentation. Edits need
-publication evidence beyond the target message’s creation time. Then cover the
+Public score posts use the current-scores button for proof, with no footer.
+Recovery notices use a read-only Game status button and editable footer copy.
+Score reconciliation keeps the original snapshot, cutover and traffic watermark.
+
+Next bite: add distinct proof for ordinary choice panel edits, then address
+final standings and silent terminal edits. Edit proof needs publication evidence
+beyond the target message’s creation time. Then cover the
 approved mode, richer details and human M2 exit. The owner's soft patch-size
 limit is 200 KB. No recovery may waive an unsafe or unsupported state.

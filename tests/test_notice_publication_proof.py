@@ -4,6 +4,7 @@ from datetime import timedelta
 from types import SimpleNamespace as NS
 from unittest.mock import AsyncMock
 
+import discord
 import pytest
 from test_discord_ordinary_loop import settle
 from test_discord_runtime import activated, opened, service
@@ -117,6 +118,14 @@ async def test_sdk_notice_references_match_only_the_original_output(tmp_path, mo
                 channel=NS(id=route.channel_id),
                 created_at=attempted + timedelta(seconds=1),
                 embeds=[send.call_args.kwargs["embed"]],
+                components=[
+                    NS(
+                        children=[
+                            discord.Button(item.to_component_dict())
+                            for item in send.call_args.kwargs["view"].children
+                        ]
+                    )
+                ],
             )
 
         channel = NS(guild=NS(id=route.guild_id), send=send, history=history)
@@ -129,5 +138,6 @@ async def test_sdk_notice_references_match_only_the_original_output(tmp_path, mo
         await runtime.initialize()
         state = await reading(runtime, route)
         await sdk.publish_recovery(route, state)
+        assert send.call_args.kwargs["embed"].footer.text == sdk.copy.text("reboot.recovery_footer")
         assert await sdk.find_recovery_publication(route, state.recovery_id, attempted)
         assert await sdk.find_recovery_publication(route, "other-recovery", attempted) is None

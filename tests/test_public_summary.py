@@ -292,7 +292,9 @@ async def test_public_transport_uses_saved_rules_no_footer_and_suppresses_mentio
         assert kwargs["embed"].footer.text is None
         assert "Roger Wilco" in str(kwargs["embed"].to_dict())
         assert len(kwargs["view"].children) == 1
-        assert kwargs["view"].children[0].custom_id == f"nrs:{route.session_id}:round:0:0:n"
+        assert kwargs["view"].children[0].custom_id == (
+            f"nrq:{route.session_id}:score:summary:{snapshot.summary_id}"
+        )
         assert kwargs["view"].children[0].label == default_presentation().text(
             "buttons.summary_current"
         )

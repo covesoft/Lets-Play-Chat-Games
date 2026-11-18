@@ -398,7 +398,7 @@ class SummaryStore:
         )
 
     @_write
-    async def acknowledge(self, session, output_key, *, message_id, now):
+    async def acknowledge(self, session, output_key, *, message_id, now, reconciled=False):
         if type(message_id) is not int or not 0 < message_id < 2**63:
             raise ValueError("A summary ACK needs a positive SQLite-range message ID.")
         delivered = utc_int(now)
@@ -414,7 +414,11 @@ class SummaryStore:
             "SELECT attempted_at_utc FROM nr_summary_outputs WHERE summary_id=?",
             (row.summary_id,),
         )
-        if row.state != "sending" or attempt[0] is None or delivered < attempt[0]:
+        if (
+            row.state not in ({"sending", "uncertain"} if reconciled else {"sending"})
+            or attempt[0] is None
+            or delivered < attempt[0]
+        ):
             raise ValueError("A summary ACK needs its actual ordered send attempt.")
         # Actual public success remains a fact during disruption/ending. This
         # updates no enforcement owner and never resumes scoring.
