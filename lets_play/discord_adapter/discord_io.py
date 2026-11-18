@@ -46,6 +46,8 @@ PUBLICATION_CONTROL = re.compile(
     r"recovery:([a-f0-9]{32}))\Z"
 )
 
+TERMINAL_CONTROL = re.compile(r"nrt:([a-f0-9]{32}):(opening|evolution):([1-9][0-9]{0,18})\Z")
+
 
 def capabilities(channel, member, *, marker_verified=False):
     if channel is None or member is None or not callable(getattr(channel, "send", None)):
@@ -306,6 +308,19 @@ class DiscordTransport:
     async def publish(self, route, kind, state, *, publication_id=None):
         channel = await self.channel(route)
         embed, view = render(state, kind=kind, presentation=self.copy)
+        if publication_id is not None:
+            if kind == "ordinary_offer":
+                embed.set_footer(
+                    text=self._publication_reference(route, "ordinary", "offer", publication_id)
+                )
+            elif kind in {"closed", "evolution_closed_silent"}:
+                family = "opening" if kind == "closed" else "evolution"
+                view.add_item(
+                    discord.ui.Button(
+                        label=self.copy.text("buttons.final_results"),
+                        custom_id=self._terminal_control(route, family, publication_id),
+                    )
+                )
         # A lobby expiry edits its invitation instead of leaving active Play controls.
         if kind in {"evolution_closed_silent", "ordinary_offer"} and state.panel_id is None:
             raise LaneUnavailable("Panel publication has no known message to edit.")
@@ -334,6 +349,54 @@ class DiscordTransport:
             embed=embed, view=view, allowed_mentions=discord.AllowedMentions.none()
         )
         return message.id
+
+    @staticmethod
+    def _terminal_control(route, family, output_id):
+        return f"nrt:{route.session_id}:{family}:{output_id}"
+
+    async def find_choice_edit(self, route, output_id, target_id, attempted_at):
+        reference = self._publication_reference(route, "ordinary", "offer", output_id)
+        return await self._find_exact_edit(
+            route,
+            target_id,
+            attempted_at,
+            lambda message: len(message.embeds) == 1 and message.embeds[0].footer.text == reference,
+        )
+
+    async def find_terminal_publication(self, route, output, target_id, attempted_at):
+        control = self._terminal_control(route, output.family, output.output_id)
+        if target_id is None:
+            return await self._find_control_post(route, control, attempted_at)
+        return await self._find_exact_edit(
+            route, target_id, attempted_at, lambda message: self._has_control(message, control)
+        )
+
+    async def _find_exact_edit(self, route, target_id, attempted_at, matches_output):
+        channel = await self.channel(route)
+        try:
+            message = await channel.fetch_message(target_id)
+        except discord.NotFound:
+            return None
+        if (
+            message.id == target_id
+            and message.author.id == self.bot.user.id
+            and message.webhook_id is None
+            and message.channel.id == route.channel_id
+            and message.edited_at is not None
+            and message.created_at <= attempted_at <= message.edited_at
+            and message.created_at < message.edited_at
+            and matches_output(message)
+        ):
+            return message.id, message.edited_at
+        return None
+
+    @staticmethod
+    def _has_control(message, control):
+        return any(
+            isinstance(component, discord.Button) and component.custom_id == control
+            for row in message.components
+            for component in row.children
+        )
 
     async def find_opening_publication(self, route, kind, attempted_at):
         # These controls identify a unique new post. An edit has no provable
@@ -381,11 +444,7 @@ class DiscordTransport:
 
     async def _find_control_post(self, route, control, attempted_at, *, legacy_footer=None):
         def matches(message):
-            return any(
-                isinstance(component, discord.Button) and component.custom_id == control
-                for row in message.components
-                for component in row.children
-            ) or bool(
+            return self._has_control(message, control) or bool(
                 legacy_footer
                 and len(message.embeds) == 1
                 and message.embeds[0].footer.text == legacy_footer
@@ -774,6 +833,11 @@ class DiscordGame:
             await requested_summary.reply_private(
                 interaction, editing, content=self.copy.text("reboot.retired_status")
             )
+            return
+        terminal = TERMINAL_CONTROL.fullmatch((interaction.data or {}).get("custom_id", ""))
+        if terminal:
+            ranked = requested_summary.RESULTS_CONTROL.fullmatch(f"nrr:{terminal[1]}:n:0:0")
+            await self.ranked_results(interaction, ranked)
             return
         publication = PUBLICATION_CONTROL.fullmatch((interaction.data or {}).get("custom_id", ""))
         if publication:

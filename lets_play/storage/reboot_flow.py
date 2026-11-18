@@ -6,6 +6,7 @@ human approval. Network work belongs to the adapter.
 """
 
 from lets_play.new_rules.contracts import EventKind
+from lets_play.storage.discord_store import DiscordStore
 from lets_play.storage.evolution_flow import REVIVAL_SECONDS
 from lets_play.storage.game_codec import IncompatibleState
 from lets_play.storage.game_store import _execute, _row
@@ -104,6 +105,31 @@ class RebootFlow:
             (session, RECOVERY_VERSION),
         )
 
+    async def choice_edit_probe(self, session):
+        self.unit._check()
+        return await _row(
+            self.conn,
+            """SELECT r.recovery_id,o.output_id,o.kind,d.attempted_at_utc,t.target_message_id
+               FROM nr_recoveries r JOIN nr_sessions s USING(session_id)
+               JOIN nr_recovery_work w USING(session_id,recovery_id)
+               JOIN nr_offers f ON f.session_id=s.session_id AND f.offer_id=s.offer_id
+               JOIN nr_ordinary_outputs o ON o.session_id=f.session_id AND o.offer_id=f.offer_id
+                   AND o.output_id=w.output_id
+               JOIN nr_discord_deliveries d ON d.session_id=o.session_id AND d.output_id=o.output_id
+               JOIN nr_discord_publication_targets t USING(family,output_id)
+               WHERE s.session_id=? AND r.stage='paused' AND r.version=? AND r.original_stage='active'
+               AND r.original_lifecycle='playing' AND r.original_pause IS NULL
+               AND s.lifecycle='paused' AND s.pause_reason='recovery' AND s.phase='ordinary'
+               AND s.revision=r.owner_revision AND s.round_id=r.original_round
+               AND s.advancement='choosing' AND s.transition_id IS NULL AND f.stage='prepared'
+               AND w.family='ordinary' AND w.status='unknown' AND w.kind='offer'
+               AND o.kind='offer' AND o.message_id IS NULL
+               AND o.acknowledged_at_utc IS NULL AND o.retired_at_utc IS NULL
+               AND d.family='ordinary' AND d.state='sending' AND d.message_id IS NULL
+               AND d.ack_sequence=0 AND t.target_message_id IS NOT NULL LIMIT 1""",
+            (session, RECOVERY_VERSION),
+        )
+
     async def held_probe(self, session):
         self.unit._check()
         return await _row(
@@ -188,6 +214,8 @@ class RebootFlow:
             "evolution": self.held_probe,
         }[family]
         probe = await probe_for(session)
+        if family == "ordinary" and (probe is None or probe["output_id"] != output_id):
+            probe = await self.choice_edit_probe(session)
         published = utc_int(published_at)
         flow = RecoveryFlow(self.unit)
         if (
@@ -196,6 +224,11 @@ class RebootFlow:
             or probe["output_id"] != output_id
             or not probe["attempted_at_utc"] <= published <= utc_int(frame.received_at)
             or (probe["kind"] == "activation" and published >= probe["cutover_utc"])
+            or (
+                family == "ordinary"
+                and probe["kind"] == "offer"
+                and message_id != probe["target_message_id"]
+            )
         ):
             return await flow.observe(frame, recovery, allow_resume=False)
         result = await flow.reconcile(
@@ -265,6 +298,39 @@ class RebootFlow:
             await RoundReports(self.unit).acknowledge(
                 report, message_id=message_id, now=published_at, reconciled=True
             )
+        return "found"
+
+    @_write
+    async def reconcile_terminal(self, frame, output, message_id, published_at):
+        session = frame.route.session_id
+        store = DiscordStore(self.unit)
+        claim = await store.publication_target(session, output)
+        flow = RecoveryFlow(self.unit)
+        if not await flow._order(frame, EventKind.RECOVERY_RECONCILE):
+            return "replay"
+        row = await _row(
+            self.conn, "SELECT stage FROM nr_admissions WHERE session_id=?", (session,)
+        )
+        published = utc_int(published_at)
+        if (
+            not output.terminal
+            or row["stage"] != "ended"
+            or claim is None
+            or await store.pending(session) != output
+            or not claim["attempted_at_utc"] <= published <= utc_int(frame.received_at)
+            or type(message_id) is not int
+            or not 0 < message_id < 2**63
+            or (claim["target_message_id"] is not None and message_id != claim["target_message_id"])
+            or (output.kind == "closed_silent" and claim["target_message_id"] is None)
+        ):
+            return "unproven"
+        table = "nr_opening_outputs" if output.family == "opening" else "nr_evolution_outputs"
+        await _execute(
+            self.conn,
+            f"UPDATE {table} SET message_id=?,acknowledged_at_utc=? WHERE session_id=? AND output_id=?",
+            (message_id, published, session, output.output_id),
+        )
+        await store.delivered(output, message_id, frame.sequence)
         return "found"
 
     async def candidate(self, session):

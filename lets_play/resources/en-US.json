@@ -261,6 +261,7 @@
     "reboot.lobby_link": "[Return to the lobby]({url}). The original join deadline is {deadline}.",
     "reboot.opening_link": "[Return to your opening cards]({url}). The original choice deadline is {deadline}. If it passes during the pause, I’ll finish the choice when setup continues.",
     "reboot.revival_link": "[Return to the Continue check]({url}). The original deadline is {deadline}.",
+    "buttons.final_results": "View final results",
     "buttons.game_status": "Game status",
     "reboot.recovery_footer": "Thanks for your patience!"
   },

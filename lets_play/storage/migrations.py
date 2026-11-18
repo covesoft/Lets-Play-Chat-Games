@@ -633,4 +633,18 @@ MIGRATIONS += (
         ),
     ),
 )
+MIGRATIONS += (
+    Migration(
+        version=14,
+        name="discord_publication_targets",
+        statements=(
+            """CREATE TABLE nr_discord_publication_targets (
+                family TEXT NOT NULL,output_id INTEGER NOT NULL,
+                target_message_id INTEGER CHECK(target_message_id>0),
+                PRIMARY KEY(family,output_id),
+                FOREIGN KEY(family,output_id) REFERENCES nr_discord_deliveries(family,output_id) ON DELETE CASCADE
+            ) STRICT""",
+        ),
+    ),
+)
 SCHEMA_VERSION = MIGRATIONS[-1].version

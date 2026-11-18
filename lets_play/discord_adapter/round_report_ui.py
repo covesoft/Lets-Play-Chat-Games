@@ -27,7 +27,9 @@ def render(session, round_number, page, copy):
         )
     if not players:
         embed.add_field(
-            name=copy.text("summary.empty_heading"), value=copy.text("summary.empty_round"), inline=False
+            name=copy.text("summary.empty_heading"),
+            value=copy.text("summary.empty_round"),
+            inline=False,
         )
     view = discord.ui.View(timeout=None)
     if previous and players:

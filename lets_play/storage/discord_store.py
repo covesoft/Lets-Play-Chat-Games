@@ -63,6 +63,14 @@ class PendingOutput:
     attempt: int = 1
 
     @property
+    def terminal(self):
+        return (self.family, self.kind) in {("opening", "closed"), ("evolution", "closed_silent")}
+
+    @property
+    def choice_edit(self):
+        return (self.family, self.kind) == ("ordinary", "offer")
+
+    @property
     def ui_kind(self):
         return self.kind if self.family == "opening" else f"{self.family}_{self.kind}"
 
@@ -341,13 +349,61 @@ class DiscordStore:
         self.unit._check(write=True)
         if await self.pending(session) != output:
             return False
-        return bool(
+        claimed = await _execute(
+            self.conn,
+            "INSERT INTO nr_discord_deliveries(session_id,family,output_id,state,attempted_at_utc) VALUES (?,?,?,'sending',?) ON CONFLICT DO NOTHING",
+            (session, output.family, output.output_id, utc_int(now)),
+        )
+        if claimed and (output.choice_edit or output.terminal):
+            state = await self.state(session)
+            target = (
+                state.panel_id
+                if (output.choice_edit or output.kind == "closed_silent" or state.context is None)
+                else None
+            )
             await _execute(
                 self.conn,
-                "INSERT INTO nr_discord_deliveries(session_id,family,output_id,state,attempted_at_utc) VALUES (?,?,?,'sending',?) ON CONFLICT DO NOTHING",
-                (session, output.family, output.output_id, utc_int(now)),
+                "INSERT INTO nr_discord_publication_targets VALUES (?,?,?)",
+                (output.family, output.output_id, target),
             )
+        return bool(claimed)
+
+    async def publication_target(self, session, output):
+        return await _row(
+            self.conn,
+            """SELECT d.attempted_at_utc,t.target_message_id FROM nr_discord_deliveries d
+               JOIN nr_discord_publication_targets t USING(family,output_id)
+               WHERE d.session_id=? AND d.family=? AND d.output_id=?
+               AND d.state='sending' AND d.message_id IS NULL AND d.ack_sequence=0""",
+            (session, output.family, output.output_id),
         )
+
+    async def terminal_routes(self, *, after_session="", limit=100):
+        self.unit._check()
+        async with self.conn.execute(
+            """SELECT a.guild_id,a.channel_id,a.session_id FROM nr_admissions a
+               WHERE a.stage='ended' AND a.session_id>? AND (
+                   EXISTS (SELECT 1 FROM nr_opening_outputs o WHERE o.session_id=a.session_id
+                       AND o.kind='closed' AND o.acknowledged_at_utc IS NULL AND o.retired_at_utc IS NULL)
+                   OR EXISTS (SELECT 1 FROM nr_evolution_outputs o WHERE o.session_id=a.session_id
+                       AND o.kind='closed_silent' AND o.acknowledged_at_utc IS NULL AND o.retired_at_utc IS NULL)
+               ) ORDER BY a.session_id LIMIT ?""",
+            (after_session, limit),
+        ) as cursor:
+            return tuple(SessionRoute(*row) for row in await cursor.fetchall())
+
+    async def uncertain_choice_target(self, session):
+        row = await _row(
+            self.conn,
+            """SELECT t.target_message_id FROM nr_discord_deliveries d
+               JOIN nr_discord_publication_targets t USING(family,output_id)
+               JOIN nr_ordinary_outputs o ON o.session_id=d.session_id AND o.output_id=d.output_id
+               WHERE d.session_id=? AND d.family='ordinary' AND d.state='sending'
+               AND o.kind='offer' AND o.acknowledged_at_utc IS NULL AND o.retired_at_utc IS NULL
+               AND t.target_message_id IS NOT NULL LIMIT 1""",
+            (session,),
+        )
+        return row[0] if row else None
 
     async def delivered(self, output, message_id, sequence):
         self.unit._check(write=True)
@@ -384,7 +440,9 @@ class DiscordStore:
             return ()
         # Never depend on global page position for one session's work.
         async with self.conn.execute(
-            "SELECT intent_id,source_id FROM nr_marker_intents WHERE session_id=? ORDER BY intent_id LIMIT 32",
+            """SELECT m.intent_id,m.source_id FROM nr_marker_intents m
+               JOIN nr_admissions a USING(session_id)
+               WHERE m.session_id=? AND a.stage<>'ended' ORDER BY m.intent_id LIMIT 32""",
             (session,),
         ) as cursor:
             return tuple(tuple(r) for r in await cursor.fetchall())

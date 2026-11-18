@@ -8,7 +8,7 @@ contains operational and API documentation only.
 
 ## Current implementation
 
-Application v0.3.21 uses schema 13. M1 is accepted and closed at v0.2.9/schema 8;
+Application v0.3.22 uses schema 14. M1 is accepted and closed at v0.2.9/schema 8;
 M2 is in progress. Preserve the existing domain/storage APIs. This is a
 development-only ordinary-round preview, not a public-release build.
 
@@ -93,7 +93,7 @@ is not a new numerical test result or M2 sign-off.
 Every code-patch handoff includes copy-paste Windows repository-root commands:
 `git apply --check`, `git apply`, editable reinstall when needed, checks and
 startup. Back up/verify a stopped existing database before an actual schema
-upgrade. Never rewrite released migrations 1–13. An unchanged schema needs no
+upgrade. Never rewrite released migrations. An unchanged schema needs no
 migration or command sync; documentation-only patches need no reinstall/restart.
 
 ## Engine, persistence and delivery invariants
@@ -250,8 +250,14 @@ Public score posts use the current-scores button for proof, with no footer.
 Recovery notices use a read-only Game status button and editable footer copy.
 Score reconciliation keeps the original snapshot, cutover and traffic watermark.
 
-Next bite: add distinct proof for ordinary choice panel edits, then address
-final standings and silent terminal edits. Edit proof needs publication evidence
-beyond the target message’s creation time. Then cover the
-approved mode, richer details and human M2 exit. The owner's soft patch-size
-limit is 200 KB. No recovery may waive an unsafe or unsupported state.
+A schema-14 claim records the exact choice or closing edit target before HTTP.
+An edit must prove target, author, output identity and edit timestamp. Do not
+overwrite an uncertain choice panel with pause copy. Terminal output discovery
+runs separately from live routes. It can publish an unclaimed close, or verify
+a claimed close, without reopening a game or occupying capacity.
+
+Inconclusive evidence keeps the claim unresolved. A live route stays paused
+and can be explicitly ended by a manager. An ended route remains ended without
+replaying an uncertain result. Next work is a deliberate operator policy for
+inconclusive evidence, mode integration, and the remaining human M2 exit checks.
+The owner’s soft patch-size limit is 200 KB.

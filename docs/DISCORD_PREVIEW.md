@@ -1,4 +1,4 @@
-# New Rules ordinary-round preview — v0.3.21 / schema 13
+# New Rules ordinary-round preview — v0.3.22 / schema 14
 
 This development build connects the existing ordinary engine to Discord. Run one
 bot process against a database. Private/requested scores, automatic interims and
@@ -8,15 +8,13 @@ score details remain separate work; M2 is still in progress.
 
 ## Install and enable
 
-The current schema is **13**, with WAL and foreign keys enabled. Apply v0.3.21
-to v0.3.20 while stopped, reinstall, run offline checks and start. No migration,
-database initialization or command sync is needed for this increment. Released
-migrations 1–13 and existing scores/clocks/claims remain unchanged. For an older
-installation, make and verify a SQLite backup of the actual configured database
-before upgrading its schema. Failed migration steps roll back. To return from
-schema 13 to v0.3.13, restore a verified schema-12 backup with the matching source.
-Never downgrade the database file in place.
-See [RECOVERY.md](RECOVERY.md) and [STORAGE.md](STORAGE.md).
+The current schema is **14**, with WAL and foreign keys enabled. Stop the bot,
+back up and verify the configured schema-13 database, apply v0.3.22 to v0.3.21,
+reinstall, and run `python -m lets_play --init-db` before startup. Migration 14
+adds durable publication targets. No command sync is needed. To roll back,
+restore the schema-13 backup with the matching source. See
+[RECOVERY.md](RECOVERY.md) and [STORAGE.md](STORAGE.md).
+
 
 Keep token, owner IDs and actual emoji markup in the private `.env`:
 

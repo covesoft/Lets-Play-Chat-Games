@@ -1,7 +1,7 @@
 # Offline disruption recovery
 
 `RecoveryFlow(unit)` provides the existing engine barrier and offline recovery
-contracts. v0.3.21/schema 13 extends the bounded live automatic path through
+contracts. v0.3.22/schema 14 extends the bounded live automatic path through
 `RebootFlow(unit)` and the serial adapter publisher. Ordinary reboot needs no
 server-manager approval, Resume button or player message.
 
@@ -130,23 +130,35 @@ New recovery notices identify their generation through the read-only Game
 status button, so the visible footer can be customized. The lookup also accepts
 the exact reference on older notices that originally carried it in their footer.
 
-## Remaining integration and upgrading
+## Interrupted choice-panel edits and terminal delivery
 
-Modes, unpublished phases and unproven output claims remain fenced.
-Proof for other newly created messages and edits is separate work. No unknown send is inferred healthy, missing/late message proof is not
-never-sent evidence, and no chat history is backfilled for scoring. No new manager
-recovery gate or diagnostic UI is planned. Full mode/retention/erasure/live evidence
-remains open.
+The claim persists the exact message to edit before Discord receives the call.
+Startup fetches that exact message, requiring the correct bot, route, output
+reference and an edit timestamp at or after the claim. Discord creation time
+cannot start a choice deadline. A verified edit retains its original deadline
+and controls. During uncertainty the pause publisher leaves the target intact.
 
-Apply v0.3.21 to v0.3.20 while stopped, reinstall, run offline checks and start.
-Schema stays **13**; no database initialization, migration or command sync is
-needed. Released migrations 1–13 are unchanged. For an older installation,
-back up and verify the stopped configured database using SQLite's backup API
-before a schema upgrade; honor private `load_settings()` path overrides. The
-schema-12 to 13 migration appends only notice guards and rolls back on failure.
-Downgrading from schema 13 to v0.3.13 requires a verified schema-12 backup;
-never downgrade the database file in place.
-See [STORAGE.md](STORAGE.md) for backup policy.
+An ended game has a separate delivery path. Startup discovers unresolved
+final results without registering the old session as active. A queued output
+with no send claim can be published once. A claimed output is acknowledged
+only after verification of the exact edit target or the original bot-authored
+result post with the output-specific View final results control. Silent ending
+edits only the saved panel. If the panel is gone, the claim stays unresolved
+without a replacement post.
+
+## Inconclusive evidence and upgrades
+
+Missing, inaccessible, edited-over or ambiguous evidence leaves an output
+unresolved. Schema-13 claims with no durable edit target cannot gain one by
+guessing. A live game stays paused and a manager can end it explicitly. A
+terminal game stays ended. No recovery scores historical chat.
+
+Stop the bot and back up the configured database with SQLite’s backup API.
+Apply v0.3.22 to v0.3.21, reinstall, verify, and run
+`python -m lets_play --init-db` before startup. Schema **14** adds a separate
+table for edit targets and terminal send identity. Released migrations 1–13
+are unchanged. Roll back by restoring the verified schema-13 backup with its
+matching source. See [STORAGE.md](STORAGE.md) for the backup policy.
 
 ## Enter before timers
 
