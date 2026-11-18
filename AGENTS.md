@@ -8,7 +8,7 @@ contains operational and API documentation only.
 
 ## Current implementation
 
-Application v0.3.17 uses schema 13. M1 is accepted and closed at v0.2.9/schema 8;
+Application v0.3.18 uses schema 13. M1 is accepted and closed at v0.2.9/schema 8;
 M2 is in progress. Preserve the existing domain/storage APIs. This is a
 development-only ordinary-round preview, not a public-release build.
 
@@ -229,6 +229,12 @@ session controls, and require an unedited message with its original creation
 time. Commit proof, original clock and adapter ACK in the receipt lane. Empty,
 ambiguous and capped lookups preserve the unresolved claim. Never inspect or
 retain chat bodies in this path.
+
+New warning and revival posts carry a reference bound to their durable output.
+A startup lookup matches the original bot-authored post and current round/attempt.
+Record the proof, clock and ACK together. An overdue warning advances after read-in,
+and an expired revival closes via the normal silent edit. An older post without
+the exact reference cannot authorize recovery.
 
 Next bite: extend positive proof to other new-post families. Edits need
 publication evidence beyond the target message’s creation time. Then cover the

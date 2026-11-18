@@ -180,7 +180,7 @@ class OpeningRuntime:
             "summary_request": EventKind.TIMER,
             "summary_ack": EventKind.TIMER,
             "round_ack": EventKind.TIMER,
-            "recovery_reconcile_opening": EventKind.RECOVERY_RECONCILE,
+            "recovery_reconcile_publication": EventKind.RECOVERY_RECONCILE,
             "recovery_prepare": EventKind.RECOVERY_APPROVE,
             "recovery_claim": EventKind.RECOVERY_NOTICE_CLAIM,
             "recovery_ack": EventKind.RECOVERY_NOTICE_PUBLISHED,
@@ -211,9 +211,14 @@ class OpeningRuntime:
                     if not recovery
                     else await RebootFlow(unit).block(frame, recovery)
                 )
-            elif action == "recovery_reconcile_opening":
-                result = await RebootFlow(unit).reconcile_opening(
-                    frame, d["recovery_id"], d["output_id"], d["message_id"], d["published_at"]
+            elif action == "recovery_reconcile_publication":
+                result = await RebootFlow(unit).reconcile_publication(
+                    frame,
+                    d["recovery_id"],
+                    d["family"],
+                    d["output_id"],
+                    d["message_id"],
+                    d["published_at"],
                 )
             elif action == "recovery_prepare":
                 result = await RebootFlow(unit).prepare(
@@ -559,9 +564,17 @@ class OpeningRuntime:
                                 continue
                         await self._fault(route, "uncertain_delivery")
                         return
-                    state = await self.state(route.session_id)
                     async with self.network_slots, asyncio.timeout(20):
-                        message_id = await self.transport.publish(route, pending.ui_kind, state)
+                        async with self.store.transaction(write=False) as unit:
+                            store = DiscordStore(unit)
+                            if await store.pending(route.session_id) != pending:
+                                continue
+                            state = await store.state(route.session_id)
+                        identified = getattr(self.transport, "publish_identified", None)
+                        if pending.family == "pacing" and identified is not None:
+                            message_id = await identified(route, pending, state)
+                        else:
+                            message_id = await self.transport.publish(route, pending.ui_kind, state)
                     await asyncio.shield(
                         self.submit(route, "publish", output=pending, message_id=message_id)
                     )
@@ -615,20 +628,33 @@ class OpeningRuntime:
         if session in self.blocked_recoveries:
             return False
         probe = None
-        find = getattr(self.transport, "find_opening_publication", None)
+        find_opening = getattr(self.transport, "find_opening_publication", None)
+        find_pacing = getattr(self.transport, "find_pacing_publication", None)
+        family = "opening"
         async with self.store.transaction(write=False) as unit:
             reboot = RebootFlow(unit)
             candidate = await reboot.candidate(session)
-            if candidate is None and session in self.recovery_routes and find is not None:
-                probe = await reboot.opening_probe(session)
+            if candidate is None and session in self.recovery_routes:
+                if find_opening is not None:
+                    probe = await reboot.opening_probe(session)
+                if probe is None and find_pacing is not None:
+                    family = "pacing"
+                    probe = await reboot.pacing_probe(session)
         if probe is not None:
+            attempted_at = utc_datetime(probe["attempted_at_utc"])
             async with self.network_slots, asyncio.timeout(20):
-                proof = await find(route, probe["kind"], utc_datetime(probe["attempted_at_utc"]))
+                if family == "opening":
+                    proof = await find_opening(route, probe["kind"], attempted_at)
+                else:
+                    proof = await find_pacing(
+                        route, probe["kind"], probe["output_id"], attempted_at
+                    )
             if proof is not None:
                 result = await self.submit(
                     route,
-                    "recovery_reconcile_opening",
+                    "recovery_reconcile_publication",
                     recovery_id=probe["recovery_id"],
+                    family=family,
                     output_id=probe["output_id"],
                     message_id=proof[0],
                     published_at=proof[1],

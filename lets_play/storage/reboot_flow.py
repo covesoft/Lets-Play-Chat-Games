@@ -42,10 +42,41 @@ class RebootFlow:
             (session, RECOVERY_VERSION),
         )
 
+    async def pacing_probe(self, session):
+        self.unit._check()
+        return await _row(
+            self.conn,
+            """SELECT r.recovery_id,o.output_id,o.kind,d.attempted_at_utc
+               FROM nr_recoveries r JOIN nr_sessions s USING(session_id)
+               JOIN nr_recovery_work w USING(session_id,recovery_id)
+               JOIN nr_round_pacing p ON p.session_id=s.session_id AND p.round_id=s.round_id
+               JOIN nr_pacing_outputs o ON o.session_id=p.session_id AND o.round_id=p.round_id
+                   AND o.attempt=p.attempt AND o.output_id=w.output_id
+               JOIN nr_discord_deliveries d ON d.session_id=o.session_id AND d.output_id=o.output_id
+               WHERE s.session_id=? AND r.stage='paused' AND r.version=? AND r.original_stage='active'
+               AND s.lifecycle='paused' AND s.pause_reason='recovery' AND s.phase='ordinary'
+               AND s.revision=r.owner_revision AND s.round_id=r.original_round
+               AND w.family='pacing' AND w.status='unknown' AND w.kind=o.kind
+               AND d.family='pacing' AND d.state='sending' AND d.message_id IS NULL
+               AND d.ack_sequence=0 AND o.message_id IS NULL
+               AND o.acknowledged_at_utc IS NULL AND o.retired_at_utc IS NULL
+               AND s.offer_id IS NULL AND s.transition_id IS NULL
+               AND ((o.kind='warning' AND p.stage='warning_queued' AND s.advancement='warning'
+                     AND r.original_lifecycle='playing' AND r.original_pause IS NULL)
+                 OR (o.kind='revival' AND p.stage='revival' AND s.advancement='idle'
+                     AND r.original_lifecycle='paused' AND r.original_pause='revival'
+                     AND EXISTS (SELECT 1 FROM nr_revivals v WHERE v.session_id=p.session_id
+                         AND v.round_id=p.round_id AND v.attempt=p.attempt
+                         AND v.owner_revision=p.owner_revision AND v.stage='prepared'))) LIMIT 1""",
+            (session, RECOVERY_VERSION),
+        )
+
     @_write
-    async def reconcile_opening(self, frame, recovery, output_id, message_id, published_at):
+    async def reconcile_publication(
+        self, frame, recovery, family, output_id, message_id, published_at
+    ):
         session = frame.route.session_id
-        probe = await self.opening_probe(session)
+        probe = await {"opening": self.opening_probe, "pacing": self.pacing_probe}[family](session)
         flow = RecoveryFlow(self.unit)
         if (
             probe is None
@@ -55,17 +86,17 @@ class RebootFlow:
         ):
             return await flow.observe(frame, recovery, allow_resume=False)
         result = await flow.reconcile(
-            frame, recovery, "opening", output_id, message_id=message_id, published_at=published_at
+            frame, recovery, family, output_id, message_id=message_id, published_at=published_at
         )
         if result == "found":
             changed = await _execute(
                 self.conn,
                 """UPDATE nr_discord_deliveries SET state='delivered',message_id=?,ack_sequence=?
-                   WHERE session_id=? AND family='opening' AND output_id=? AND state='sending'""",
-                (message_id, frame.sequence, session, output_id),
+                   WHERE session_id=? AND family=? AND output_id=? AND state='sending'""",
+                (message_id, frame.sequence, session, family, output_id),
             )
             if not changed:
-                raise IncompatibleState("Opening proof lost its adapter claim.")
+                raise IncompatibleState("Publication proof lost its adapter claim.")
         return result
 
     async def candidate(self, session):

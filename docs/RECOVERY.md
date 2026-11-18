@@ -1,7 +1,7 @@
 # Offline disruption recovery
 
 `RecoveryFlow(unit)` provides the existing engine barrier and offline recovery
-contracts. v0.3.17/schema 13 extends the bounded live automatic path through
+contracts. v0.3.18/schema 13 extends the bounded live automatic path through
 `RebootFlow(unit)` and the serial adapter publisher. Ordinary reboot needs no
 server-manager approval, Resume button or player message.
 
@@ -79,6 +79,20 @@ original message creation time starts the original lobby or choice clock.
 An expired lobby closes immediately. An expired opening choice completes via
 normal timeout after read-in. Confirmed posts keep their original buttons.
 
+## Interrupted warning and revival posts
+
+New warning and revival posts include a reference tied to the exact session,
+output and kind. On startup the bot uses the same bounded original-post lookup
+and rechecks that the round and attempt still own the unresolved claim. It
+commits the original Discord publication time and adapter acknowledgement in
+one ordered receipt. A recovered warning retains its original 30-second cutoff
+and advances after read-in if already due. A recovered revival retains its
+original five-minute deadline and Continue button. If it already expired the
+round ends through the normal silent closure path.
+
+A post from before this version may lack the reference. Old, edited, ambiguous
+or capped results leave the claim unresolved.
+
 ## Remaining integration and upgrading
 
 Modes, unpublished phases and unproven output claims remain fenced.
@@ -87,7 +101,7 @@ never-sent evidence, and no chat history is backfilled for scoring. No new manag
 recovery gate or diagnostic UI is planned. Full mode/retention/erasure/live evidence
 remains open.
 
-Apply v0.3.17 to v0.3.16 while stopped, reinstall, run offline checks and start.
+Apply v0.3.18 to v0.3.17 while stopped, reinstall, run offline checks and start.
 Schema stays **13**; no database initialization, migration or command sync is
 needed. Released migrations 1–13 are unchanged. For an older installation,
 back up and verify the stopped configured database using SQLite's backup API

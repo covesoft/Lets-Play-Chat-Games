@@ -291,7 +291,14 @@ class DiscordTransport:
                 pass
         return facts
 
-    async def publish(self, route, kind, state):
+    async def publish_identified(self, route, output, state):
+        return await self.publish(route, output.ui_kind, state, publication_id=output.output_id)
+
+    @staticmethod
+    def _pacing_reference(route, kind, output_id):
+        return f"New Rules · {route.session_id}:pacing:{kind}:{output_id}"
+
+    async def publish(self, route, kind, state, *, publication_id=None):
         channel = await self.channel(route)
         embed, view = render(state, kind=kind, presentation=self.copy)
         # A lobby expiry edits its invitation instead of leaving active Play controls.
@@ -307,6 +314,10 @@ class DiscordTransport:
                 allowed_mentions=discord.AllowedMentions.none(),
             )
             return state.panel_id
+        if publication_id is not None and kind in {"pacing_warning", "pacing_revival"}:
+            embed.set_footer(
+                text=self._pacing_reference(route, kind.removeprefix("pacing_"), publication_id)
+            )
         message = await channel.send(
             embed=embed, view=view, allowed_mentions=discord.AllowedMentions.none()
         )
@@ -320,8 +331,29 @@ class DiscordTransport:
             "lobby": {prefix + "join"},
             "offer": {prefix + f"pick:{i}" for i in range(3)},
         }[kind]
+
+        def matches_controls(message):
+            controls = [
+                component.custom_id
+                for row in message.components
+                for component in row.children
+                if isinstance(component, discord.Button)
+            ]
+            return len(controls) == len(expected) and set(controls) == expected
+
+        return await self._find_original_post(route, attempted_at, matches_controls)
+
+    async def find_pacing_publication(self, route, kind, output_id, attempted_at):
+        reference = self._pacing_reference(route, kind, output_id)
+
+        def matches_reference(message):
+            return len(message.embeds) == 1 and message.embeds[0].footer.text == reference
+
+        return await self._find_original_post(route, attempted_at, matches_reference)
+
+    async def _find_original_post(self, route, attempted_at, matches_output):
         channel = await self.channel(route)
-        matches = []
+        match = None
         limit = 50
         count = 0
         async for message in channel.history(limit=limit, after=attempted_at, oldest_first=True):
@@ -332,19 +364,13 @@ class DiscordTransport:
                 or message.edited_at is not None
                 or message.created_at < attempted_at
                 or message.channel.id != route.channel_id
+                or not matches_output(message)
             ):
                 continue
-            controls = [
-                component.custom_id
-                for row in message.components
-                for component in row.children
-                if isinstance(component, discord.Button)
-            ]
-            if len(controls) == len(expected) and set(controls) == expected:
-                matches.append((message.id, message.created_at))
-                if len(matches) > 1:
-                    return None
-        return matches[0] if count < limit and len(matches) == 1 else None
+            if match is not None:
+                return None
+            match = message.id, message.created_at
+        return match if count < limit else None
 
     async def recovery_capabilities(self, route, panel_id):
         channel = await self.channel(route)
