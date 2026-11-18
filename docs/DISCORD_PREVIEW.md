@@ -1,21 +1,21 @@
-# New Rules ordinary-round preview — v0.3.14 / schema 13
+# New Rules ordinary-round preview — v0.3.15 / schema 13
 
 This development build connects the existing ordinary engine to Discord. Run one
 bot process against a database. Private/requested scores, automatic interims and
-compact round-end reports are wired. Modes, explicit evidence-based restart
-resume and richer score details remain separate work; M2 is still in progress.
+compact round-end reports and acknowledged ordinary-phase reboot recovery are
+wired. Modes, remaining recovery phases, uncertain-send reconciliation and richer
+score details remain separate work; M2 is still in progress.
 
 ## Install and enable
 
-The current schema is **13**, with WAL and foreign keys enabled. Apply both
-v0.3.14 patches in order to v0.3.13: retirement/copy/transport preparation, then
-automatic recovery. Stop the bot and make/verify a SQLite backup of its actual
-configured database before the schema-12 upgrade. Install, run offline checks,
-then `python -m lets_play --init-db` (schema 13) and start. No new command sync.
-Schema 13 appends only recovery-notice send/ACK guards and their index; released
-migrations 1–12 and existing game scores/clocks/claims remain unchanged. Failed
-migration steps roll back. To roll back an upgraded database, restore the verified
-schema-12 backup with v0.3.13 source. Never downgrade the schema-13 file in place.
+The current schema is **13**, with WAL and foreign keys enabled. Apply v0.3.15
+to v0.3.14 while stopped, reinstall, run offline checks and start. No migration,
+database initialization or command sync is needed for this increment. Released
+migrations 1–13 and existing scores/clocks/claims remain unchanged. For an older
+installation, make and verify a SQLite backup of the actual configured database
+before upgrading its schema. Failed migration steps roll back. To return from
+schema 13 to v0.3.13, restore a verified schema-12 backup with the matching source.
+Never downgrade the database file in place.
 See [RECOVERY.md](RECOVERY.md) and [STORAGE.md](STORAGE.md).
 
 Keep token, owner IDs and actual emoji markup in the private `.env`:
@@ -90,11 +90,19 @@ badge map, voice library or additional intent is needed.
    game resumes automatically. Check preserved scores/rules/round and verify that
    read-in posts received no points. The known notice becomes the current panel.
    An overdue round can proceed to its saved pacing boundary after read-in.
-9. The manager debug pane is retired. Old diagnostic controls reply privately.
-   Interrupted warnings/choices, held/revival/opening/modes and uncertain sends
-   remain paused in this first automatic path, with a brief host-contact notice.
-   Manager ending remains available. Deleted/missing ACK evidence does not allow
-   a blind resend. Actual marker/client/channel behavior still needs human checks.
+9. Also reboot during a published warning, a published choice, a partial
+   replacement-target choice, and an already-announced rule transition. Each
+   receives the same automatic read-in. Confirm original deadlines and selections
+   survive. The notice links to the saved cards; their original buttons work after
+   resume, while the notice has no duplicate card buttons. If the deadline passes
+   during the pause, timeout completes the choice automatically after read-in.
+   Announced transitions show the incoming rules during read-in, take effect at
+   resume once, and retain their saved round clock.
+10. The manager debug pane is retired. Old diagnostic controls reply privately.
+    Held/revival/opening/modes, unpublished phases and uncertain sends
+    remain paused, with a brief host-contact notice.
+    Manager ending remains available. Deleted/missing ACK evidence does not allow
+    a blind resend. Actual marker/client/channel behavior still needs human checks.
 
 Later pool: NR004, NR006, NR007, NR008, NR010, NR011, NR013, NR016, NR017,
 NR019, NR022, NR024, NR025, NR027, NR033 and NR034. NR036 is not offered because
@@ -133,8 +141,9 @@ highest first, with unrated players last and ID breaking exact ties. They retain
 clickable non-pinging identities and no score footer on preplay closures.
 Private live scores, requested public reports, automatic interims and actual
 round-end boards are wired. Richer fault/rule/streak and badge presentation,
-Drawing Conclusions, settings, owner grants, profile commands, evidence-based
-restart resume and final-output retry/24-hour cleanup workers remain unfinished.
+Drawing Conclusions, settings, owner grants, profile commands, remaining recovery
+phases/uncertain-send reconciliation and final-output retry/24-hour cleanup workers
+remain unfinished.
 Failed terminal delivery retains durable results evidence. This is a development
 preview, not a public-play release or M2 completion.
 
@@ -182,10 +191,9 @@ See [ROUND_REPORTS.md](ROUND_REPORTS.md) for delivery guards and timing tests.
 
 ## Continuity and next bite
 
-Automatic settled-round reboot recovery is implemented; M2 remains in progress.
-Next extend it to acknowledged ordinary warnings and choices, keeping original
-publication deadlines and partial selections. Cover genuinely uncertain sends
-only after each outbound family's proof/guard contract is implemented. Held,
-revival/opening continuation and Drawing Conclusions follow. Keep recovery
-unattended; technical reconciliation is host/service work. Do not reintroduce a
+Automatic acknowledged ordinary-phase reboot recovery is implemented; M2 remains
+in progress. Next cover held/revival/opening continuation, preserving clocks and
+terminal expiry. Cover genuinely uncertain sends only after each outbound family's
+proof/guard contract is implemented. Drawing Conclusions follows recovery. Keep
+recovery unattended; technical reconciliation is host/service work. Do not reintroduce a
 manager resume gate or expand retired debug UI. See [RECOVERY.md](RECOVERY.md).

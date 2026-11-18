@@ -196,7 +196,7 @@ async def test_100_players_round_scores_include_selection_posts_and_rank_all_pag
         assert all_players == expected
         assert dict(all_players)[1001].ordinary_posts == 6
         embed, view = round_report_ui.render(route.session_id, 1, first, default_presentation())
-        assert embed.description == "Round 1 is over, here's how you did:"
+        assert embed.description == "The results for Round 1 are in, here's how you did:"
         assert embed.footer.text is None and len(embed.fields) == 20
         assert all(f.name.startswith("Scoring ") and f.value.startswith("<@") for f in embed.fields)
         assert all(len(b.custom_id) <= 100 for b in view.children)

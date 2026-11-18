@@ -1,28 +1,37 @@
 # Offline disruption recovery
 
 `RecoveryFlow(unit)` provides the existing engine barrier and offline recovery
-contracts. v0.3.14/schema 13 adds a bounded live automatic path through
+contracts. v0.3.15/schema 13 extends the bounded live automatic path through
 `RebootFlow(unit)` and the serial adapter publisher. Ordinary reboot needs no
 server-manager approval, Resume button or player message.
 
-## Automatic settled-round path
+## Automatic ordinary-phase path
 
 1. Startup drains admitted work and enters every saved route's barrier before
    allowing publishers/timers. Work finishing during initialization cannot
    recreate normal timers or senders.
-2. A candidate has an active ordinary/idle round, waiting pacing, unchanged
-   recovery ownership, no partial choice/transition or prior independent pause,
-   and no unresolved output. Independent scoped existence checks cover all four
-   engine-output families, adapter delivery claims, summary receipts, round-report
+2. A candidate has an active ordinary round, unchanged recovery ownership, no
+   prior independent pause and no unresolved output. Known phases are idle/waiting,
+   an ACKed warning, published cards (including partial replacement targets), or
+   an ACKed announced activation. Phase-specific proof joins the scoped engine
+   output to its adapter receipt: same message, real publication time and positive
+   ordered ACK. Warning/activation clocks must match that proof. A refreshed offer
+   may inherit an earlier choice clock. Independent scoped existence checks cover
+   all four engine-output families, adapter delivery claims, summary receipts, round-report
    receipts and older recovery-notice attempts. A complete engine list alone is
    insufficient. Prepared summaries with no send attempt can wait for resume.
 3. Outside database write units, verify essential channel permissions and really
    add/remove the configured marker on the existing known panel. No separate
-   start-game probe is posted. Missing panel/access or marker failure stays paused.
+   start-game probe is posted. A saved published choice also requires its original
+   card panel to remain accessible, before notice and again before resume.
+   Missing panel/access or marker failure stays paused.
 4. Ordered internal approval uses the original RecoveryFlow contracts. Claim the
    recovery notice durably before its HTTP send. Publish one friendly resumption
-   notice with the preserved rules and a 30-second read-in. Actual successful
-   publication/ACK owns the persisted boundary. No scores or public summary
+   notice with the preserved rules and a 30-second read-in. For an already-announced
+   activation it shows the saved incoming rules, labeled to take effect on resume;
+   no early activation or round closure occurs. Published choices include a link
+   back to their original cards and the unchanged absolute deadline. Actual
+   successful publication/ACK owns the persisted boundary. No scores or public summary
    baselines change. The known notice becomes the phase panel in ACK order.
 5. During read-in, /rules shows a concise countdown and the preserved rules.
    Ingress is guarded without scoring; even a post after the scheduled boundary
@@ -30,7 +39,12 @@ server-manager approval, Resume button or player message.
    access is checked, and an ordered internal receipt performs continuation.
    Historical-source guards, original round clocks/rules/scores and due-boundary
    ordering remain the engine's responsibility. Overdue pacing runs after resume.
-   The notice is then refreshed as the current phase panel.
+   Published card buttons stay on the original ACK-bound message, including any
+   partial outgoing-target selection. Refresh restores that panel and edits the
+   notice into a link, without duplicate card buttons or a new choice minute.
+   An expired choice runs the normal timeout workflow after read-in; an already
+   announced overdue activation commits once with its original effective clock.
+   In other phases the notice is refreshed as the current phase panel.
 
 Schema 13 appends `notice_attempted_at_utc`, `notice_ack_sequence` and an index to
 `nr_recoveries`. Claims survive lost ACKs, timeout, cancellation and another
@@ -48,22 +62,22 @@ manager ending. Do not automatically retry a failed/uncertain notice in this bui
 
 ## Remaining integration and upgrading
 
-This increment does not continue interrupted warnings, choices/activations, held
-play, revival, preplay or modes automatically. Their engine contracts already
-exist where documented below; wiring their publication proofs and continuation
+This increment does not continue held play, revival, preplay or modes automatically.
+Prepared/unpublished warnings, choices or activations also remain fenced. Their
+engine contracts already exist where documented below; wiring their publication proofs and continuation
 is next. No unknown send is inferred healthy, missing/late message proof is not
 never-sent evidence, and no chat history is backfilled for scoring. No new manager
 recovery gate or diagnostic UI is planned. Full mode/retention/erasure/live evidence
 remains open.
 
-Apply the two v0.3.14 patches in order while the bot is stopped: cleanup/preparation,
-then automatic recovery. The second requires **schema 13**. Back up and verify the
-stopped schema-12 database with SQLite's backup API before applying/upgrading;
-use the database path selected by `load_settings()` so private .env overrides are
-honored. Reinstall, run offline checks, then `python -m lets_play --init-db` and
-start. No command sync is needed. Released migrations 1–12 are unchanged; failure
-in any schema-13 statement rolls back completely. Rollback requires the verified
-schema-12 backup and matching v0.3.13 source; do not downgrade a schema-13 file.
+Apply v0.3.15 to v0.3.14 while stopped, reinstall, run offline checks and start.
+Schema stays **13**; no database initialization, migration or command sync is
+needed. Released migrations 1–13 are unchanged. For an older installation,
+back up and verify the stopped configured database using SQLite's backup API
+before a schema upgrade; honor private `load_settings()` path overrides. The
+schema-12 to 13 migration appends only notice guards and rolls back on failure.
+Downgrading from schema 13 to v0.3.13 requires a verified schema-12 backup;
+never downgrade the database file in place.
 See [STORAGE.md](STORAGE.md) for backup policy.
 
 ## Enter before timers

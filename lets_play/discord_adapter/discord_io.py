@@ -8,7 +8,12 @@ from discord import app_commands
 
 from lets_play.discord_adapter import requested_summary, round_report_ui
 from lets_play.discord_adapter.lane import LaneUnavailable
-from lets_play.discord_adapter.ordinary_ui import render_ordinary
+from lets_play.discord_adapter.ordinary_ui import (
+    choice_detail,
+    render_ordinary,
+    resumption_rules,
+    rule_text,
+)
 from lets_play.new_rules.contracts import (
     AttachmentSnapshot,
     EmojiIdentity,
@@ -292,8 +297,20 @@ class DiscordTransport:
         embed, view = render(state, kind="rules", presentation=self.copy)
         embed.title = self.copy.text("reboot.notice_title")
         embed.description = self.copy.text(
-            "reboot.notice_description", seconds=RECOVERY_READ_IN_SECONDS
+            "reboot.activation_description"
+            if state.offer and state.offer.stage == "selected" and state.offer_display_ready
+            else "reboot.notice_description",
+            seconds=RECOVERY_READ_IN_SECONDS,
         )
+        embed.clear_fields()
+        for instance in resumption_rules(state):
+            embed.add_field(
+                name=self.copy.text(f"cards.{instance.card_id}.name"),
+                value=rule_text(self.copy, instance),
+                inline=False,
+            )
+        if state.offer and state.offer.stage == "published" and state.offer_panel_id:
+            embed.description += "\n\n" + choice_detail(state, self.copy)
         embed.colour = self.copy.color("reboot")
         message = await channel.send(
             embed=embed, view=view, allowed_mentions=discord.AllowedMentions.none()
@@ -336,6 +353,7 @@ class DiscordTransport:
             return
         signature = (
             state.panel_id,
+            state.recovery_notice_id,
             state.admission.stage,
             state.recovery_id,
             state.context.position if state.context else None,
@@ -347,6 +365,18 @@ class DiscordTransport:
         channel = await self.channel(route)
         embed, view = render(state, presentation=self.copy)
         await channel.get_partial_message(state.panel_id).edit(embed=embed, view=view)
+        if (
+            state.recovery_notice_id
+            and state.recovery_notice_id != state.panel_id
+            and state.offer
+            and state.offer.stage == "published"
+            and not state.recovery_id
+        ):
+            notice, notice_view = render(state, kind="rules", presentation=self.copy)
+            notice.description = choice_detail(state, self.copy, resumed=True)
+            await channel.get_partial_message(state.recovery_notice_id).edit(
+                embed=notice, view=notice_view, allowed_mentions=discord.AllowedMentions.none()
+            )
         self.refreshed[route.session_id] = signature
 
     async def paused(self, route, state):

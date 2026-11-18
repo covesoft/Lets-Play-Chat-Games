@@ -1,7 +1,8 @@
-"""Automatic recovery of settled ordinary rounds through the existing engine.
+"""Automatic recovery of acknowledged ordinary phases through the existing engine.
 
-This first live path deliberately refuses interrupted offers, modes and unknown
-sends. A clean reboot needs no human approval. Network work belongs to the adapter.
+Known warnings, choices and announced transitions keep their original clocks.
+Unpublished work, modes and unknown sends stay fenced. A clean reboot needs no
+human approval. Network work belongs to the adapter.
 """
 
 from lets_play.new_rules.contracts import EventKind
@@ -9,6 +10,7 @@ from lets_play.storage.game_codec import IncompatibleState
 from lets_play.storage.game_store import _execute, _row
 from lets_play.storage.game_store import _unit_mutating as _write
 from lets_play.storage.offer_codec import utc_int
+from lets_play.storage.ordinary_flow import OrdinaryFlow
 from lets_play.storage.recovery_flow import RECOVERY_VERSION, RecoveryFlow, active_recovery
 
 
@@ -30,21 +32,13 @@ class RebootFlow:
             or row["original_lifecycle"] != "playing"
             or row["original_pause"] is not None
             or p.phase != "ordinary"
-            or p.advancement != "idle"
-            or p.offer_id
-            or p.transition_id
             or p.lifecycle != "paused"
             or p.pause_reason != "recovery"
             or p.round_id != row["original_round"]
             or p.revision != row["owner_revision"]
         ):
             return None
-        pacing = await _row(
-            self.conn,
-            "SELECT stage FROM nr_round_pacing WHERE session_id=? AND round_id=?",
-            (session, p.round_id),
-        )
-        if pacing is None or pacing[0] != "waiting":
+        if not await self._known_phase(session, p):
             return None
         # Existence checks are scoped independently of every visible work page.
         # A delivered engine record never clears an unrelated adapter claim.
@@ -105,6 +99,92 @@ class RebootFlow:
         ):
             return None
         return row
+
+    async def _publication(self, session, family, condition, args):
+        table = {"ordinary": "nr_ordinary_outputs", "pacing": "nr_pacing_outputs"}[family]
+        return await _row(
+            self.conn,
+            f"SELECT o.message_id,o.acknowledged_at_utc FROM {table} o "
+            "JOIN nr_discord_deliveries d ON d.session_id=o.session_id "
+            "AND d.output_id=o.output_id AND d.family=? WHERE o.session_id=? "
+            f"AND {condition} AND o.message_id IS NOT NULL AND o.acknowledged_at_utc IS NOT NULL "
+            "AND o.retired_at_utc IS NULL AND d.state='delivered' "
+            "AND d.message_id=o.message_id AND d.ack_sequence>0 LIMIT 1",
+            (family, session, *args),
+        )
+
+    async def _known_phase(self, session, position):
+        pacing = await _row(
+            self.conn,
+            "SELECT stage,attempt,warning_published_at_utc,selection_due_at_utc "
+            "FROM nr_round_pacing WHERE session_id=? AND round_id=?",
+            (session, position.round_id),
+        )
+        if pacing is None:
+            return False
+        if position.advancement == "idle":
+            return (
+                not position.offer_id
+                and not position.transition_id
+                and pacing["stage"] == "waiting"
+            )
+        if position.advancement == "warning":
+            proof = await self._publication(
+                session,
+                "pacing",
+                "o.round_id=? AND o.attempt=? AND o.kind='warning'",
+                (position.round_id, pacing["attempt"]),
+            )
+            return bool(
+                not position.offer_id
+                and not position.transition_id
+                and pacing["stage"] == "warning_published"
+                and proof
+                and pacing["warning_published_at_utc"] == proof["acknowledged_at_utc"]
+                and pacing["selection_due_at_utc"] is not None
+                and pacing["selection_due_at_utc"] > pacing["warning_published_at_utc"]
+            )
+        if (
+            position.advancement != "choosing"
+            or not position.offer_id
+            or pacing["stage"] != "selected"
+        ):
+            return False
+        offer = await OrdinaryFlow(self.unit).get_offer(session, position.offer_id)
+        if (
+            offer is None
+            or offer.stage not in ("published", "selected")
+            or offer.published_at is None
+        ):
+            return False
+        proof = await self._publication(
+            session, "ordinary", "o.offer_id=? AND o.kind='offer'", (position.offer_id,)
+        )
+        if proof is None or proof["acknowledged_at_utc"] < utc_int(offer.published_at):
+            return False
+        options = {o.incoming.instance_id: o for o in offer.hand.options}
+        if offer.selected_incoming is not None and offer.selected_incoming not in options:
+            return False
+        if offer.stage == "published":
+            return not position.transition_id and offer.selected_outgoing is None
+        activation = await _row(
+            self.conn,
+            "SELECT stage,announced_at_utc,effective_at_utc FROM nr_activations "
+            "WHERE session_id=? AND offer_id=?",
+            (session, position.offer_id),
+        )
+        proof = await self._publication(
+            session, "ordinary", "o.offer_id=? AND o.kind='activation'", (position.offer_id,)
+        )
+        return bool(
+            position.transition_id == position.offer_id + ":activation"
+            and offer.selected_incoming in options
+            and activation
+            and activation["stage"] == "announced"
+            and proof
+            and activation["announced_at_utc"] == proof["acknowledged_at_utc"]
+            and activation["announced_at_utc"] < activation["effective_at_utc"]
+        )
 
     @_write
     async def prepare(self, frame, recovery, *, capabilities, templates):

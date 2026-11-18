@@ -564,6 +564,14 @@ class OpeningRuntime:
         finally:
             self.publishers.pop(route.session_id, None)
 
+    async def _recovery_capabilities(self, route, state):
+        facts = await self.transport.recovery_capabilities(route, state.panel_id)
+        if state.offer_panel_id and state.offer_panel_id != state.panel_id:
+            control_facts = await self.transport.recovery_capabilities(route, state.offer_panel_id)
+            if not control_facts.available:
+                return control_facts
+        return facts
+
     async def _publish_recovery(self, route):
         session = route.session_id
         if session in self.blocked_recoveries:
@@ -580,7 +588,7 @@ class OpeningRuntime:
                 return False
             state = await self.state(session)
             async with self.network_slots, asyncio.timeout(20):
-                facts = await self.transport.recovery_capabilities(route, state.panel_id)
+                facts = await self._recovery_capabilities(route, state)
             result = await self.submit(
                 route, "recovery_resume", recovery_id=recovery, capabilities=facts
             )
@@ -593,7 +601,7 @@ class OpeningRuntime:
         if candidate["stage"] == "paused":
             state = await self.state(session)
             async with self.network_slots, asyncio.timeout(20):
-                facts = await self.transport.recovery_capabilities(route, state.panel_id)
+                facts = await self._recovery_capabilities(route, state)
             if (
                 await self.submit(
                     route, "recovery_prepare", recovery_id=recovery, capabilities=facts

@@ -36,6 +36,8 @@ class DisplayState:
     previous_scores: bool = False
     offer_display_ready: bool = True
     recovery_resume_at: datetime | None = None
+    offer_panel_id: int | None = None
+    recovery_notice_id: int | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -101,6 +103,16 @@ class DiscordStore:
             if context and context.position.offer_id
             else None
         )
+        offer_panel_id = (
+            await OrdinaryFlow(self.unit).known_message_id(session, offer.hand.offer_id, "offer")
+            if offer and offer.stage == "published"
+            else None
+        )
+        recovery_notice_id = notice[0] if notice and panel and panel[0] == notice[0] else None
+        if offer_panel_id and not recovery and context.position.lifecycle == "playing":
+            # A resumption notice is not a second publication of these cards.
+            # Restore the original ACK-bound panel and its still-running clock.
+            panel = (offer_panel_id,)
         pacing = await RoundPacing(self.unit).record(session) if context else None
         revival = await EvolutionFlow(self.unit).revival(session) if context else None
         round_row = (
@@ -181,6 +193,8 @@ class DiscordStore:
             utc_datetime(recovery["resume_at_utc"])
             if recovery and recovery["stage"] == "reading" and recovery["resume_at_utc"] is not None
             else None,
+            offer_panel_id,
+            recovery_notice_id,
         )
 
     async def _ranked_scores(self, session, anchor, backwards, *, round_id=None, limit=10):

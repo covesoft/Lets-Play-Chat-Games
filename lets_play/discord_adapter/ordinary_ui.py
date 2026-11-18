@@ -9,6 +9,36 @@ def rule_text(copy, instance):
     return copy.text(f"cards.{instance.card_id}.description")
 
 
+def resumption_rules(state):
+    """Display an already-announced incoming set without activating or scoring it."""
+    offer = state.offer
+    if offer and offer.stage == "selected" and state.offer_display_ready:
+        option = next(
+            o for o in offer.hand.options if o.incoming.instance_id == offer.selected_incoming
+        )
+        return next(
+            c.instances for c in option.completions if c.outgoing_id == offer.selected_outgoing
+        )
+    return state.context.active_instances
+
+
+def choice_location(state):
+    route = state.context.position.route
+    return (
+        f"https://discord.com/channels/{route.guild_id}/{route.channel_id}/{state.offer_panel_id}"
+    )
+
+
+def choice_detail(state, copy, *, resumed=False):
+    return copy.text(
+        "reboot.choice_resumed" if resumed else "reboot.choice_detail",
+        url=choice_location(state),
+        deadline=copy.text(
+            "ordinary.deadline", timestamp=int(state.offer.choice_deadline.expires_at.timestamp())
+        ),
+    )
+
+
 def render_ordinary(state, copy, button, *, kind=None):
     p = state.context.position
     session = p.route.session_id
@@ -32,7 +62,10 @@ def render_ordinary(state, copy, button, *, kind=None):
             embed.title = copy.text("reboot.notice_title")
             embed.colour = copy.color("reboot")
             embed.description = copy.text(
-                "reboot.reading_description", timestamp=int(state.recovery_resume_at.timestamp())
+                "reboot.activation_reading_description"
+                if offer and offer.stage == "selected" and state.offer_display_ready
+                else "reboot.reading_description",
+                timestamp=int(state.recovery_resume_at.timestamp()),
             )
         else:
             embed.description = (
@@ -40,7 +73,16 @@ def render_ordinary(state, copy, button, *, kind=None):
                 if state.recovery_id
                 else copy.text("paused.description")
             )
-        rules(state.context.active_instances)
+        if (
+            state.recovery_resume_at
+            and offer
+            and offer.stage == "published"
+            and state.offer_panel_id
+        ):
+            embed.description += "\n\n" + choice_detail(state, copy)
+        rules(
+            resumption_rules(state) if state.recovery_resume_at else state.context.active_instances
+        )
     elif p.lifecycle == "paused" and p.pause_reason == "revival":
         embed.title = copy.text("revival.title")
         embed.colour = copy.color("revival")
