@@ -181,6 +181,7 @@ class OpeningRuntime:
             "summary_ack": EventKind.TIMER,
             "round_ack": EventKind.TIMER,
             "recovery_reconcile_publication": EventKind.RECOVERY_RECONCILE,
+            "recovery_reconcile_notice": EventKind.RECOVERY_RECONCILE,
             "recovery_prepare": EventKind.RECOVERY_APPROVE,
             "recovery_claim": EventKind.RECOVERY_NOTICE_CLAIM,
             "recovery_ack": EventKind.RECOVERY_NOTICE_PUBLISHED,
@@ -219,6 +220,10 @@ class OpeningRuntime:
                     d["output_id"],
                     d["message_id"],
                     d["published_at"],
+                )
+            elif action == "recovery_reconcile_notice":
+                result = await RebootFlow(unit).reconcile_superseded_notice(
+                    frame, d["recovery_id"], d["superseded"], d["message_id"], d["published_at"]
                 )
             elif action == "recovery_prepare":
                 result = await RebootFlow(unit).prepare(
@@ -572,7 +577,7 @@ class OpeningRuntime:
                             state = await store.state(route.session_id)
                         identified = getattr(self.transport, "publish_identified", None)
                         if identified is not None and (
-                            pending.family == "pacing" or pending.kind == "activation"
+                            pending.family == "pacing" or pending.kind in {"activation", "held"}
                         ):
                             message_id = await identified(route, pending, state)
                         else:
@@ -629,10 +634,12 @@ class OpeningRuntime:
         session = route.session_id
         if session in self.blocked_recoveries:
             return False
-        probe = None
+        probe = notice = None
         find_opening = getattr(self.transport, "find_opening_publication", None)
         find_pacing = getattr(self.transport, "find_pacing_publication", None)
         find_activation = getattr(self.transport, "find_activation_publication", None)
+        find_held = getattr(self.transport, "find_held_publication", None)
+        find_notice = getattr(self.transport, "find_recovery_publication", None)
         family = "opening"
         async with self.store.transaction(write=False) as unit:
             reboot = RebootFlow(unit)
@@ -652,11 +659,36 @@ class OpeningRuntime:
                 if probe is None and find_activation is not None:
                     family = "ordinary"
                     probe = await reboot.ordinary_activation_probe(session)
+                if probe is None and find_held is not None:
+                    family = "evolution"
+                    probe = await reboot.held_probe(session)
+                if probe is None and find_notice is not None:
+                    notice = await reboot.superseded_notice_probe(session)
+                    if notice is not None:
+                        current = await active_recovery(unit, session)
+        if notice is not None:
+            async with self.network_slots, asyncio.timeout(20):
+                proof = await find_notice(
+                    route, notice["recovery_id"], utc_datetime(notice["notice_attempted_at_utc"])
+                )
+            if proof is not None:
+                result = await self.submit(
+                    route,
+                    "recovery_reconcile_notice",
+                    recovery_id=current["recovery_id"],
+                    superseded=notice["recovery_id"],
+                    message_id=proof[0],
+                    published_at=proof[1],
+                )
+                if result == "found":
+                    return True
         if probe is not None:
             attempted_at = utc_datetime(probe["attempted_at_utc"])
             async with self.network_slots, asyncio.timeout(20):
                 if probe["kind"] == "activation":
                     proof = await find_activation(route, family, probe["output_id"], attempted_at)
+                elif family == "evolution":
+                    proof = await find_held(route, probe["output_id"], attempted_at)
                 elif family == "opening":
                     proof = await find_opening(route, probe["kind"], attempted_at)
                 else:

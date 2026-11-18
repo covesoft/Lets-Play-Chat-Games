@@ -102,6 +102,78 @@ class RebootFlow:
             (session, RECOVERY_VERSION),
         )
 
+    async def held_probe(self, session):
+        self.unit._check()
+        return await _row(
+            self.conn,
+            """SELECT r.recovery_id,o.output_id,o.kind,d.attempted_at_utc
+               FROM nr_recoveries r JOIN nr_sessions s USING(session_id)
+               JOIN nr_recovery_work w USING(session_id,recovery_id)
+               JOIN nr_evolution e ON e.session_id=s.session_id AND e.round_id=s.round_id
+               JOIN nr_evolution_outputs o ON o.session_id=e.session_id AND o.token=e.held_token
+                   AND o.output_id=w.output_id
+               JOIN nr_discord_deliveries d ON d.session_id=o.session_id AND d.output_id=o.output_id
+               WHERE s.session_id=? AND r.stage='paused' AND r.version=? AND r.original_stage='active'
+               AND r.original_lifecycle='playing' AND r.original_pause IS NULL
+               AND s.lifecycle='paused' AND s.pause_reason='recovery' AND s.phase='ordinary'
+               AND s.revision=r.owner_revision AND s.round_id=r.original_round
+               AND s.advancement='held' AND s.offer_id IS NULL AND s.transition_id IS NULL
+               AND e.phase='held' AND e.idle_anchor_at_utc IS NOT NULL
+               AND w.family='evolution' AND w.status='unknown' AND w.kind='held'
+               AND o.kind='held' AND o.message_id IS NULL
+               AND o.acknowledged_at_utc IS NULL AND o.retired_at_utc IS NULL
+               AND d.family='evolution' AND d.state='sending' AND d.message_id IS NULL
+               AND d.ack_sequence=0 LIMIT 1""",
+            (session, RECOVERY_VERSION),
+        )
+
+    async def superseded_notice_probe(self, session):
+        self.unit._check()
+        current = await active_recovery(self.unit, session)
+        if (
+            current is None
+            or current["stage"] != "paused"
+            or current["version"] != RECOVERY_VERSION
+        ):
+            return None
+        return await _row(
+            self.conn,
+            """SELECT * FROM nr_recoveries WHERE session_id=? AND stage='superseded' AND version=?
+               AND notice_attempted_at_utc IS NOT NULL AND notice_message_id IS NULL
+               AND notice_published_at_utc IS NULL AND notice_ack_sequence=0
+               AND notice_prepared_at_utc<=notice_attempted_at_utc
+               ORDER BY notice_attempted_at_utc,recovery_id LIMIT 1""",
+            (session, RECOVERY_VERSION),
+        )
+
+    @_write
+    async def reconcile_superseded_notice(
+        self, frame, current, superseded, message_id, published_at
+    ):
+        session = frame.route.session_id
+        proof_target = await self.superseded_notice_probe(session)
+        result = await RecoveryFlow(self.unit).observe(frame, current, allow_resume=False)
+        if result != "paused":
+            return result
+        published = utc_int(published_at)
+        if (
+            proof_target is None
+            or proof_target["recovery_id"] != superseded
+            or type(message_id) is not int
+            or not 0 < message_id < 2**63
+            or not proof_target["notice_attempted_at_utc"]
+            <= published
+            <= utc_int(frame.received_at)
+        ):
+            return "unproven"
+        await _execute(
+            self.conn,
+            """UPDATE nr_recoveries SET notice_message_id=?,notice_published_at_utc=?,notice_ack_sequence=?
+               WHERE session_id=? AND recovery_id=? AND stage='superseded'""",
+            (message_id, published, frame.sequence, session, superseded),
+        )
+        return "found"
+
     @_write
     async def reconcile_publication(
         self, frame, recovery, family, output_id, message_id, published_at
@@ -111,6 +183,7 @@ class RebootFlow:
             "opening": self.opening_probe,
             "pacing": self.pacing_probe,
             "ordinary": self.ordinary_activation_probe,
+            "evolution": self.held_probe,
         }[family]
         probe = await probe_for(session)
         published = utc_int(published_at)

@@ -8,7 +8,7 @@ contains operational and API documentation only.
 
 ## Current implementation
 
-Application v0.3.19 uses schema 13. M1 is accepted and closed at v0.2.9/schema 8;
+Application v0.3.20 uses schema 13. M1 is accepted and closed at v0.2.9/schema 8;
 M2 is in progress. Preserve the existing domain/storage APIs. This is a
 development-only ordinary-round preview, not a public-release build.
 
@@ -241,7 +241,13 @@ lookup and an exact publication reference. Require the saved selection and
 pending activation to match. Accept actual creation only strictly before the
 original cutover. Equal, late and unverified times keep the claim unresolved.
 
-Next bite: extend positive proof to other new-post families. Edits need
+Held notices and recovery announcements carry exact publication references.
+A verified held post leaves the idle clock in place. Proof of a superseded
+recovery notice clears that generation’s uncertain send. The current generation
+still requires its own access verification, announcement, and read-in.
+
+Next bite: extend positive proof to public score posts while keeping the existing
+footer-free presentation. Edits need
 publication evidence beyond the target message’s creation time. Then cover the
 approved mode, richer details and human M2 exit. The owner's soft patch-size
 limit is 200 KB. No recovery may waive an unsafe or unsupported state.

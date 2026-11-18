@@ -319,6 +319,7 @@ class DiscordTransport:
             "pacing_revival": ("pacing", "revival"),
             "activation": ("opening", "activation"),
             "ordinary_activation": ("ordinary", "activation"),
+            "evolution_held": ("evolution", "held"),
         }.get(kind)
         if publication_id is not None and reference_kind is not None:
             embed.set_footer(
@@ -355,6 +356,14 @@ class DiscordTransport:
     async def find_activation_publication(self, route, family, output_id, attempted_at):
         return await self._find_referenced_post(
             route, family, "activation", output_id, attempted_at
+        )
+
+    async def find_held_publication(self, route, output_id, attempted_at):
+        return await self._find_referenced_post(route, "evolution", "held", output_id, attempted_at)
+
+    async def find_recovery_publication(self, route, recovery_id, attempted_at):
+        return await self._find_referenced_post(
+            route, "recovery", "notice", recovery_id, attempted_at
         )
 
     async def _find_referenced_post(self, route, family, kind, output_id, attempted_at):
@@ -429,6 +438,10 @@ class DiscordTransport:
         elif state.phase_control_id:
             embed.description += "\n\n" + phase_recovery_link(state, route, self.copy)
         embed.colour = self.copy.color("reboot")
+        embed.set_footer(
+            #text=self._publication_reference(route, "recovery", "notice", state.recovery_id)
+            text=self.copy.text("reboot.recovery_footer")
+        )
         message = await channel.send(
             embed=embed, view=view, allowed_mentions=discord.AllowedMentions.none()
         )

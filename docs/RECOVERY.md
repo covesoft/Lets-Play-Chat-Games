@@ -1,7 +1,7 @@
 # Offline disruption recovery
 
 `RecoveryFlow(unit)` provides the existing engine barrier and offline recovery
-contracts. v0.3.19/schema 13 extends the bounded live automatic path through
+contracts. v0.3.20/schema 13 extends the bounded live automatic path through
 `RebootFlow(unit)` and the serial adapter publisher. Ordinary reboot needs no
 server-manager approval, Resume button or player message.
 
@@ -104,6 +104,18 @@ unresolved. With timely proof, no replacement announcement is sent. The
 existing read-in completes before the original activation is applied once at
 its saved effective time.
 
+## Interrupted held and recovery notices
+
+A new held notice can be verified from its original reference. The ordered
+receipt checks the live round, held token, recovery generation and durable
+claim. The existing idle deadline still controls when revival is due.
+
+A lost acknowledgement on a recovery notice can be reconciled after a later
+startup supersedes that generation. The lookup matches the old generation’s
+reference. Recording that proof clears only its old claim. Before the game
+can resume, the current generation still checks access, publishes its own
+announcement and observes its own read-in.
+
 ## Remaining integration and upgrading
 
 Modes, unpublished phases and unproven output claims remain fenced.
@@ -112,7 +124,7 @@ never-sent evidence, and no chat history is backfilled for scoring. No new manag
 recovery gate or diagnostic UI is planned. Full mode/retention/erasure/live evidence
 remains open.
 
-Apply v0.3.19 to v0.3.18 while stopped, reinstall, run offline checks and start.
+Apply v0.3.20 to v0.3.19 while stopped, reinstall, run offline checks and start.
 Schema stays **13**; no database initialization, migration or command sync is
 needed. Released migrations 1–13 are unchanged. For an older installation,
 back up and verify the stopped configured database using SQLite's backup API
