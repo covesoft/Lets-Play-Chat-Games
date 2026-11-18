@@ -133,6 +133,7 @@
     "summary.order": "Players ordered by ID. Actual compliance and adjusted scores are shown separately.",
     "summary.empty_heading": "Scores",
     "summary.empty": "No participation recorded for this scope yet.",
+    "summary.empty_round": "No participation recorded for this round.",
     "summary.unavailable": "These scores are unavailable or this control has expired.",
     "summary.round_closed": "This round is complete. These are its recorded totals.",
     "results.unavailable": "Those final results are unavailable or this control has expired.",
