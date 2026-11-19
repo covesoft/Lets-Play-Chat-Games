@@ -8,7 +8,7 @@ contains operational and API documentation only.
 
 ## Current implementation
 
-Application v0.3.23 uses schema 15. M1 is accepted and closed at v0.2.9/schema 8;
+Application v0.3.24 uses schema 16. M1 is accepted and closed at v0.2.9/schema 8;
 M2 is in progress. Preserve the existing domain/storage APIs. This is a
 development-only Discord preview, not a public-release build.
 
@@ -141,6 +141,9 @@ migration or command sync; documentation-only patches need no reinstall/restart.
   Revival pauses scoring, needs three distinct explicit returners and retains
   the open round, scores and original publication-owned clock. Quorum itself
   neither closes the round nor grants another game credit.
+- Restoring ordinary rules from a Breaking Moment queues one lime-green notice
+  in the same transaction. Claim it before HTTP. A known unclaimed notice may
+  publish once after recovery. An uncertain claim needs exact new-post proof.
 - Credit/live flag/global increment/Familiar Face commit together. Resolve real
   closures in creation order before final Very Careful evaluation and purge.
   finalize_ended neither authorizes nor ends a game. Missing evidence/version
@@ -154,8 +157,12 @@ migration or command sync; documentation-only patches need no reinstall/restart.
   ordered ACK and flow acknowledgement together. Preserve older namespaced
   claims. Read bounded pending work per session, never filter a global first page.
   Unknown/missing ACK, cancellation or timeout never permits blind resend.
-- Later ordinary offers edit the known phase panel (normally the warning).
-  Successful edit ACK binds that same message and owns the choice clock. Refresh
+- A public warning shows a relative Discord timestamp without active-rule fields.
+  The first ordinary offer edits the known phase panel unless eight distinct
+  channel messages follow that warning. Count Gateway posts from humans, bots,
+  and webhooks using only the eight highest message IDs for the warning attempt.
+  That threshold claims a new post and leaves the warning as history. Its actual
+  acknowledgement owns the choice clock. Refresh
   cannot reveal prepared offers/selected activations before publication ACK.
   Partial target changes still edit in place. Missing/uncertain edits require
   recovery, without replacement sends. Opening choice/new-rule disclosure retain
@@ -187,7 +194,9 @@ and /rules, not choice/target menus. Preplay /rules exposes no copied mutations.
 Requested public reports require BOTH 30 seconds since actual prior success AND
 new non-whisper human traffic. Pending requests coalesce; blocked requests do not
 consume traffic/time. Check current scores and legacy nrf controls open live
-private scores. After ACK discard copied scores/rules and older completed summary
+private scores. Whole-game posts capture the displayed game page and show its
+game totals. Posting refreshes that same scope/page privately. After ACK discard
+copied scores/rules and older completed summary
 receipts; retain the latest receipt plus unresolved sends. Compact delivered
 legacy archives on startup. Request IDs provide a bounded replay watermark, not
 a growing request cache or historical score browser.

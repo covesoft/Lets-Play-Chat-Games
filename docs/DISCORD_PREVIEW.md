@@ -1,4 +1,4 @@
-# New Rules Discord preview — v0.3.23 / schema 15
+# New Rules Discord preview — v0.3.24 / schema 16
 
 This development build connects the existing ordinary engine to Discord. Run one
 bot process against a database. Private/requested scores, automatic interims and
@@ -9,13 +9,12 @@ release work are still open.
 
 ## Install and enable
 
-The current schema is **15**, with WAL and foreign keys enabled. Stop the bot,
-back up and verify the configured schema-14 database, apply v0.3.23 to v0.3.22,
-reinstall, and run `python -m lets_play --init-db` before startup. Migration 15
-adds Breaking Moment records and preserves existing badges while enabling
-Pictoglyphs. No command sync is needed. To roll back, restore the schema-14
-backup with the matching source. See
-[RECOVERY.md](RECOVERY.md) and [STORAGE.md](STORAGE.md).
+The current schema is **16**, with WAL and foreign keys enabled. Stop the bot,
+back up and verify the configured schema-15 database, apply v0.3.24 to v0.3.23,
+reinstall, and run `python -m lets_play --init-db` before startup. Migration 16
+adds warning traffic metadata, public summary scope, and Breaking Moment end
+notices. No command sync is needed. To roll back, restore the schema-15 backup
+with matching source. See [RECOVERY.md](RECOVERY.md) and [STORAGE.md](STORAGE.md).
 
 
 Keep token, owner IDs and actual emoji markup in the private `.env`:
@@ -57,12 +56,14 @@ badge map, voice library or additional intent is needed.
    activation. The frozen post target can trigger it thereafter; fallback is at
    14:30. Only actual warning publication starts its full 30 seconds. A delayed
    send must not shorten that notice. Picker eligibility uses the saved cutoff
-   snapshot, with at least five ordinary posts; the exactly-at-cutoff body is
-   scored afterward in the old round.
-4. The warning is edited into the selected picker's complete three-card hand;
-   no duplicate choice message is sent. Those original-panel buttons remain
-   authoritative. The successful edit ACK starts its publication-owned 60-second
-   choice deadline. Missing/uncertain edits enter recovery without a fallback send.
+   snapshot, with at least five ordinary posts. The exactly-at-cutoff body is
+   scored afterward in the old round. The public warning shows the countdown
+   without rule fields. `/rules` still displays the game status and current rules.
+4. With fewer than eight observed channel messages after the warning, the warning
+   is edited into the complete hand. With eight or more, including whispers and
+   bot posts, the chooser gets one new message and the warning stays in chat.
+   The acknowledged panel's buttons remain authoritative and actual delivery
+   starts the 60-second choice deadline. An uncertain edit or send enters recovery.
    Later hands use sixteen already implemented non-phrase templates. Choices can
    add a rule or replace one legal existing occupant. When several outgoing rules are legal, choosing the incoming
    card reveals the outgoing buttons. The original deadline does not restart;
@@ -118,10 +119,10 @@ compatibility witnesses; an incomplete hand is never published.
     shows only Drawing Conclusions during the bout. Try three distinct emoji-only
     posts and then an emoji mixed with text. Expect one marker on the mixed post.
     A whisper or reaction should add no compliance observation. After two minutes
-    the same round should show its previous rules, and its next hand should be
-    ordinary-only. In a separate bout, restart after the third valid post and
-    check that the recovery notice names the interruption and ordinary rules
-    return after read-in. Check that the saved scores include those posts.
+    a lime-green notice marks the return of the previous rules in the same
+    round. Its next hand is ordinary-only. In a separate bout, restart after the
+    third valid post and check the recovery countdown, the green notice when
+    play resumes, and the saved scores.
 
 ## Delivery and ordering
 

@@ -1,4 +1,4 @@
-# Requested summaries — v0.3.9 / schema 12
+# Requested summaries
 
 During play, Summary is available on the rules disclosure panel and inside
 `/rules`. Choice and replacement-target menus show only their choice controls.
@@ -43,9 +43,11 @@ gate, which excludes whispers and mode posts; see [ROUND_REPORTS.md](ROUND_REPOR
 SDK dispatch captures a public request before HTTP defer, in the existing
 bounded ordered lane. Due engine boundaries run first, then one consistent
 round/session/rule/traffic/score capture is committed. An ended game cannot
-prepare a report. The public report shows five ID-ordered round scores, active
-rule names and aggregate round/game traffic, with mentions suppressed and no
-footer. **Check current scores** opens the normal live private menu, giving
+prepare a report. A round report shows five ID-ordered round scores, active
+rule names and aggregate round/game traffic. Posting from Whole game captures
+the selected five-player page and game totals. Its private acknowledgement
+keeps that scope and page open. Public mentions are suppressed and both embeds
+are footer-free. **Check current scores** opens the normal live private menu, giving
 access to all current players and both scopes. Older `nrf` saved-score controls
 also redirect to current scores; no historical browsing service remains.
 

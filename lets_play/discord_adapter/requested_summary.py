@@ -5,12 +5,13 @@ import re
 import discord
 
 from lets_play.presentation import PresentationError
+from lets_play.storage.summary_store import SUMMARY_PAGE_SIZE
 
 CONTROL = re.compile(r"nrs:([a-f0-9]{32}):(round|game):([0-9]{1,19}):([0-9]{1,19}):(n|p)\Z")
 RESULTS_CONTROL = re.compile(r"nrr:([a-f0-9]{32}):(n|p):([0-9]{1,19}):([0-9]{1,7})\Z")
-POST_CONTROL = re.compile(r"nrp:([a-f0-9]{32})\Z")
+POST_CONTROL = re.compile(r"nrp:([a-f0-9]{32})(?::game:([0-9]{1,19}):(n|p))?\Z")
 SAVED_CONTROL = re.compile(r"nrf:([a-f0-9]{32}):([0-9]{1,19}):(round|game):([0-9]{1,19}):(n|p)\Z")
-PAGE_SIZE = 5
+PAGE_SIZE = SUMMARY_PAGE_SIZE
 
 
 def add_button(view, copy, session, *, label="buttons.summary"):
@@ -25,13 +26,11 @@ def render(page, copy, *, snapshot=None, public=False, publication_control=None)
         if page.as_of
         else copy.text("summary.as_of_unknown")
     )
-    embed.description = copy.text(
-        "summary.description",
-        round=page.round_number,
-        messages=page.human_messages,
-        whispers=page.whispers,
-        as_of=as_of,
-        status=copy.text(
+    description = {
+        "messages": page.human_messages,
+        "whispers": page.whispers,
+        "as_of": as_of,
+        "status": copy.text(
             "summary.captured"
             if snapshot
             else "summary.ended"
@@ -42,11 +41,15 @@ def render(page, copy, *, snapshot=None, public=False, publication_control=None)
             if page.lifecycle == "paused"
             else "summary.live"
         ),
-    )
+    }
+    if page.scope == "game":
+        embed.description = copy.text("summary.game_description", **description)
+    else:
+        embed.description = copy.text("summary.description", round=page.round_number, **description)
     if automatic:
         embed.title = copy.text("reports.mid_title")
         embed.description = copy.text("reports.mid_description", round=page.round_number)
-    if snapshot:
+    if snapshot and page.scope == "round":
         if not automatic:
             embed.add_field(
                 name=copy.text("summary.capture_heading"),
@@ -138,10 +141,12 @@ def render(page, copy, *, snapshot=None, public=False, publication_control=None)
         if page.following and page.players:
             button("buttons.results_next", page.scope, page.round_number, page.players[-1][0])
         if page.lifecycle == "playing":
+            control = f"nrp:{page.session_id}"
+            if page.scope == "game":
+                direction = "p" if page.backwards else "n"
+                control += f":game:{page.anchor}:{direction}"
             view.add_item(
-                discord.ui.Button(
-                    label=copy.text("buttons.summary_post"), custom_id=f"nrp:{page.session_id}"
-                )
+                discord.ui.Button(label=copy.text("buttons.summary_post"), custom_id=control)
             )
     if (
         len(embed) > 6000

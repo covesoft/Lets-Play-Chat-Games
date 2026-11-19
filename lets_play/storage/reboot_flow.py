@@ -107,7 +107,7 @@ class RebootFlow:
             (session, RECOVERY_VERSION),
         )
 
-    async def choice_edit_probe(self, session):
+    async def choice_probe(self, session):
         self.unit._check()
         return await _row(
             self.conn,
@@ -128,7 +128,7 @@ class RebootFlow:
                AND o.kind='offer' AND o.message_id IS NULL
                AND o.acknowledged_at_utc IS NULL AND o.retired_at_utc IS NULL
                AND d.family='ordinary' AND d.state='sending' AND d.message_id IS NULL
-               AND d.ack_sequence=0 AND t.target_message_id IS NOT NULL LIMIT 1""",
+               AND d.ack_sequence=0 LIMIT 1""",
             (session, RECOVERY_VERSION),
         )
 
@@ -154,6 +154,24 @@ class RebootFlow:
                AND o.acknowledged_at_utc IS NULL AND o.retired_at_utc IS NULL
                AND d.family='evolution' AND d.state='sending' AND d.message_id IS NULL
                AND d.ack_sequence=0 LIMIT 1""",
+            (session, RECOVERY_VERSION),
+        )
+
+    async def mode_end_probe(self, session):
+        self.unit._check()
+        return await _row(
+            self.conn,
+            """SELECT r.recovery_id,o.output_id,o.kind,d.attempted_at_utc
+               FROM nr_recoveries r JOIN nr_recovery_work w USING(session_id,recovery_id)
+               JOIN nr_evolution_outputs o ON o.session_id=w.session_id AND o.output_id=w.output_id
+               JOIN nr_breaking_moments b ON b.session_id=o.session_id AND b.round_id=o.token
+               JOIN nr_discord_deliveries d ON d.session_id=o.session_id AND d.output_id=o.output_id
+               WHERE r.session_id=? AND r.stage='paused' AND r.version=?
+               AND w.family='evolution' AND w.kind='mode_ended' AND w.status='unknown'
+               AND o.kind='mode_ended' AND b.outcome IN ('completed','interrupted')
+               AND o.acknowledged_at_utc IS NULL AND o.retired_at_utc IS NULL
+               AND d.family='evolution' AND d.state='sending' AND d.message_id IS NULL
+               AND d.ack_sequence=0 ORDER BY o.output_id LIMIT 1""",
             (session, RECOVERY_VERSION),
         )
 
@@ -217,7 +235,9 @@ class RebootFlow:
         }[family]
         probe = await probe_for(session)
         if family == "ordinary" and (probe is None or probe["output_id"] != output_id):
-            probe = await self.choice_edit_probe(session)
+            probe = await self.choice_probe(session)
+        elif family == "evolution" and (probe is None or probe["output_id"] != output_id):
+            probe = await self.mode_end_probe(session)
         published = utc_int(published_at)
         flow = RecoveryFlow(self.unit)
         if (
@@ -229,6 +249,7 @@ class RebootFlow:
             or (
                 family == "ordinary"
                 and probe["kind"] == "offer"
+                and probe["target_message_id"] is not None
                 and message_id != probe["target_message_id"]
             )
         ):
@@ -375,10 +396,16 @@ class RebootFlow:
             "nr_pacing_outputs",
             "nr_evolution_outputs",
         ):
+            extra = ""
+            if table == "nr_evolution_outputs":
+                extra = """AND (o.kind<>'mode_ended' OR EXISTS(
+                    SELECT 1 FROM nr_discord_deliveries d
+                    WHERE d.family='evolution' AND d.output_id=o.output_id
+                ))"""
             if await _row(
                 self.conn,
-                f"SELECT 1 FROM {table} WHERE session_id=? "
-                "AND acknowledged_at_utc IS NULL AND retired_at_utc IS NULL LIMIT 1",
+                f"SELECT 1 FROM {table} o WHERE session_id=? "
+                f"AND acknowledged_at_utc IS NULL AND retired_at_utc IS NULL {extra} LIMIT 1",
                 (session,),
             ):
                 return None

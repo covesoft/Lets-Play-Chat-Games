@@ -1,5 +1,6 @@
 """Durable ordinary warning and succession over the shared ordered receipt lane."""
 
+import json
 from dataclasses import dataclass, replace
 from datetime import datetime, timedelta
 from fractions import Fraction
@@ -19,6 +20,8 @@ from lets_play.storage.game_codec import IncompatibleState, decode_score
 from lets_play.storage.game_store import _execute, _row
 from lets_play.storage.game_store import _unit_mutating as _write
 from lets_play.storage.offer_codec import utc_datetime, utc_int
+
+BUSY_WARNING_MESSAGES = 8
 
 
 @dataclass(frozen=True, slots=True)
@@ -142,6 +145,53 @@ class RoundPacing:
             (session_id, session_id, limit),
         ) as cursor:
             return tuple(PacingOutput(*r) for r in await cursor.fetchall())
+
+    async def observe_channel_message(self, session, source):
+        """Keep only the eight highest distinct message IDs in this warning attempt."""
+        if not source.isascii() or not source.isdecimal() or len(source) > 19:
+            return
+        message_id = int(source)
+        if not 0 < message_id < 2**63:
+            return
+        row = await _row(
+            self.conn,
+            """SELECT p.round_id,p.attempt,a.message_ids_json FROM nr_round_pacing p
+               JOIN nr_sessions s ON s.session_id=p.session_id AND s.round_id=p.round_id
+               LEFT JOIN nr_offers o ON o.session_id=s.session_id AND o.offer_id=s.offer_id
+               LEFT JOIN nr_warning_activity a ON a.session_id=p.session_id AND a.round_id=p.round_id AND a.attempt=p.attempt
+               WHERE p.session_id=? AND s.lifecycle IN ('playing','paused')
+               AND (p.stage IN ('warning_queued','warning_published') OR
+                    (p.stage='selected' AND (o.stage IS NULL OR
+                     (o.stage='prepared' AND o.published_at_utc IS NULL))))""",
+            (session,),
+        )
+        if row is None:
+            return
+        previous = json.loads(row["message_ids_json"] or "[]")
+        latest = sorted({*previous, message_id})[-BUSY_WARNING_MESSAGES:]
+        if latest != previous:
+            await _execute(
+                self.conn,
+                """INSERT INTO nr_warning_activity VALUES (?,?,?,?)
+                ON CONFLICT(session_id) DO UPDATE SET round_id=excluded.round_id,
+                attempt=excluded.attempt,message_ids_json=excluded.message_ids_json""",
+                (session, row["round_id"], row["attempt"], json.dumps(latest)),
+            )
+
+    async def busy_warning(self, session, round_id):
+        row = await _row(
+            self.conn,
+            """SELECT a.message_ids_json,o.message_id FROM nr_round_pacing p
+               JOIN nr_pacing_outputs o USING(session_id,round_id,attempt)
+               JOIN nr_warning_activity a USING(session_id,round_id,attempt)
+               WHERE p.session_id=? AND p.round_id=? AND o.kind='warning'
+               AND o.message_id IS NOT NULL AND o.acknowledged_at_utc IS NOT NULL""",
+            (session, round_id),
+        )
+        # Message IDs older than the actual public warning do not count even
+        # if received while Discord's send acknowledgement was still in flight.
+        ids = json.loads(row[0]) if row else ()
+        return len(ids) == BUSY_WARNING_MESSAGES and ids[0] > row[1]
 
     async def known_warning_message_id(
         self, session_id: str, round_id: str, *, attempt=1

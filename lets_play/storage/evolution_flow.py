@@ -222,12 +222,15 @@ class EvolutionFlow:
         )
         return await pacing._record(p.route.session_id, p.round_id)
 
-    async def _retire(self, frame, table):
+    async def _retire(self, frame, table, *, ending=False):
         if table not in {"nr_pacing_outputs", "nr_ordinary_outputs", "nr_evolution_outputs"}:
             raise ValueError("Unknown output table.")
+        keep_mode_notice = (
+            " AND kind<>'mode_ended'" if table == "nr_evolution_outputs" and not ending else ""
+        )
         await _execute(
             self.conn,
-            f"UPDATE {table} SET retired_at_utc=? WHERE session_id=? AND acknowledged_at_utc IS NULL AND retired_at_utc IS NULL",
+            f"UPDATE {table} SET retired_at_utc=? WHERE session_id=? AND acknowledged_at_utc IS NULL AND retired_at_utc IS NULL{keep_mode_notice}",
             (utc_int(frame.received_at), frame.route.session_id),
         )
 
@@ -653,7 +656,7 @@ class EvolutionFlow:
             if row["phase"] != "ended":
                 await self._retire(frame, "nr_pacing_outputs")
                 await self._retire(frame, "nr_ordinary_outputs")
-                await self._retire(frame, "nr_evolution_outputs")
+                await self._retire(frame, "nr_evolution_outputs", ending=True)
                 await _execute(
                     self.conn,
                     "UPDATE nr_revivals SET stage='cancelled' WHERE session_id=? AND stage IN ('prepared','published')",
@@ -696,7 +699,7 @@ class EvolutionFlow:
                     (p.route.session_id, revival["revival_id"]),
                 )
                 await self._retire(frame, "nr_pacing_outputs")
-                await self._retire(frame, "nr_evolution_outputs")
+                await self._retire(frame, "nr_evolution_outputs", ending=True)
                 await _execute(
                     self.conn,
                     "UPDATE nr_evolution SET phase='ended' WHERE session_id=?",
@@ -744,10 +747,11 @@ class EvolutionFlow:
     async def publish_notice(self, frame, token, *, message_id):
         kind = {
             EventKind.HELD_PUBLISHED: "held",
+            EventKind.MODE_ENDED_PUBLISHED: "mode_ended",
             EventKind.SILENT_END_PUBLISHED: "closed_silent",
         }.get(frame.kind)
         if kind is None:
-            raise ValueError("A typed held/silent-end acknowledgement is required.")
+            raise ValueError("A typed evolution notice acknowledgement is required.")
         if not await OrdinaryFlow(self.unit)._enter(frame, frame.kind, None):
             return "replay"
         self._message_id(message_id)

@@ -21,7 +21,7 @@ from lets_play.new_rules.contracts import (
     SessionRoute,
 )
 from lets_play.storage import bootstrap, evolution_flow
-from lets_play.storage.migrations import MIGRATIONS
+from lets_play.storage.migrations import MIGRATIONS, SCHEMA_VERSION
 from lets_play.storage.progression import Progression
 from lets_play.storage.summary_store import SummaryStore
 
@@ -277,12 +277,12 @@ async def test_reopen_interrupts_bout_or_finishes_the_announced_round(
 async def test_schema_15_retains_existing_profiles_awards_and_foreign_keys(tmp_path, monkeypatch):
     db = tmp_path / "game.sqlite3"
     with monkeypatch.context() as patch:
-        patch.setattr(bootstrap, "MIGRATIONS", MIGRATIONS[:-1])
+        patch.setattr(bootstrap, "MIGRATIONS", MIGRATIONS[:14])
         patch.setattr(bootstrap, "SCHEMA_VERSION", 14)
         assert (await bootstrap.initialize_database(db)).schema_version == 14
     execute(db, "INSERT INTO nr_profiles VALUES(303, 10)")
     execute(db, "INSERT INTO nr_badges VALUES(303, 'familiar_face')")
-    assert (await bootstrap.initialize_database(db)).schema_version == 15
+    assert (await bootstrap.initialize_database(db)).schema_version == SCHEMA_VERSION
     assert rows(db, "SELECT * FROM nr_profiles") == [(303, 10)]
     assert rows(db, "SELECT * FROM nr_badges") == [(303, "familiar_face")]
     execute(db, "INSERT INTO nr_badges VALUES(303, 'mode_emoji');")

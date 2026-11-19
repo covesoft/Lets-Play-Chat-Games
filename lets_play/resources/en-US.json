@@ -1,6 +1,11 @@
 {
   "locale": "en-US",
   "strings": {
+    "mode.ended_title": "the Breaking Moment is over!",
+    "mode.ended_description": "Regular rules are back in effect. Use /rules to see them.",
+    "mode.interrupted_countdown": "Drawing Conclusions was interrupted. Scores and earned progress are saved. Ordinary rules return in this same round <t:{timestamp}:R>.",
+    "warning.countdown": "Another Rule is coming! Everyone who chats has a chance to choose.\n\nThe next choice is <t:{timestamp}:R>. The current rules stay in effect!",
+    "summary.game_description": "Whole game · human posts: {messages}, including {whispers} whispers.\n{as_of}\n{status}\nUse /rules for the current requirements.",
     "mode.title": "Breaking Moment!",
     "cards.drawing_conclusions.name": "Drawing Conclusions",
     "cards.drawing_conclusions.description": "Post only Unicode or custom emoji. Spaces between emoji are fine.",
@@ -15,7 +20,7 @@
     "reports.round_title": "New Rules — round results",
     "reports.round_description": "The results for Round {round} are in, and here's how you did:",
     "reports.score": "Scoring {percent:.2f}",
-    "reports.unrated": "Scoring Unrated",
+    "reports.unrated": "Scoring unrated",
     "reports.unavailable": "Those round results are no longer available.",
     "game.title": "New Rules",
     "results.title": "New Rules — game over",
@@ -139,7 +144,8 @@
     "summary.ended": "This game has ended. These are its recorded totals.",
     "summary.scope_round": "Round scores",
     "summary.scope_game": "Game scores",
-    "summary.order": "Players ordered by ID. Actual compliance and adjusted scores are shown separately.",
+    "summary.order.deprecated": "Players ordered by ID. Actual compliance and adjusted scores are shown separately.",
+    "summary.order": "\u200b",
     "summary.empty_heading": "Scores",
     "summary.empty": "No participation recorded for this scope yet.",
     "summary.empty_round": "No participation recorded for this round.",
@@ -275,6 +281,7 @@
     "reboot.recovery_footer": "Thanks for your patience!"
   },
   "colors": {
+    "mode_ended": "#32CD32",
     "mode": "#8665C7",
     "round_results": "#8665C7",
     "default": "#8665C7",

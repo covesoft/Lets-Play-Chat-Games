@@ -1,8 +1,11 @@
 """Presentation only for later ordinary phases; state/legality stay in the engine."""
 
+from datetime import UTC, datetime, timedelta
+
 import discord
 
 from lets_play.new_rules.breaking_moments import ModeChoice, mode_ends_at
+from lets_play.new_rules.pacing import WARNING_SECONDS
 
 
 def rule_text(copy, instance):
@@ -54,7 +57,7 @@ def choice_detail(state, copy, *, resumed=False):
     )
 
 
-def render_ordinary(state, copy, button, *, kind=None):
+def render_ordinary(state, copy, button, *, kind=None, now=None):
     p = state.context.position
     session = p.route.session_id
     offer, pacing, revival = state.offer, state.pacing, state.revival
@@ -70,7 +73,11 @@ def render_ordinary(state, copy, button, *, kind=None):
                 inline=False,
             )
 
-    if state.recovery_id or (p.lifecycle == "paused" and p.pause_reason != "revival"):
+    if kind == "evolution_mode_ended":
+        embed.title = copy.text("mode.ended_title")
+        embed.colour = copy.color("mode_ended")
+        embed.description = copy.text("mode.ended_description")
+    elif state.recovery_id or (p.lifecycle == "paused" and p.pause_reason != "revival"):
         embed.title = copy.text("paused.title")
         embed.colour = copy.color("paused")
         if state.recovery_resume_at:
@@ -199,6 +206,14 @@ def render_ordinary(state, copy, button, *, kind=None):
         elif pacing and pacing.stage in {"warning_queued", "warning_published"}:
             embed.title = copy.text("warning.title")
             embed.colour = copy.color("warning")
+            if not rules_only:
+                deadline = pacing.selection_due_at or (now or datetime.now(UTC)) + timedelta(
+                    seconds=WARNING_SECONDS
+                )
+                embed.description = copy.text(
+                    "warning.countdown", timestamp=int(deadline.timestamp())
+                )
+                return embed, view
             embed.description = copy.text("warning.description")
         elif offer and offer.stage == "selected":
             embed.description = copy.text(

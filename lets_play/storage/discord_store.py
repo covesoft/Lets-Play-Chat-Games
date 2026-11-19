@@ -9,7 +9,7 @@ from lets_play.new_rules.evaluation import EvaluationContext
 from lets_play.new_rules.scoring import ScoreTotals
 from lets_play.storage.breaking_flow import BreakingFlow, BreakingMoment
 from lets_play.storage.evolution_flow import EvolutionFlow, RevivalRecord
-from lets_play.storage.game_codec import decode_score
+from lets_play.storage.game_codec import IncompatibleState, decode_score
 from lets_play.storage.game_store import _execute, _row
 from lets_play.storage.offer_codec import utc_datetime, utc_int
 from lets_play.storage.opening_flow import AdmissionRecord, OpeningFlow
@@ -69,7 +69,7 @@ class PendingOutput:
         return (self.family, self.kind) in {("opening", "closed"), ("evolution", "closed_silent")}
 
     @property
-    def choice_edit(self):
+    def choice(self):
         return (self.family, self.kind) == ("ordinary", "offer")
 
     @property
@@ -101,8 +101,11 @@ class DiscordStore:
         )
         panel = await _row(
             self.conn,
-            """SELECT message_id,ack_sequence FROM nr_discord_deliveries WHERE session_id=? AND message_id IS NOT NULL
-            ORDER BY ack_sequence DESC,attempted_at_utc DESC,output_id DESC LIMIT 1""",
+            """SELECT d.message_id,d.ack_sequence FROM nr_discord_deliveries d
+            WHERE d.session_id=? AND d.message_id IS NOT NULL AND NOT EXISTS(
+                SELECT 1 FROM nr_evolution_outputs o WHERE d.family='evolution'
+                AND o.output_id=d.output_id AND o.kind='mode_ended'
+            ) ORDER BY ack_sequence DESC,attempted_at_utc DESC,output_id DESC LIMIT 1""",
             (session,),
         )
         notice = await _row(
@@ -319,6 +322,16 @@ class DiscordStore:
         self.unit._check()
         if await active_recovery(self.unit, session):
             return None
+        mode_end = await _row(
+            self.conn,
+            """SELECT o.output_id,o.token FROM nr_evolution_outputs o
+               JOIN nr_sessions s USING(session_id) WHERE o.session_id=? AND o.kind='mode_ended'
+               AND s.lifecycle<>'ended' AND o.acknowledged_at_utc IS NULL AND o.retired_at_utc IS NULL
+               ORDER BY o.output_id LIMIT 1""",
+            (session,),
+        )
+        if mode_end:
+            return PendingOutput("evolution", mode_end[0], "mode_ended", mode_end[1])
         for family, flow in (
             ("opening", OpeningFlow(self.unit)),
             ("ordinary", OrdinaryFlow(self.unit)),
@@ -360,13 +373,20 @@ class DiscordStore:
             "INSERT INTO nr_discord_deliveries(session_id,family,output_id,state,attempted_at_utc) VALUES (?,?,?,'sending',?) ON CONFLICT DO NOTHING",
             (session, output.family, output.output_id, utc_int(now)),
         )
-        if claimed and (output.choice_edit or output.terminal):
+        if claimed and (output.choice or output.terminal):
             state = await self.state(session)
             target = (
                 state.panel_id
-                if (output.choice_edit or output.kind == "closed_silent" or state.context is None)
+                if (output.choice or output.kind == "closed_silent" or state.context is None)
                 else None
             )
+            if output.choice:
+                if state.offer.published_at is None and await RoundPacing(self.unit).busy_warning(
+                    session, state.context.position.round_id
+                ):
+                    target = None
+                elif target is None:
+                    raise IncompatibleState("A choice edit needs its original panel.")
             await _execute(
                 self.conn,
                 "INSERT INTO nr_discord_publication_targets VALUES (?,?,?)",

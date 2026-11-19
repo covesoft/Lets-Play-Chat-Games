@@ -100,15 +100,18 @@ class LetsPlayBot(commands.Bot):
         if runtime and runtime.ready and args:
             if event == "message":
                 message = args[0]
-                if message.guild and not (
-                    message.author.bot or message.webhook_id or message.is_system()
-                ):
-                    route = runtime.routes.get((message.guild.id, message.channel.id))
-                    if route:
+                route = (
+                    runtime.routes.get((message.guild.id, message.channel.id))
+                    if message.guild
+                    else None
+                )
+                if route:
+                    if message.author.bot or message.webhook_id or message.is_system():
+                        future = runtime.submit(route, "channel_post", source=str(message.id))
+                    else:
                         snapshot = message_snapshot(message, route, runtime.clock.now())
-                        runtime.submit(route, "event", event=snapshot).add_done_callback(
-                            runtime._consume
-                        )
+                        future = runtime.submit(route, "event", event=snapshot)
+                    future.add_done_callback(runtime._consume)
             elif event == "raw_reaction_add":
                 payload = args[0]
                 route = runtime.routes.get((payload.guild_id, payload.channel_id))

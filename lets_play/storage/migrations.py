@@ -672,4 +672,34 @@ MIGRATIONS += (
         ),
     ),
 )
+MIGRATIONS += (
+    Migration(
+        version=16,
+        name="warning_traffic_summary_scope_and_mode_notices",
+        statements=(
+            """CREATE TABLE nr_warning_activity (
+                session_id TEXT PRIMARY KEY,round_id TEXT NOT NULL,attempt INTEGER NOT NULL CHECK(attempt>0),
+                message_ids_json TEXT NOT NULL,
+                FOREIGN KEY(session_id,round_id) REFERENCES nr_round_pacing ON DELETE CASCADE
+            ) STRICT""",
+            "ALTER TABLE nr_summary_outputs ADD COLUMN display_scope TEXT NOT NULL DEFAULT 'round' CHECK(display_scope IN ('round','game'))",
+            "ALTER TABLE nr_evolution_outputs RENAME TO nr_evolution_outputs_v15",
+            """CREATE TABLE nr_evolution_outputs (
+                output_id INTEGER PRIMARY KEY AUTOINCREMENT,session_id TEXT NOT NULL REFERENCES nr_sessions ON DELETE CASCADE,
+                token TEXT NOT NULL,kind TEXT NOT NULL CHECK(kind IN ('held','closed_silent','mode_ended')),
+                message_id INTEGER CHECK(message_id>0),acknowledged_at_utc INTEGER,retired_at_utc INTEGER,
+                UNIQUE(session_id,token,kind)
+            ) STRICT""",
+            "INSERT INTO nr_evolution_outputs SELECT * FROM nr_evolution_outputs_v15",
+            """INSERT INTO sqlite_sequence(name,seq)
+                SELECT 'nr_evolution_outputs',seq FROM sqlite_sequence WHERE name='nr_evolution_outputs_v15'
+                AND NOT EXISTS (SELECT 1 FROM sqlite_sequence WHERE name='nr_evolution_outputs')""",
+            """UPDATE sqlite_sequence SET seq=MAX(seq,COALESCE(
+                (SELECT seq FROM sqlite_sequence WHERE name='nr_evolution_outputs_v15'),0))
+                WHERE name='nr_evolution_outputs'""",
+            "DROP TABLE nr_evolution_outputs_v15",
+            "CREATE INDEX nr_pending_evolution_outputs ON nr_evolution_outputs(output_id) WHERE acknowledged_at_utc IS NULL AND retired_at_utc IS NULL",
+        ),
+    ),
+)
 SCHEMA_VERSION = MIGRATIONS[-1].version

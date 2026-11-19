@@ -257,6 +257,18 @@ class RecoveryFlow:
                 # No absent ACK is treated as evidence that delivery failed.
                 for c in candidates:
                     o = await _row(self.conn, f"SELECT * FROM {table} WHERE output_id=?", (c[0],))
+                    if (
+                        family == "evolution"
+                        and o["kind"] == "mode_ended"
+                        and not await _row(
+                            self.conn,
+                            "SELECT 1 FROM nr_discord_deliveries WHERE family='evolution' AND output_id=?",
+                            (c[0],),
+                        )
+                    ):
+                        # The first possible send will still be owned by its
+                        # durable claim. No network attempt existed at the fence.
+                        continue
                     work.append((family, c[0], o["kind"], "unknown", None, None))
         else:
             await self._record(session, previous["recovery_id"])

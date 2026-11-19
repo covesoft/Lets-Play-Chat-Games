@@ -1,7 +1,7 @@
 # Offline disruption recovery
 
 `RecoveryFlow(unit)` provides the existing engine barrier and offline recovery
-contracts. v0.3.23/schema 15 extends the bounded live automatic path through
+contracts. v0.3.24/schema 16 extends the bounded live automatic path through
 `RebootFlow(unit)` and the serial adapter publisher. Ordinary reboot needs no
 server-manager approval, Resume button or player message.
 
@@ -130,13 +130,17 @@ New recovery notices identify their generation through the read-only Game
 status button, so the visible footer can be customized. The lookup also accepts
 the exact reference on older notices that originally carried it in their footer.
 
-## Interrupted choice-panel edits and terminal delivery
+## Interrupted choice-panel publication and terminal delivery
 
 The claim persists the exact message to edit before Discord receives the call.
 Startup fetches that exact message, requiring the correct bot, route, output
 reference and an edit timestamp at or after the claim. Discord creation time
 cannot start a choice deadline. A verified edit retains its original deadline
 and controls. During uncertainty the pause publisher leaves the target intact.
+A busy-warning choice claim explicitly records a new post. Startup can verify
+the unedited bot-authored post by exact output reference and creation time.
+Its creation time owns the original choice deadline. A legacy claim without
+a publication target record provides neither proof.
 
 An ended game has a separate delivery path. Startup discovers unresolved
 final results without registering the old session as active. A queued output
@@ -155,7 +159,9 @@ in the same round with its original activation time. Committed mode scores,
 game credit and Pictoglyphs survive. If a published mode start passes during
 read-in, the selected round change still commits once at its saved timestamp
 and an unobserved bout is interrupted immediately. A future start remains
-scheduled. Inconclusive delivery retains the ordinary paused/manager-end behavior.
+scheduled. The public read-in shows a relative deadline. The return of ordinary
+rules queues a separate lime-green notice. A claim with inconclusive delivery
+retains the ordinary paused/manager-end behavior.
 
 ## Inconclusive evidence and upgrades
 
@@ -165,10 +171,11 @@ guessing. A live game stays paused and a manager can end it explicitly. A
 terminal game stays ended. No recovery scores historical chat.
 
 Stop the bot and back up the configured database with SQLite’s backup API.
-Apply v0.3.23 to v0.3.22, reinstall, verify, and run
-`python -m lets_play --init-db` before startup. Schema **15** adds a Breaking
-Moment record per mode-led round and enables Pictoglyphs in the badge table.
-Roll back by restoring the verified schema-14 backup with its matching source. See [STORAGE.md](STORAGE.md) for the backup policy.
+Apply v0.3.24 to v0.3.23, reinstall, verify, and run
+`python -m lets_play --init-db` before startup. Schema **16** adds warning
+traffic and selected summary scope and preserves existing evolution output IDs.
+Roll back by restoring the verified schema-15 backup with matching source.
+See [STORAGE.md](STORAGE.md) for the backup policy.
 
 ## Enter before timers
 
