@@ -45,9 +45,10 @@ PUBLISH_KINDS = {
 
 
 class OpeningRuntime:
-    def __init__(self, store, transport, *, clock=None):
+    def __init__(self, store, transport, *, clock=None, include_breaking_moment=True):
         self.store, self.transport = store, transport
         self.clock = clock or ReceiptClock()
+        self.include_breaking_moment = include_breaking_moment
         self.routes = {}  # Exact (guild,channel) -> route; live routes only.
         self.lanes = {}
         self.publishers = {}
@@ -270,6 +271,7 @@ class OpeningRuntime:
                 # Do not bootstrap it again with new-session defaults after resume.
                 preserve_config = context and (
                     context.position.advancement == "held"
+                    or context.position.phase == "mode"
                     or recovery_row
                     and recovery_row["original_pause"] == "revival"
                 )
@@ -353,7 +355,8 @@ class OpeningRuntime:
             )
 
     async def _normal(self, unit, route, frame, action, d):
-        opening, flow, evolution = OpeningFlow(unit), OrdinaryFlow(unit), EvolutionFlow(unit)
+        opening, flow = OpeningFlow(unit), OrdinaryFlow(unit)
+        evolution = EvolutionFlow(unit, include_breaking_moment=self.include_breaking_moment)
         context = await unit.get_context(route.session_id)
 
         async def stale():
@@ -465,7 +468,7 @@ class OpeningRuntime:
         if not state or not state.context or state.recovery_id or state.admission.stage == "ended":
             return
         session = route.session_id
-        if session not in self.configured:
+        if session not in self.configured and state.context.position.phase == "ordinary":
             key = (session, "configure")
             if key not in self.work_queued:
                 self.work_queued.add(key)

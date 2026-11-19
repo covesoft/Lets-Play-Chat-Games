@@ -17,6 +17,12 @@ from types import MappingProxyType
 MAX_CATALOG_BYTES = 128 * 1024
 # Only these templates accept arguments. Attribute/index lookups are prohibited.
 TEMPLATE_FIELDS = {
+    "mode.active_description": frozenset({"ends"}),
+    "mode.scheduled_description": frozenset({"starts", "ends"}),
+    "mode.interrupted_notice": frozenset({"seconds"}),
+    "mode.interrupted_reading": frozenset({"timestamp"}),
+    "mode.scheduled_notice": frozenset({"seconds"}),
+    "mode.scheduled_reading": frozenset({"timestamp"}),
     "reboot.preplay": frozenset({"seconds"}),
     "reboot.preplay_reading": frozenset({"timestamp"}),
     "reboot.opening_activation": frozenset({"seconds"}),

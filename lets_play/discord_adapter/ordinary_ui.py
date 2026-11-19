@@ -2,6 +2,8 @@
 
 import discord
 
+from lets_play.new_rules.breaking_moments import ModeChoice, mode_ends_at
+
 
 def rule_text(copy, instance):
     if instance.card_id == "NR036":
@@ -9,15 +11,28 @@ def rule_text(copy, instance):
     return copy.text(f"cards.{instance.card_id}.description")
 
 
+def selected_option(offer):
+    return next(o for o in offer.hand.options if o.incoming.instance_id == offer.selected_incoming)
+
+
+def scheduled_mode(state):
+    offer = state.offer
+    return bool(
+        offer
+        and offer.stage == "selected"
+        and state.offer_display_ready
+        and isinstance(selected_option(offer).incoming, ModeChoice)
+    )
+
+
 def resumption_rules(state):
     """Display an already-announced incoming set without activating or scoring it."""
     offer = state.offer
     if offer and offer.stage == "selected" and state.offer_display_ready:
-        option = next(
-            o for o in offer.hand.options if o.incoming.instance_id == offer.selected_incoming
-        )
         return next(
-            c.instances for c in option.completions if c.outgoing_id == offer.selected_outgoing
+            c.instances
+            for c in selected_option(offer).completions
+            if c.outgoing_id == offer.selected_outgoing
         )
     return state.context.active_instances
 
@@ -62,7 +77,11 @@ def render_ordinary(state, copy, button, *, kind=None):
             embed.title = copy.text("reboot.notice_title")
             embed.colour = copy.color("reboot")
             embed.description = copy.text(
-                "reboot.activation_reading_description"
+                "mode.interrupted_reading"
+                if state.mode
+                else "mode.scheduled_reading"
+                if scheduled_mode(state)
+                else "reboot.activation_reading_description"
                 if offer and offer.stage == "selected" and state.offer_display_ready
                 else "reboot.revival_reading"
                 if revival and revival.stage == "published"
@@ -95,6 +114,13 @@ def render_ordinary(state, copy, button, *, kind=None):
             button(view, copy.text("buttons.revive"), session, "revive")
         else:
             rules(state.context.active_instances)
+    elif state.mode:
+        embed.title = copy.text("mode.title")
+        embed.colour = copy.color("mode")
+        embed.description = copy.text(
+            "mode.active_description", ends=int(state.mode.ends_at.timestamp())
+        )
+        rules((state.mode.choice,))
     elif offer and offer.stage in {"prepared", "published"} and not rules_only:
         embed.title = copy.text("ordinary.offer_title")
         embed.colour = copy.color("offer")
@@ -146,13 +172,24 @@ def render_ordinary(state, copy, button, *, kind=None):
         embed.description = copy.text(
             "ordinary.scheduled_description", timestamp=int(offer.effective_at.timestamp())
         )
-        option = next(
-            o for o in offer.hand.options if o.incoming.instance_id == offer.selected_incoming
-        )
-        result = next(
-            c.instances for c in option.completions if c.outgoing_id == offer.selected_outgoing
-        )
-        rules(result)
+        option = selected_option(offer)
+        if isinstance(option.incoming, ModeChoice):
+            embed.title = copy.text("mode.title")
+            embed.colour = copy.color("mode")
+            embed.description = copy.text(
+                "mode.scheduled_description",
+                starts=int(offer.effective_at.timestamp()),
+                ends=int(mode_ends_at(offer.effective_at).timestamp()),
+            )
+            rules((option.incoming,))
+        else:
+            rules(
+                next(
+                    c.instances
+                    for c in option.completions
+                    if c.outgoing_id == offer.selected_outgoing
+                )
+            )
     else:
         embed.description = copy.text("round.description", round=state.round_number)
         if p.advancement == "held":

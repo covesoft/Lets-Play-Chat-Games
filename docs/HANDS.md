@@ -3,8 +3,8 @@
 The package can prepare legal ordinary additions/replacements, construct a
 complete three-template offer, and revalidate a frozen choice. It performs no
 I/O, publication, activation, phrase consumption, round closure, or awards.
-The live shell does not invoke this API. The full catalog and mode-aware deck
-are not implemented; every option currently produced is ordinary.
+The live adapter enables the Drawing Conclusions ticket for eligible later
+hands. The full catalog and other Breaking Moments are still pending.
 
 ## Implemented catalog
 
@@ -98,7 +98,9 @@ The builder samples distinct templates without replacement. NR036 has one ticket
 regardless of phrase count; it freezes an eligible phrase only after selecting
 that template. Replacement targets likewise do not create extra tickets.
 Injected RNG is the sole source of randomness; fixed inputs/seeds reproduce an
-offer. No automatic fallback, guaranteed mode, or spontaneous mode timer exists.
+offer. When enabled, Drawing Conclusions contributes a single ticket. It has
+one completion that preserves the exact ordinary inventory. Opening hands and
+the hand after a mode-led round use ordinary tickets only.
 
 The ordered `PhraseChoice` snapshot accepts at most 15 entries. The supplied
 session window is 5 or 15: slice **before** filtering used/incompatible wording,

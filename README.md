@@ -3,7 +3,7 @@
 Let’s Play is a Discord chat-game bot. Its first game, **New Rules**, is a party
 conversation game where unusual rules accumulate as people chat.
 
-**Current status: v0.3.22 — development-only ordinary-round preview (M2 in progress).**
+**Current status: v0.3.23 — development-only Discord preview (M2 in progress).**
 M1 is accepted and closed at v0.2.9/schema 8. The Discord adapter connects a
 persisted three-human opening, message/raw-reaction scoring, markers, timed
 warnings, picker succession, three-card choices, replacements, and announced
@@ -30,8 +30,12 @@ can be recovered if its original published post is verified. A verified
 recovery notice from an earlier restart also clears its uncertain send. Public
 score posts can reconcile against their original current-scores control. Published
 choice edits use the claimed message and edit time. Final results can finish or
-reconcile delivery after the game closes. Broader unknown-send reconciliation, modes, settings, complete retry/retention cleanup and
-public-release checks remain unfinished.
+reconcile delivery after the game closes. Drawing Conclusions can appear in
+eligible later hands and temporarily suspends ordinary rules for 120 seconds.
+After a reboot interrupts the bout, the read-in restores ordinary rules in the
+same round and preserves earned scores, game credit and Pictoglyphs. Other
+Breaking Moments, settings, complete retry/retention cleanup and public-release
+checks remain unfinished.
 Restart and uncertain publication enter a durable pause; a manager can close the
 saved game. See [the preview runbook](docs/DISCORD_PREVIEW.md) for setup and live checks.
 Offline checks do not certify a human Discord session or Windows execution.

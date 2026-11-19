@@ -4,6 +4,7 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from enum import StrEnum
 
+from lets_play.new_rules.breaking_moments import DRAWING_CONCLUSIONS, ModeChoice
 from lets_play.new_rules.catalog import CARD_SPECS
 from lets_play.new_rules.compatibility import (
     DEFAULT_WITNESS_BUDGET,
@@ -54,12 +55,12 @@ class PhraseChoice:
 
 @dataclass(frozen=True, slots=True)
 class HandOption:
-    incoming: RuleInstance
+    incoming: RuleInstance | ModeChoice
     completions: tuple[LegalCompletion, ...] = field(repr=False)
 
     def __post_init__(self) -> None:
         if (
-            not isinstance(self.incoming, RuleInstance)
+            not isinstance(self.incoming, (RuleInstance, ModeChoice))
             or not isinstance(self.completions, tuple)
             or not self.completions
         ):
@@ -69,9 +70,13 @@ class HandOption:
             if (
                 not isinstance(item, LegalCompletion)
                 or not isinstance(item.instances, tuple)
-                or item.instances.count(self.incoming) != 1
+                or (
+                    (item.outgoing_id is not None or self.incoming in item.instances)
+                    if isinstance(self.incoming, ModeChoice)
+                    else item.instances.count(self.incoming) != 1
+                )
             ):
-                raise ValueError("Each completion must contain its frozen incoming instance once.")
+                raise ValueError("A completion must match its frozen choice.")
             targets.append(item.outgoing_id)
         if len(set(targets)) != len(targets) or (None in targets and len(targets) != 1):
             raise ValueError("An option has unique replacement targets or one addition.")
@@ -114,6 +119,15 @@ class OrdinaryHand:
             )
         ):
             raise ValueError("A hand requires exactly three completable options.")
+        if any(
+            isinstance(option.incoming, ModeChoice)
+            and (
+                self.owner.lifecycle is not Lifecycle.PLAYING
+                or option.completions[0].instances != self.active_instances
+            )
+            for option in self.options
+        ):
+            raise ValueError("A Breaking Moment can only suspend a later hand's exact rules.")
         if (
             len({o.incoming.card_id for o in self.options}) != 3
             or len({o.incoming.instance_id for o in self.options}) != 3
@@ -132,6 +146,16 @@ class HandBuild:
     hand: OrdinaryHand | None = None
     blocked: BlockedReason | None = None
     eligible_templates: tuple[str, ...] = ()
+
+
+def choice_completions(active, incoming, *, budget=DEFAULT_WITNESS_BUDGET):
+    """A mode preserves the legal ordinary inventory it temporarily suspends."""
+    if isinstance(incoming, ModeChoice):
+        if any(rule.instance_id == incoming.instance_id for rule in active):
+            return ()
+        assessment = assess_state(active, budget=budget)
+        return (LegalCompletion(None, active, assessment.witness),) if assessment.legal else ()
+    return legal_completions(active, incoming, budget=budget)
 
 
 def _available(templates: frozenset[str] | None) -> frozenset[str]:
@@ -171,6 +195,7 @@ def build_hand(
     used_phrases: frozenset[tuple[str, ...]] = frozenset(),
     available_templates: frozenset[str] | None = None,
     budget: WitnessBudget = DEFAULT_WITNESS_BUDGET,
+    include_breaking_moment: bool = False,
 ) -> HandBuild:
     """One ticket per template; freeze an eligible phrase only after template draw.
 
@@ -228,6 +253,18 @@ def build_hand(
                 variants.append(HandOption(instance, completions))
         if variants:
             pool.append((card, tuple(variants)))
+    if include_breaking_moment and p.lifecycle is Lifecycle.PLAYING:
+        mode = ModeChoice(f"{offer_id}:{DRAWING_CONCLUSIONS}")
+        pool.append(
+            (
+                mode.card_id,
+                (
+                    HandOption(
+                        mode, choice_completions(context.active_instances, mode, budget=budget)
+                    ),
+                ),
+            )
+        )
     eligible = tuple(card for card, _ in pool)
     if len(pool) < 3:
         return HandBuild(blocked=BlockedReason.TOO_FEW, eligible_templates=eligible)
@@ -292,7 +329,8 @@ def revalidate_choice(
     option = next((o for o in hand.options if o.incoming.instance_id == incoming_id), None)
     if option is None:
         return ChoiceResult(ChoiceStatus.INVALID)
-    if option.incoming.card_id not in _available(available_templates):
+    available = _available(available_templates)
+    if isinstance(option.incoming, RuleInstance) and option.incoming.card_id not in available:
         return ChoiceResult(ChoiceStatus.UNAVAILABLE)
     used = _used(used_phrases, context.active_instances)
     if option.incoming.card_id == "NR036" and phrase_keys(option.incoming) in used:
@@ -310,7 +348,7 @@ def revalidate_choice(
         return ChoiceResult(ChoiceStatus.UNPROVEN)
     # Recompute from the frozen incoming parameters and latest supplied inputs;
     # an old saved witness or new guild phrase bank is never activation authority.
-    completions = legal_completions(context.active_instances, option.incoming, budget=budget)
+    completions = choice_completions(context.active_instances, option.incoming, budget=budget)
     completion = next((c for c in completions if c.outgoing_id == outgoing_id), None)
     return (
         ChoiceResult(ChoiceStatus.READY, completion)

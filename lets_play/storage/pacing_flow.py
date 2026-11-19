@@ -353,6 +353,8 @@ class RoundPacing:
         row = await self._record(frame.route.session_id, p.round_id)
         if row is None or row["stage"] not in ("waiting", "warning_queued", "warning_published"):
             return
+        if p.lifecycle is Lifecycle.PLAYING and p.phase is Phase.MODE:
+            return
         expected_advance = Advancement.IDLE if row["stage"] == "waiting" else Advancement.WARNING
         if (
             p.lifecycle is not Lifecycle.PLAYING

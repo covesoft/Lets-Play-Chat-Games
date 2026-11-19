@@ -2,12 +2,12 @@
 
 The package supplies bootstrap/migration infrastructure and an offline New Rules
 event unit of work. The development Discord adapter wires the supported ordinary
-subset; modes and complete summary/recovery services remain unfinished.
+subset and Drawing Conclusions; additional modes and recovery work remain open.
 Pure ordinary-subset [hand preparation](HANDS.md) supplies legal result states.
 Schema 3's [ordinary flow](ORDINARY_FLOW.md) persists later-round offers,
 publication acknowledgements, selection, announced cutover and pending-award
 closure boundaries. Schema 4 composes [general progression](PROGRESSION.md) with
-ordinary cutover. Mode/theme resolution and the complete session engine remain absent.
+ordinary cutover. Schema 15 adds Drawing Conclusions bout ownership and its action award.
 `initialize_database()` opens one aiosqlite connection, initializes it, reports
 safe metadata, and closes it on success or failure. `--init-db` invokes it without
 Discord. The live shell invokes it in `setup_hook()` before command sync.

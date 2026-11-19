@@ -1,7 +1,7 @@
 # Offline disruption recovery
 
 `RecoveryFlow(unit)` provides the existing engine barrier and offline recovery
-contracts. v0.3.22/schema 14 extends the bounded live automatic path through
+contracts. v0.3.23/schema 15 extends the bounded live automatic path through
 `RebootFlow(unit)` and the serial adapter publisher. Ordinary reboot needs no
 server-manager approval, Resume button or player message.
 
@@ -146,6 +146,17 @@ result post with the output-specific View final results control. Silent ending
 edits only the saved panel. If the panel is gone, the claim stays unresolved
 without a replacement post.
 
+## Drawing Conclusions
+
+Startup requires the saved bout, its original acknowledged activation, and the
+same delivery and fresh-access checks as an ordinary round. The notice announces
+the interruption. Once read-in finishes, the exact suspended cards are restored
+in the same round with its original activation time. Committed mode scores,
+game credit and Pictoglyphs survive. If a published mode start passes during
+read-in, the selected round change still commits once at its saved timestamp
+and an unobserved bout is interrupted immediately. A future start remains
+scheduled. Inconclusive delivery retains the ordinary paused/manager-end behavior.
+
 ## Inconclusive evidence and upgrades
 
 Missing, inaccessible, edited-over or ambiguous evidence leaves an output
@@ -154,11 +165,10 @@ guessing. A live game stays paused and a manager can end it explicitly. A
 terminal game stays ended. No recovery scores historical chat.
 
 Stop the bot and back up the configured database with SQLite’s backup API.
-Apply v0.3.22 to v0.3.21, reinstall, verify, and run
-`python -m lets_play --init-db` before startup. Schema **14** adds a separate
-table for edit targets and terminal send identity. Released migrations 1–13
-are unchanged. Roll back by restoring the verified schema-13 backup with its
-matching source. See [STORAGE.md](STORAGE.md) for the backup policy.
+Apply v0.3.23 to v0.3.22, reinstall, verify, and run
+`python -m lets_play --init-db` before startup. Schema **15** adds a Breaking
+Moment record per mode-led round and enables Pictoglyphs in the badge table.
+Roll back by restoring the verified schema-14 backup with its matching source. See [STORAGE.md](STORAGE.md) for the backup policy.
 
 ## Enter before timers
 

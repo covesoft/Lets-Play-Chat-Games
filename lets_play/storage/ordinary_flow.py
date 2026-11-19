@@ -10,8 +10,8 @@ from dataclasses import dataclass, replace
 from datetime import datetime, timedelta
 from enum import StrEnum
 
+from lets_play.new_rules.breaking_moments import ModeChoice
 from lets_play.new_rules.catalog import CARD_SPECS
-from lets_play.new_rules.compatibility import legal_completions
 from lets_play.new_rules.contracts import (
     Advancement,
     EventEnvelope,
@@ -24,9 +24,15 @@ from lets_play.new_rules.contracts import (
     ReactionEvent,
 )
 from lets_play.new_rules.evaluation import EvaluationContext, evaluate_message, evaluate_reaction
-from lets_play.new_rules.hands import ChoiceStatus, OrdinaryHand, revalidate_choice
+from lets_play.new_rules.hands import (
+    ChoiceStatus,
+    OrdinaryHand,
+    choice_completions,
+    revalidate_choice,
+)
 from lets_play.new_rules.parsing import parse_message
 from lets_play.new_rules.text_rules import phrase_keys
+from lets_play.storage.breaking_flow import BreakingFlow
 from lets_play.storage.game_store import ApplyStatus, GameUnitOfWork, _execute, _row
 from lets_play.storage.game_store import _unit_mutating as _write
 from lets_play.storage.offer_codec import decode_hand, encode_hand, utc_datetime, utc_int
@@ -226,7 +232,9 @@ class OrdinaryFlow:
             observed_at_utc=excluded.observed_at_utc""",
             (frame.route.session_id, frame.sequence, observed),
         )
-        await self._advance_due(frame, available)
+        activation = await self._advance_due(frame, available)
+        if context.position.phase is Phase.MODE or activation is FlowStatus.ACTIVATED:
+            await BreakingFlow(self.unit).advance(frame)
         from lets_play.storage.pacing_flow import RoundPacing
 
         await RoundPacing(self.unit)._advance_due(frame)
@@ -267,6 +275,10 @@ class OrdinaryFlow:
                 return FlowResult(FlowStatus.STALE)
             if pacing.picker_id != hand.picker_id:
                 return FlowResult(FlowStatus.UNAUTHORIZED)
+        if any(isinstance(o.incoming, ModeChoice) for o in hand.options) and await BreakingFlow(
+            self.unit
+        ).record(session, p.round_id):
+            return FlowResult(FlowStatus.INVALID)
         # Recheck all three saved options; persist only frozen config/target IDs.
         decode_hand(encode_hand(hand))
         new = replace(
@@ -361,7 +373,14 @@ class OrdinaryFlow:
         option = next(
             (o for o in record.hand.options if o.incoming.instance_id == incoming_id), None
         )
-        if option is None or option.incoming.card_id not in self._available(available):
+        if option is None:
+            return ()
+        if isinstance(option.incoming, ModeChoice):
+            if await BreakingFlow(self.unit).record(
+                context.position.route.session_id, context.position.round_id
+            ):
+                return ()
+        elif option.incoming.card_id not in self._available(available):
             return ()
         if option.incoming.card_id == "NR036" and await self.used_keys(
             context.position.route.session_id, (phrase_keys(option.incoming),)
@@ -369,7 +388,7 @@ class OrdinaryFlow:
             return ()
         return tuple(
             c
-            for c in legal_completions(context.active_instances, option.incoming)
+            for c in choice_completions(context.active_instances, option.incoming)
             if c.outgoing_id in (None, *option.outgoing_ids)
         )
 
@@ -409,6 +428,14 @@ class OrdinaryFlow:
         keys = (
             (phrase_keys(option.incoming),) if option and option.incoming.card_id == "NR036" else ()
         )
+        if (
+            option
+            and isinstance(option.incoming, ModeChoice)
+            and await BreakingFlow(self.unit).record(
+                frame.route.session_id, current.position.round_id
+            )
+        ):
+            return FlowResult(FlowStatus.UNAVAILABLE)
         used = await self.used_keys(frame.route.session_id, keys)
         prepared = revalidate_choice(
             record.hand,
@@ -609,9 +636,16 @@ class OrdinaryFlow:
         if completion is None:
             await self._recover(frame, record)
             return FlowStatus.RECOVERY
+        incoming = next(
+            o.incoming
+            for o in record.hand.options
+            if o.incoming.instance_id == record.selected_incoming
+        )
+        is_mode = isinstance(incoming, ModeChoice)
         old = current.position
         new = replace(
             old,
+            phase=Phase.MODE if is_mode else Phase.ORDINARY,
             round_id=row["next_round_id"],
             ruleset_version=old.ruleset_version + 1,
             revision=old.revision + 1,
@@ -619,7 +653,7 @@ class OrdinaryFlow:
             offer_id=None,
             transition_id=None,
         )
-        # Closure and general resolution share this unit; mode/theme work remains.
+        # Closure, incoming enforcement and general resolution share this unit.
         await _execute(
             self.conn,
             "INSERT INTO nr_round_closures VALUES (?,?,?,?)",
@@ -633,10 +667,11 @@ class OrdinaryFlow:
             "UPDATE nr_rounds SET started_at_utc=? WHERE session_id=? AND round_id=?",
             (row["effective_at_utc"], frame.route.session_id, new.round_id),
         )
-        incoming = next(
-            i for i in completion.instances if i.instance_id == record.selected_incoming
-        )
-        if incoming.card_id == "NR036":
+        if is_mode:
+            await BreakingFlow(self.unit).start(
+                new, row["offer_id"], incoming, row["effective_at_utc"]
+            )
+        elif incoming.card_id == "NR036":
             await _execute(
                 self.conn,
                 "INSERT INTO nr_used_phrases VALUES (?,?)",
@@ -745,8 +780,16 @@ class OrdinaryFlow:
                     (frame.route.session_id, frame.kind, frame.source_id),
                 )
             return FlowResult(FlowStatus.IGNORED)
+        mode = await BreakingFlow(self.unit).active(context.position)
+        if mode and isinstance(event, ReactionEvent) and not event.is_bot:
+            # Guard only this source, never consume the actor/target ordinary offense.
+            await _execute(
+                self.conn,
+                "INSERT INTO nr_paused_sources VALUES (?,?,?) ON CONFLICT DO NOTHING",
+                frame.source_key,
+            )
         decision = (
-            evaluate_message(event, context)
+            evaluate_message(event, context, mode=mode.choice if mode else None)
             if isinstance(event, MessageEvent)
             else evaluate_reaction(event, context)
         )

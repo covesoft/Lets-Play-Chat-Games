@@ -17,6 +17,7 @@ from pathlib import Path
 
 import aiosqlite
 
+from lets_play.new_rules.breaking_moments import EMOJI_REQUIRED
 from lets_play.new_rules.contracts import EventKind, Lifecycle, Outcome, Phase, SessionPosition
 from lets_play.new_rules.evaluation import (
     EVALUATOR_VERSION,
@@ -30,6 +31,7 @@ from lets_play.new_rules.parsing import PARSER_VERSION
 from lets_play.new_rules.scoring import (
     SCORE_VERSION,
     ScoreTotals,
+    mode_score,
     ordinary_score,
     reaction_score,
     whisper_score,
@@ -355,6 +357,10 @@ class GameUnitOfWork:
             ),
         )
         if new.lifecycle is Lifecycle.ENDED:
+            if expected.phase is Phase.MODE:
+                from lets_play.storage.breaking_flow import BreakingFlow
+
+                await BreakingFlow(self).close(expected)
             await _execute(
                 self._conn,
                 "UPDATE nr_admissions SET stage='ended' WHERE playing_session_id=?",
@@ -473,7 +479,7 @@ class GameUnitOfWork:
             return ApplyStatus.DUPLICATE_EVENT
         if current.position != p or p.lifecycle is not Lifecycle.PLAYING:
             return ApplyStatus.STALE_OWNER
-        self._validate_decision(decision, current)
+        await self._validate_decision(decision, current)
         if not is_message:
             prior = await _row(
                 self._conn,
@@ -541,12 +547,18 @@ class GameUnitOfWork:
         if decision.enroll:
             from lets_play.storage.progression import Progression
 
-            await Progression(self).credit_ordinary(session_id, decision.actor_id)
+            progression = Progression(self)
+            if p.phase is Phase.MODE:
+                if decision.score.mode_quality:
+                    await progression.credit_drawing_conclusions(
+                        session_id, p.round_id, decision.actor_id
+                    )
+            else:
+                await progression.credit_ordinary(session_id, decision.actor_id)
         return ApplyStatus.APPLIED
 
-    @staticmethod
-    def _validate_decision(
-        decision: MessageDecision | ReactionDecision, context: EvaluationContext
+    async def _validate_decision(
+        self, decision: MessageDecision | ReactionDecision, context: EvaluationContext
     ) -> None:
         if type(decision.actor_id) is not int or decision.actor_id <= 0:
             raise ValueError("A positive actor ID is required.")
@@ -555,8 +567,21 @@ class GameUnitOfWork:
                 if decision.score != whisper_score() or decision.evaluations:
                     raise ValueError("A whisper may only add traffic.")
                 return
-            if context.position.phase is not Phase.ORDINARY:
-                raise ValueError("Ordinary evaluation cannot be persisted as a mode result.")
+            if context.position.phase is Phase.MODE:
+                from lets_play.storage.breaking_flow import BreakingFlow
+
+                bout = await BreakingFlow(self).active(context.position)
+                if bout and len(decision.evaluations) == 1:
+                    result = decision.evaluations[0]
+                    if (
+                        result.rule_instance_id == bout.choice.instance_id
+                        and result.outcome in (Outcome.PASS, Outcome.FAIL)
+                        and result.reason_code
+                        == (EMOJI_REQUIRED if result.outcome is Outcome.FAIL else None)
+                        and decision.score == mode_score(result)
+                    ):
+                        return
+                raise ValueError("The decision must match the saved Breaking Moment.")
             ids = tuple(item.instance_id for item in context.active_instances)
             if tuple(item.rule_instance_id for item in decision.evaluations) != ids:
                 raise ValueError("Message results must cover the frozen active instances in order.")

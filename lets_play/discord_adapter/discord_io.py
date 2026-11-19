@@ -13,6 +13,7 @@ from lets_play.discord_adapter.ordinary_ui import (
     render_ordinary,
     resumption_rules,
     rule_text,
+    scheduled_mode,
 )
 from lets_play.new_rules.contracts import (
     AttachmentSnapshot,
@@ -510,6 +511,10 @@ class DiscordTransport:
             key = "reboot.notice_description"
             if state.revival and state.revival.stage == "published":
                 key = "reboot.revival"
+            elif state.mode:
+                key = "mode.interrupted_notice"
+            elif scheduled_mode(state):
+                key = "mode.scheduled_notice"
             elif state.offer and state.offer.stage == "selected" and state.offer_display_ready:
                 key = "reboot.activation_description"
             for instance in resumption_rules(state):

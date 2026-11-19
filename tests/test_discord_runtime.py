@@ -76,10 +76,15 @@ class Transport:
 
 
 @asynccontextmanager
-async def service(tmp_path, monkeypatch, *, transport=None):
+async def service(tmp_path, monkeypatch, *, transport=None, include_breaking_moment=False):
     monkeypatch.setattr(runtime_module, "OPENING_CARDS", frozenset({"NR004", "NR006", "NR034"}))
     async with open_game_store(tmp_path / "game.sqlite3") as store:
-        runtime = OpeningRuntime(store, transport or Transport(), clock=Clock())
+        runtime = OpeningRuntime(
+            store,
+            transport or Transport(),
+            clock=Clock(),
+            include_breaking_moment=include_breaking_moment,
+        )
         await runtime.initialize()
         try:
             yield runtime

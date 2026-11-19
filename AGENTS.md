@@ -8,14 +8,16 @@ contains operational and API documentation only.
 
 ## Current implementation
 
-Application v0.3.22 uses schema 14. M1 is accepted and closed at v0.2.9/schema 8;
+Application v0.3.23 uses schema 15. M1 is accepted and closed at v0.2.9/schema 8;
 M2 is in progress. Preserve the existing domain/storage APIs. This is a
-development-only ordinary-round preview, not a public-release build.
+development-only Discord preview, not a public-release build.
 
 Implemented: persisted three-human opening, message/raw-reaction scoring and
 markers, ordinary warning/picker/choice/replacement/timeout/cutover, held play,
 same-round revival, manager ending, private live scores, requested public reports,
 gated automatic interims, compact round-end boards and ranked final standings.
+Drawing Conclusions is the supported Breaking Moment. An eligible later hand
+can draw it as one template ticket. Opening and post-mode hands are ordinary-only.
 Seventeen ordinary predicates exist; opening offers five proven templates and
 later offers sixteen non-phrase templates. NR036 is not offered by the adapter.
 
@@ -37,9 +39,12 @@ and unresolved engine, adapter, summary, round-report or older notice claims sta
 fenced. Published held play, revival, lobby, opening choices and announced first
 activation use the same unattended recovery. Original join and Continue buttons
 remain authoritative, and terminal lobby/revival deadlines win during read-in.
-Mode recovery and unknown-result reconciliation remain separate increments. Genuine blockers stay paused with a concise host-contact
-notice; manager ending remains available. No modes, complete output retry/TTL,
-operator erasure, full settings/premium/profile UI or release certification yet.
+Acknowledged Drawing Conclusions bouts interrupt on disruption. After the
+same read-in, restore ordinary rules within the saved round. If an acknowledged
+mode start passes during read-in, apply that round cutover once and interrupt the
+unobserved bout. Genuine blockers stay paused with a concise host-contact
+notice; manager ending remains available. Other modes, complete output retry/TTL,
+operator erasure, full settings/premium/profile UI and release certification remain open.
 
 See `docs/DISCORD_PREVIEW.md` for the current runbook, `docs/RECOVERY.md` for
 recovery API boundaries, `docs/REQUESTED_SUMMARY.md` for current-score access and
@@ -119,6 +124,12 @@ migration or command sync; documentation-only patches need no reinstall/restart.
   body; preserve exact scores/unrated eligibility. Partial selections and refresh
   retain the original choice clock. Rotation/general resolution commit only at
   actual activation. Closure evidence alone is not a resolved award.
+- Breaking Moments use the same announced cutover as ordinary choices. Keep the
+  exact suspended inventory and incoming round clock. Restore ordinary rules after
+  120 seconds without a new draw/round. Mode results add binary observations, one
+  marker per failed message, and no ordinary posts or reaction faults. Whispers
+  add only traffic. Commit each third qualifying Drawing Conclusions post, game
+  credit and Pictoglyphs in the same unit. Credit and badge ownership are independent.
 - Lobby clocks start at actual publication (180 seconds; first choice 60).
   Starter plus two distinct humans is quorum; joins alone do not credit a game.
   Preplay has no fake playing round. First acknowledged activation creates it,
@@ -258,6 +269,6 @@ a claimed close, without reopening a game or occupying capacity.
 
 Inconclusive evidence keeps the claim unresolved. A live route stays paused
 and can be explicitly ended by a manager. An ended route remains ended without
-replaying an uncertain result. Next work is a deliberate operator policy for
-inconclusive evidence, mode integration, and the remaining human M2 exit checks.
+replaying an uncertain result. The existing authorized ending is the operator
+disposition for stalled games. Next work includes human M2 exit checks.
 The owner’s soft patch-size limit is 200 KB.

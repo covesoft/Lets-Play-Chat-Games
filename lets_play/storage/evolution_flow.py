@@ -21,6 +21,7 @@ from lets_play.new_rules.contracts import (
     Phase,
 )
 from lets_play.new_rules.hands import build_hand
+from lets_play.storage.breaking_flow import BreakingFlow
 from lets_play.storage.game_codec import IncompatibleState
 from lets_play.storage.game_store import _execute, _row
 from lets_play.storage.game_store import _unit_mutating as _write
@@ -57,8 +58,9 @@ class EvolutionOutput:
 class EvolutionFlow:
     """Returned effects are provisional until the enclosing write unit commits."""
 
-    def __init__(self, unit):
+    def __init__(self, unit, *, include_breaking_moment=False):
         self.unit, self.conn = unit, unit._conn
+        self.include_breaking_moment = include_breaking_moment
 
     async def next_deadline(self, session_id: str) -> datetime | None:
         """Known held/revival timer boundary; no clock is inferred from preparation."""
@@ -172,6 +174,10 @@ class EvolutionFlow:
             phrase_draw_limit=row["phrase_draw_limit"] or 5,
             used_phrases=used,
             available_templates=templates,
+            include_breaking_moment=self.include_breaking_moment
+            and not await BreakingFlow(self.unit).record(
+                frame.route.session_id, context.position.round_id
+            ),
         )
         return result.hand
 

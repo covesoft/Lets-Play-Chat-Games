@@ -9,12 +9,14 @@ import re
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 
+from lets_play.new_rules.breaking_moments import ModeChoice
 from lets_play.new_rules.contracts import RuleInstance
 from lets_play.new_rules.scoring import ScoreTotals
+from lets_play.storage.breaking_flow import BreakingFlow
 from lets_play.storage.game_codec import SCORE_COLUMNS, IncompatibleState, decode_score
 from lets_play.storage.game_store import _execute, _row
 from lets_play.storage.game_store import _unit_mutating as _write
-from lets_play.storage.offer_codec import utc_datetime, utc_int
+from lets_play.storage.offer_codec import decode_choice, utc_datetime, utc_int
 from lets_play.storage.pacing_flow import RoundPacing
 from lets_play.storage.recovery_flow import active_recovery, require_dispatchable
 
@@ -44,7 +46,7 @@ class SummarySnapshot:
     whispers: int
     round_messages: int
     round_whispers: int
-    rules: tuple[RuleInstance, ...]
+    rules: tuple[RuleInstance | ModeChoice, ...]
     message_id: int | None
     ordinary_posts: int = 0
 
@@ -200,10 +202,7 @@ class SummaryStore:
         )
         if row is None:
             return None
-        rules = tuple(
-            RuleInstance(i, card, tuple(tuple(p) for p in parameters))
-            for i, card, parameters in json.loads(row["rules_json"])
-        )
+        rules = tuple(decode_choice(item) for item in json.loads(row["rules_json"]))
         return SummarySnapshot(
             row["summary_id"],
             session,
@@ -309,9 +308,9 @@ class SummaryStore:
             "SELECT round_number,human_messages,whispers,ordinary_posts FROM nr_rounds WHERE session_id=? AND round_id=?",
             (session, p.round_id),
         )
-        rules = json.dumps(
-            [(r.instance_id, r.card_id, r.parameters) for r in context.active_instances]
-        )
+        mode = await BreakingFlow(self.unit).active(p)
+        effective = (mode.choice,) if mode else context.active_instances
+        rules = json.dumps([(r.instance_id, r.card_id, r.parameters) for r in effective])
         cursor = await self.conn.execute(
             """INSERT INTO nr_summary_outputs(session_id,output_key,kind,state,round_id,round_number,captured_at_utc,human_messages,whispers,round_messages,round_whispers,rules_json)
             VALUES (?,?,?,'prepared',?,?,?,?,?,?,?,?)""",

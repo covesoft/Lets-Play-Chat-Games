@@ -17,6 +17,7 @@ from lets_play.new_rules.contracts import (
     Phase,
     ReactionEvent,
 )
+from lets_play.storage.breaking_flow import BreakingFlow
 from lets_play.storage.game_codec import IncompatibleState
 from lets_play.storage.game_store import _execute, _row
 from lets_play.storage.game_store import _unit_mutating as _write
@@ -621,7 +622,10 @@ class RecoveryFlow:
                 or context.position.round_id != row["original_round"]
             ):
                 return "stale_owner"
-            if context.position.phase is not Phase.ORDINARY:
+            if context.position.phase is Phase.MODE and (
+                row["original_lifecycle"] != "playing"
+                or not await BreakingFlow(self.unit).active(context.position)
+            ):
                 return "unsupported_mode"
             if row["original_pause"] not in (None, "revival"):
                 return "existing_pause"
@@ -868,6 +872,9 @@ class RecoveryFlow:
             from lets_play.storage.pacing_flow import RoundPacing
 
             await OrdinaryFlow(self.unit)._advance_due(frame, templates)
+            # If an announced start fell inside read-in, honour the original
+            # round cutover but never start a fresh bout for the unseen window.
+            await BreakingFlow(self.unit).advance(frame, interrupted=True)
             await RoundPacing(self.unit)._advance_due(frame)
             await EvolutionFlow(self.unit)._advance_due(frame)
 

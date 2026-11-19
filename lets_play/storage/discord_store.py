@@ -7,6 +7,7 @@ from datetime import datetime
 from lets_play.new_rules.contracts import SessionRoute
 from lets_play.new_rules.evaluation import EvaluationContext
 from lets_play.new_rules.scoring import ScoreTotals
+from lets_play.storage.breaking_flow import BreakingFlow, BreakingMoment
 from lets_play.storage.evolution_flow import EvolutionFlow, RevivalRecord
 from lets_play.storage.game_codec import decode_score
 from lets_play.storage.game_store import _execute, _row
@@ -39,6 +40,7 @@ class DisplayState:
     offer_panel_id: int | None = None
     recovery_notice_id: int | None = None
     phase_control_id: int | None = None
+    mode: BreakingMoment | None = None
 
     @property
     def recovery_control_id(self):
@@ -150,7 +152,10 @@ class DiscordStore:
             if context
             else None
         )
+        mode = await BreakingFlow(self.unit).active(context.position) if context else None
         boundaries = []
+        if mode and context.position.lifecycle == "playing":
+            boundaries.append(mode.ends_at)
         if context is None and admission.next_deadline:
             boundaries.append(admission.next_deadline)
         if offer and offer.stage == "published" and offer.choice_deadline:
@@ -222,6 +227,7 @@ class DiscordStore:
             offer_panel_id,
             recovery_notice_id,
             phase_control_id,
+            mode,
         )
 
     async def _ranked_scores(self, session, anchor, backwards, *, round_id=None, limit=10):

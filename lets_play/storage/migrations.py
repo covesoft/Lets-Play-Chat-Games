@@ -647,4 +647,29 @@ MIGRATIONS += (
         ),
     ),
 )
+MIGRATIONS += (
+    Migration(
+        version=15,
+        name="drawing_conclusions",
+        statements=(
+            """CREATE TABLE nr_breaking_moments (
+                session_id TEXT NOT NULL,round_id TEXT NOT NULL,offer_id TEXT NOT NULL,
+                choice_id TEXT NOT NULL,kind TEXT NOT NULL CHECK(kind='drawing_conclusions'),
+                ends_at_utc INTEGER NOT NULL,
+                outcome TEXT CHECK(outcome IN ('completed','interrupted','ended')),
+                PRIMARY KEY(session_id,round_id),
+                FOREIGN KEY(session_id,round_id) REFERENCES nr_rounds ON DELETE CASCADE
+            ) STRICT""",
+            """CREATE TABLE nr_badges_v15 (
+                actor_id INTEGER NOT NULL REFERENCES nr_profiles ON DELETE CASCADE,
+                badge_key TEXT NOT NULL CHECK(badge_key IN
+                    ('rulemaker','spotless','familiar_face','party_animal','very_careful','mode_emoji')),
+                PRIMARY KEY(actor_id,badge_key)
+            ) STRICT""",
+            "INSERT INTO nr_badges_v15 SELECT actor_id,badge_key FROM nr_badges",
+            "DROP TABLE nr_badges",
+            "ALTER TABLE nr_badges_v15 RENAME TO nr_badges",
+        ),
+    ),
+)
 SCHEMA_VERSION = MIGRATIONS[-1].version

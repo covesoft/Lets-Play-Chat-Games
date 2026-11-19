@@ -21,15 +21,17 @@ schema-3 aggregates at round resolution. Familiar Face membership commits with
 the increment reaching ten. Existing badge membership never blocks credit.
 
 `profile(actor_id)` returns `NewRulesProfile`: actor ID, New Rules-only count and
-sorted stable general badge keys. An unknown actor reads as zero/empty without
+sorted stable badge keys. An unknown actor reads as zero/empty without
 creating a record. Global rows contain no session, guild, earning date or repeat
 counter. They survive gameplay foreign-key cleanup. Future games must use their
 own aggregates; this count is not an application-wide total.
 
-Schema 4 supports the five general badge keys only. Adding other predicates and
-keys requires explicit implementation/migration; the table is not an arbitrary
-public award-grant API. Mode-based gameplay credit and the twenty theme/mode badge
-predicates are not implemented by this facade.
+For Drawing Conclusions, schema 15 supports Pictoglyphs (`mode_emoji`). Three
+successful emoji-only posts from one actor in the same bout independently qualify
+gameplay credit and the badge. The third post and qualifying effects commit in one
+unit. An existing badge never blocks a game's credit, and later faults or an
+interrupted bout preserve earned awards. Profile presentation and other mode and
+theme predicates remain future work.
 
 ## Actual round closure
 

@@ -1,18 +1,20 @@
-# New Rules ordinary-round preview — v0.3.22 / schema 14
+# New Rules Discord preview — v0.3.23 / schema 15
 
 This development build connects the existing ordinary engine to Discord. Run one
 bot process against a database. Private/requested scores, automatic interims and
 compact round-end reports and acknowledged ordinary-phase reboot recovery are
-wired. Modes, remaining recovery phases, uncertain-send reconciliation and richer
-score details remain separate work; M2 is still in progress.
+wired. Drawing Conclusions uses the same announced cutover, and an interrupted
+bout restores ordinary play after read-in. Other Breaking Moments and remaining
+release work are still open.
 
 ## Install and enable
 
-The current schema is **14**, with WAL and foreign keys enabled. Stop the bot,
-back up and verify the configured schema-13 database, apply v0.3.22 to v0.3.21,
-reinstall, and run `python -m lets_play --init-db` before startup. Migration 14
-adds durable publication targets. No command sync is needed. To roll back,
-restore the schema-13 backup with the matching source. See
+The current schema is **15**, with WAL and foreign keys enabled. Stop the bot,
+back up and verify the configured schema-14 database, apply v0.3.23 to v0.3.22,
+reinstall, and run `python -m lets_play --init-db` before startup. Migration 15
+adds Breaking Moment records and preserves existing badges while enabling
+Pictoglyphs. No command sync is needed. To roll back, restore the schema-14
+backup with the matching source. See
 [RECOVERY.md](RECOVERY.md) and [STORAGE.md](STORAGE.md).
 
 
@@ -101,8 +103,8 @@ badge map, voice library or additional intent is needed.
     deadline lands during read-in, it ends on that deadline. Held idle time
     carries over, and an expired opening choice finishes automatically.
 11. The manager debug pane is retired. Old diagnostic controls reply privately.
-    Modes, unpublished phases and uncertain sends
-    remain paused, with a brief host-contact notice.
+    Unpublished phases and unresolved sends remain paused, with a brief
+    host-contact notice.
     Manager ending remains available. Deleted/missing ACK evidence does not allow
     a blind resend. Actual marker/client/channel behavior still needs human checks.
 
@@ -111,6 +113,15 @@ NR019, NR022, NR024, NR025, NR027, NR033 and NR034. NR036 is not offered because
 its phrase-bank integration belongs to a later increment. No new validators are
 introduced here. Legal hands and replacements still require actual-validator
 compatibility witnesses; an incomplete hand is never published.
+
+12. When a later hand offers Drawing Conclusions, choose it. Check that `/rules`
+    shows only Drawing Conclusions during the bout. Try three distinct emoji-only
+    posts and then an emoji mixed with text. Expect one marker on the mixed post.
+    A whisper or reaction should add no compliance observation. After two minutes
+    the same round should show its previous rules, and its next hand should be
+    ordinary-only. In a separate bout, restart after the third valid post and
+    check that the recovery notice names the interruption and ordinary rules
+    return after read-in. Check that the saved scores include those posts.
 
 ## Delivery and ordering
 
