@@ -19,9 +19,8 @@ result = evaluate_text_rule(view, RuleInstance("example-instance", "NR034"))
 ```
 
 `RuleEvaluation` returns an instance ID, typed pass/fail/not-applicable outcome,
-and a stable reason code on failure. Supported text IDs are NR007, NR008, NR010,
-NR011, NR012, NR013, NR014, NR016, NR017, NR019, NR022, NR024 through NR031,
-and NR033 through NR036. See the [ordinary subset](HANDS.md) for their behavior
+and a stable reason code on failure. Supported text IDs are NR007 through NR022,
+NR024 through NR031, and NR033 through NR039. See the [ordinary subset](HANDS.md) for their behavior
 and metadata.
 Other card IDs raise `NotImplementedError`; they never receive a default successful result.
 The engine must select the active instances and phase before invoking ordinary
@@ -147,6 +146,22 @@ Person forbids `you`, `your`, `you're`, `you've`, `you'll`, `you'd`,
 variants. `Yours` is a separate word. The Royal We requires one of
 `we`, `our`, or `us`. `We're`, `Wednesday`, `your`, and `USA` do
 not meet that requirement.
+
+No Accounting checks logical content for Unicode digit characters, including
+Arabic-Indic digits, superscripts such as `²`, and digit keycaps. Numeric
+characters such as `½` fall outside that digit class. Discord object IDs and
+hidden link destinations are excluded from logical content. One Breath checks
+the original message for CR or LF, including breaks inside Markdown. A Small
+Pause requires an ASCII comma in logical content.
+
+Use Your Words counts at least five parser words. Room to Elaborate and Small
+Print use trimmed logical grapheme counts, including visible spaces and
+punctuation. Little Words counts Unicode letters within each parser word.
+Combining marks, digits, and internal apostrophes add no letters. Decree Mode
+checks words of three or more graphemes, including an internal apostrophe.
+It title-cases the first cased letter and lowercases later cased letters in
+that word. `Don't` and `DoN’T` illustrate a pass and a failure. Hyphen-separated
+words are checked individually, and uncased words pass the casing check.
 
 The parser fixtures and `ordinary_rule_examples.json` cover boundary,
 applicability, and composition examples for the supported predicates.

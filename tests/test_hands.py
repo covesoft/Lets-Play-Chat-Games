@@ -384,7 +384,7 @@ def test_offer_and_phrase_representations_do_not_reveal_phrase_or_witness_text()
     [
         {"phrase_draw_limit": 4},
         {"phrase_draw_limit": True},
-        {"available_templates": frozenset({"NR037"})},
+        {"available_templates": frozenset({"NR040"})},
         {"phrase_bank": bank(16)},
         {"used_phrases": frozenset({("NOT_NORMALIZED",)})},
     ],

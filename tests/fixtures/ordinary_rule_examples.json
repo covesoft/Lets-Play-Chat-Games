@@ -946,5 +946,449 @@
     "card": "NR035",
     "content": "-# we lol because but my you’re",
     "outcome": "not_applicable"
+  },
+  {
+    "id": "NR009-m3-0",
+    "card": "NR009",
+    "content": "ducks",
+    "outcome": "pass"
+  },
+  {
+    "id": "NR009-m3-1",
+    "card": "NR009",
+    "content": "duck 7",
+    "outcome": "fail"
+  },
+  {
+    "id": "NR009-m3-2",
+    "card": "NR009",
+    "content": "duck ７",
+    "outcome": "fail"
+  },
+  {
+    "id": "NR009-m3-3",
+    "card": "NR009",
+    "content": "duck ٣",
+    "outcome": "fail"
+  },
+  {
+    "id": "NR009-m3-4",
+    "card": "NR009",
+    "content": "duck ²",
+    "outcome": "fail"
+  },
+  {
+    "id": "NR009-m3-5",
+    "card": "NR009",
+    "content": "duck ½",
+    "outcome": "pass"
+  },
+  {
+    "id": "NR009-m3-6",
+    "card": "NR009",
+    "content": "1️⃣",
+    "outcome": "fail"
+  },
+  {
+    "id": "NR009-m3-7",
+    "card": "NR009",
+    "content": "<@456> <:duck:789>",
+    "outcome": "pass"
+  },
+  {
+    "id": "NR009-m3-8",
+    "card": "NR009",
+    "content": "[duck](https://example.invalid/123)",
+    "outcome": "pass"
+  },
+  {
+    "id": "NR009-m3-9",
+    "card": "NR009",
+    "content": "`123`",
+    "outcome": "fail"
+  },
+  {
+    "id": "NR009-m3-10",
+    "card": "NR009",
+    "content": "",
+    "outcome": "not_applicable"
+  },
+  {
+    "id": "NR009-m3-11",
+    "card": "NR009",
+    "content": "-# twelve123\n",
+    "outcome": "not_applicable"
+  },
+  {
+    "id": "NR015-m3-0",
+    "card": "NR015",
+    "content": "hello",
+    "outcome": "pass"
+  },
+  {
+    "id": "NR015-m3-1",
+    "card": "NR015",
+    "content": "hello\nworld",
+    "outcome": "fail"
+  },
+  {
+    "id": "NR015-m3-2",
+    "card": "NR015",
+    "content": "hello\rworld",
+    "outcome": "fail"
+  },
+  {
+    "id": "NR015-m3-3",
+    "card": "NR015",
+    "content": "hello\r\nworld",
+    "outcome": "fail"
+  },
+  {
+    "id": "NR015-m3-4",
+    "card": "NR015",
+    "content": "```\nduck\n```",
+    "outcome": "fail"
+  },
+  {
+    "id": "NR015-m3-5",
+    "card": "NR015",
+    "content": "hello\n",
+    "outcome": "fail"
+  },
+  {
+    "id": "NR015-m3-6",
+    "card": "NR015",
+    "content": "",
+    "outcome": "not_applicable"
+  },
+  {
+    "id": "NR015-m3-7",
+    "card": "NR015",
+    "content": "-# twelve123\n",
+    "outcome": "not_applicable"
+  },
+  {
+    "id": "NR018-m3-0",
+    "card": "NR018",
+    "content": "one two three four",
+    "outcome": "fail"
+  },
+  {
+    "id": "NR018-m3-1",
+    "card": "NR018",
+    "content": "one two three four five",
+    "outcome": "pass"
+  },
+  {
+    "id": "NR018-m3-2",
+    "card": "NR018",
+    "content": "one-two **three** 4 five",
+    "outcome": "pass"
+  },
+  {
+    "id": "NR018-m3-3",
+    "card": "NR018",
+    "content": "one two three four 👩🏽‍🚀",
+    "outcome": "fail"
+  },
+  {
+    "id": "NR018-m3-4",
+    "card": "NR018",
+    "content": "",
+    "outcome": "not_applicable"
+  },
+  {
+    "id": "NR018-m3-5",
+    "card": "NR018",
+    "content": "-# twelve123\n",
+    "outcome": "not_applicable"
+  },
+  {
+    "id": "NR020-m3-0",
+    "card": "NR020",
+    "content": " **1234567890123456789** ",
+    "outcome": "fail"
+  },
+  {
+    "id": "NR020-m3-1",
+    "card": "NR020",
+    "content": " **12345678901234567890** ",
+    "outcome": "pass"
+  },
+  {
+    "id": "NR020-m3-2",
+    "card": "NR020",
+    "content": "xxxxxxxxxxxxxxxxxxx👩🏽‍🚀",
+    "outcome": "pass"
+  },
+  {
+    "id": "NR020-m3-3",
+    "card": "NR020",
+    "content": "xxxxxxxxxxxxxxxxxxé",
+    "outcome": "fail"
+  },
+  {
+    "id": "NR020-m3-4",
+    "card": "NR020",
+    "content": "xxxxxxxxxxxxxxxxxxx?",
+    "outcome": "pass"
+  },
+  {
+    "id": "NR020-m3-5",
+    "card": "NR020",
+    "content": "",
+    "outcome": "not_applicable"
+  },
+  {
+    "id": "NR020-m3-6",
+    "card": "NR020",
+    "content": "-# twelve123\n",
+    "outcome": "not_applicable"
+  },
+  {
+    "id": "NR021-m3-0",
+    "card": "NR021",
+    "content": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+    "outcome": "pass"
+  },
+  {
+    "id": "NR021-m3-1",
+    "card": "NR021",
+    "content": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx?",
+    "outcome": "fail"
+  },
+  {
+    "id": "NR021-m3-2",
+    "card": "NR021",
+    "content": " **xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx👩🏽‍🚀** ",
+    "outcome": "pass"
+  },
+  {
+    "id": "NR021-m3-3",
+    "card": "NR021",
+    "content": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxé",
+    "outcome": "fail"
+  },
+  {
+    "id": "NR021-m3-4",
+    "card": "NR021",
+    "content": "xxxxxxxxxxxxxxxxxxx yyyyyyyyyyyyyyyyyyyy",
+    "outcome": "pass"
+  },
+  {
+    "id": "NR021-m3-5",
+    "card": "NR021",
+    "content": "",
+    "outcome": "not_applicable"
+  },
+  {
+    "id": "NR021-m3-6",
+    "card": "NR021",
+    "content": "-# twelve123\n",
+    "outcome": "not_applicable"
+  },
+  {
+    "id": "NR037-m3-0",
+    "card": "NR037",
+    "content": "Please Our Ducks Quack Over",
+    "outcome": "pass"
+  },
+  {
+    "id": "NR037-m3-1",
+    "card": "NR037",
+    "content": "we Go to the Pond",
+    "outcome": "fail"
+  },
+  {
+    "id": "NR037-m3-2",
+    "card": "NR037",
+    "content": "we Go to a Pond",
+    "outcome": "pass"
+  },
+  {
+    "id": "NR037-m3-3",
+    "card": "NR037",
+    "content": "Don't Stop",
+    "outcome": "pass"
+  },
+  {
+    "id": "NR037-m3-4",
+    "card": "NR037",
+    "content": "Don’T Stop",
+    "outcome": "fail"
+  },
+  {
+    "id": "NR037-m3-5",
+    "card": "NR037",
+    "content": "i’m Here",
+    "outcome": "fail"
+  },
+  {
+    "id": "NR037-m3-6",
+    "card": "NR037",
+    "content": "I’m Here",
+    "outcome": "pass"
+  },
+  {
+    "id": "NR037-m3-7",
+    "card": "NR037",
+    "content": "Été",
+    "outcome": "pass"
+  },
+  {
+    "id": "NR037-m3-8",
+    "card": "NR037",
+    "content": "éb",
+    "outcome": "pass"
+  },
+  {
+    "id": "NR037-m3-9",
+    "card": "NR037",
+    "content": "42Cats 東京",
+    "outcome": "pass"
+  },
+  {
+    "id": "NR037-m3-10",
+    "card": "NR037",
+    "content": "42cats",
+    "outcome": "fail"
+  },
+  {
+    "id": "NR037-m3-11",
+    "card": "NR037",
+    "content": "Al-Lev",
+    "outcome": "pass"
+  },
+  {
+    "id": "NR037-m3-12",
+    "card": "NR037",
+    "content": "ALL CAPS",
+    "outcome": "fail"
+  },
+  {
+    "id": "NR037-m3-13",
+    "card": "NR037",
+    "content": "",
+    "outcome": "not_applicable"
+  },
+  {
+    "id": "NR037-m3-14",
+    "card": "NR037",
+    "content": "-# twelve123\n",
+    "outcome": "not_applicable"
+  },
+  {
+    "id": "NR038-m3-0",
+    "card": "NR038",
+    "content": "hello, friend",
+    "outcome": "pass"
+  },
+  {
+    "id": "NR038-m3-1",
+    "card": "NR038",
+    "content": "**hello,**",
+    "outcome": "pass"
+  },
+  {
+    "id": "NR038-m3-2",
+    "card": "NR038",
+    "content": "hello，friend",
+    "outcome": "fail"
+  },
+  {
+    "id": "NR038-m3-3",
+    "card": "NR038",
+    "content": "[hello](https://example.invalid/a,b)",
+    "outcome": "fail"
+  },
+  {
+    "id": "NR038-m3-4",
+    "card": "NR038",
+    "content": "`hello, friend`",
+    "outcome": "pass"
+  },
+  {
+    "id": "NR038-m3-5",
+    "card": "NR038",
+    "content": "",
+    "outcome": "not_applicable"
+  },
+  {
+    "id": "NR038-m3-6",
+    "card": "NR038",
+    "content": "-# twelve123\n",
+    "outcome": "not_applicable"
+  },
+  {
+    "id": "NR039-m3-0",
+    "card": "NR039",
+    "content": "quacks",
+    "outcome": "pass"
+  },
+  {
+    "id": "NR039-m3-1",
+    "card": "NR039",
+    "content": "quacker",
+    "outcome": "fail"
+  },
+  {
+    "id": "NR039-m3-2",
+    "card": "NR039",
+    "content": "quack’s",
+    "outcome": "pass"
+  },
+  {
+    "id": "NR039-m3-3",
+    "card": "NR039",
+    "content": "quackʼs",
+    "outcome": "pass"
+  },
+  {
+    "id": "NR039-m3-4",
+    "card": "NR039",
+    "content": "quacks123",
+    "outcome": "pass"
+  },
+  {
+    "id": "NR039-m3-5",
+    "card": "NR039",
+    "content": "abcdefg123",
+    "outcome": "fail"
+  },
+  {
+    "id": "NR039-m3-6",
+    "card": "NR039",
+    "content": "1234567",
+    "outcome": "pass"
+  },
+  {
+    "id": "NR039-m3-7",
+    "card": "NR039",
+    "content": "éclair",
+    "outcome": "pass"
+  },
+  {
+    "id": "NR039-m3-8",
+    "card": "NR039",
+    "content": "éclairs",
+    "outcome": "fail"
+  },
+  {
+    "id": "NR039-m3-9",
+    "card": "NR039",
+    "content": "little-duck",
+    "outcome": "pass"
+  },
+  {
+    "id": "NR039-m3-10",
+    "card": "NR039",
+    "content": "",
+    "outcome": "not_applicable"
+  },
+  {
+    "id": "NR039-m3-11",
+    "card": "NR039",
+    "content": "-# twelve123\n",
+    "outcome": "not_applicable"
   }
 ]

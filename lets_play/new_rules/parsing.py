@@ -48,6 +48,10 @@ class Word:
     start: int
     end: int
 
+    @property
+    def letter_count(self) -> int:
+        return sum(char.isalpha() and char not in _APOSTROPHES for char in self.text)
+
 
 @dataclass(frozen=True, slots=True)
 class Link:
@@ -91,7 +95,7 @@ class MessageView:
     @property
     def character_count(self) -> int:
         """User-perceived graphemes in trimmed logical text; not bytes/code points."""
-        return sum(1 for _ in _GRAPHEME.finditer(self.logical.strip()))
+        return grapheme_count(self.logical.strip())
 
     @property
     def has_line_break(self) -> bool:
@@ -110,6 +114,10 @@ class MessageView:
         if not self.words or self.words[0].key != word_key(word):
             return False
         return is_word_gap(self.logical[: self.words[0].start])
+
+
+def grapheme_count(text: str) -> int:
+    return sum(1 for _ in _GRAPHEME.finditer(text))
 
 
 def word_key(word: str) -> str:

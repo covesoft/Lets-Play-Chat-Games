@@ -24,11 +24,19 @@ from lets_play.new_rules.contracts import (
     SessionRoute,
 )
 from lets_play.new_rules.evaluation import EvaluationContext, evaluate_message
-from lets_play.new_rules.parsing import MAX_PARSER_CODEPOINTS, ParserLimitError, parse_message
+from lets_play.new_rules.parsing import (
+    MAX_PARSER_CODEPOINTS,
+    ParserLimitError,
+    grapheme_count,
+    parse_message,
+)
 from lets_play.new_rules.text_rules import (
+    MIN_CHARACTERS,
+    MIN_WORDS,
     REQUIRED_ENDINGS,
     ROYAL_WORDS,
     RuleConfigurationError,
+    decree_case,
     phrase_keys,
 )
 
@@ -79,6 +87,7 @@ _ROUTE = SessionRoute(1, 1, "witness")
 _POSITION = SessionPosition(_ROUTE, Lifecycle.PLAYING, round_id="witness")
 _TIME = datetime(2000, 1, 1, tzinfo=UTC)
 _MATCHING_MARK_CONFLICTS = frozenset({("NR010", "NR013"), ("NR012", "NR014")})
+_FILLER_WORDS = ("bright", "green", "ducks", "swim", "today", "near", "each", "pond")
 
 
 def _direct_conflict(left: str, right: str) -> bool:
@@ -138,6 +147,47 @@ def _required_part_orders(phrases: tuple[tuple[str, ...], ...], *, require_royal
                 yield (*order[:index], (word,), *order[index:])
 
 
+def _render_witness(words: tuple[str, ...], cards: set[str], punctuation: str) -> str:
+    if "NR037" in cards:
+        words = tuple(decree_case(word) for word in words)
+    if "NR038" in cards:
+        words = (words[0] + ",", *words[1:])
+    text = " ".join(words) + punctuation
+    if "NR008" in cards:
+        return text.upper()
+    if "NR007" in cards:
+        return text.lower()
+    return text
+
+
+def _witness_texts(
+    words: tuple[str, ...],
+    cards: set[str],
+    punctuation: str,
+    *,
+    has_prefix: bool,
+    has_suffix: bool,
+):
+    text = _render_witness(words, cards, punctuation)
+    missing_words = MIN_WORDS - len(words) if "NR018" in cards else 0
+    missing_characters = MIN_CHARACTERS - grapheme_count(text) if "NR020" in cards else 0
+    if missing_words <= 0 and missing_characters <= 0:
+        yield len(words), text
+        return
+    padding = []
+    for filler in _FILLER_WORDS:
+        if len(padding) >= missing_words and missing_characters <= 0:
+            break
+        if filler not in words:
+            padding.append(filler)
+            missing_characters -= len(filler) + 1
+    # Inserting next to a required phrase can preserve overlap with either end.
+    # Try the gaps and let actual validators reject any split phrase.
+    for index in range(int(has_prefix), len(words) + 1 - int(has_suffix)):
+        padded = (*words[:index], *padding, *words[index:])
+        yield len(padded), _render_witness(padded, cards, punctuation)
+
+
 def assess_state(
     instances: tuple[RuleInstance, ...], *, budget: WitnessBudget = DEFAULT_WITNESS_BUDGET
 ) -> Assessment:
@@ -181,13 +231,18 @@ def assess_state(
                 limited = True
                 break
             candidates.add(words or ("hello",))
-    for words in sorted(candidates, key=lambda item: (len(item), item)):
-        text = " ".join(words) + punctuation
-        if "NR008" in cards:
-            text = text.upper()
-        elif "NR007" in cards:
-            text = text.lower()
-        if len(text) > MAX_PARSER_CODEPOINTS:
+    texts = (
+        trial
+        for words in sorted(candidates, key=lambda item: (len(item), item))
+        for trial in _witness_texts(
+            words, cards, punctuation, has_prefix=bool(prefix), has_suffix=bool(suffix)
+        )
+    )
+    for index, (word_count, text) in enumerate(texts):
+        if index >= budget.max_candidates:
+            limited = True
+            break
+        if word_count > budget.max_words or len(text) > MAX_PARSER_CODEPOINTS:
             limited = True
             continue
         view = parse_message(text)

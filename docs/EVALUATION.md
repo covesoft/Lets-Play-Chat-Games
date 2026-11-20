@@ -23,7 +23,7 @@ including changes that later return to the same visible state.
 | --- | --- |
 | NR004 | Every ordinary human message; no attachments passes, one or more attachments fails once. Native voice attachments count; link previews do not. |
 | NR006 | Ordinary reaction actions by their actor; message creates return not-applicable for this card. |
-| NR007, NR008, NR010, NR011, NR012, NR013, NR014, NR016, NR017, NR019, NR022, NR024, NR025–NR031, NR033, NR034, NR035 | Present ordinary text, including whitespace/punctuation-only text; absent or empty text is not-applicable. |
+| NR007–NR022, NR024–NR031, NR033–NR035, NR037–NR039 | Present ordinary text, including whitespace/punctuation-only text; absent or empty text is not-applicable. |
 | NR036 | Present ordinary text against a frozen phrase; each active instance is evaluated separately. |
 
 Unsupported cards raise `NotImplementedError`. Invalid instance configurations

@@ -8,7 +8,7 @@ hands. The full catalog and other Breaking Moments are still pending.
 
 ## Implemented catalog
 
-`catalog.CARD_SPECS` is immutable metadata for these 25 implemented validators:
+`catalog.CARD_SPECS` is immutable metadata for these 33 implemented validators:
 
 | ID | Card | Check / mechanical group |
 | --- | --- | --- |
@@ -16,14 +16,19 @@ hands. The full catalog and other Breaking Moments are still pending.
 | NR006 | Expressionless | Prohibited reaction actors; Expression |
 | NR007 | Inside Voice | Lowercase mapping; casing slot |
 | NR008 | SPEAK UP | Uppercase mapping; casing slot |
+| NR009 | No Accounting | No Unicode digits (Typography) |
 | NR010 | Questionable Conduct | ASCII question-mark ending; terminal slot |
 | NR011 | Are You Sure? | At least three consecutive terminal ASCII periods; terminal slot |
 | NR012 | With Gusto | ASCII exclamation-mark ending; terminal slot |
 | NR013 | No Questions | No ASCII question marks; conflicts with NR010 |
 | NR014 | Curb The Enthusiasm | No ASCII exclamation marks; conflicts with NR012 |
+| NR015 | One Breath | No original CR or LF (Typography) |
 | NR016 | Plain Clothes | No supported formatting; independent Typography restriction |
 | NR017 | Briefly | At most five words; Brevity |
+| NR018 | Use Your Words | At least five words (Brevity) |
 | NR019 | One Word Will Do | Exactly one word; Brevity |
+| NR020 | Room to Elaborate | At least twenty graphemes (Brevity) |
+| NR021 | Small Print | At most forty graphemes (Brevity) |
 | NR022 | No Echoes | No repeated normalized word; Vocabulary |
 | NR024 | So Agreeable | Distinct first word `yes`; prefix slot |
 | NR025 | No Apologies | No whole word `sorry`; Vocabulary |
@@ -37,6 +42,9 @@ hands. The full catalog and other Breaking Moments are still pending.
 | NR034 | Roger Wilco | Ending word `over`; separate from terminal punctuation |
 | NR035 | The Royal We | Include `we`, `our`, or `us`; Clauses |
 | NR036 | Don’t Forget | Frozen phrase; two independent instances |
+| NR037 | Decree Mode | Title case words of at least three graphemes (casing slot) |
+| NR038 | A Small Pause | Include an ASCII comma (Typography) |
+| NR039 | Little Words | Up to six Unicode letters per word (Brevity) |
 
 Mechanical settings are code constants in `catalog.py`:
 `CHATGAMES_MAX_ACTIVE_BREVITY_RULES=1`,
@@ -56,7 +64,7 @@ one-word phrases. NR010 conflicts with NR013, and NR012 with NR014. The two
 bans can coexist, and either required mark can coexist with the other mark's ban.
 The witness search composes required prefixes, phrases, inclusion words, and
 endings, then applies casing and punctuation. If a required phrase already
-contains a Royal We word, the witness can use that same occurrence. The actual evaluator must pass every applicable predicate; only
+contains a Royal We word, the witness can use that same occurrence. Minimum-length rules can add distinct filler words while preserving the required start and ending. The actual evaluator must pass every applicable predicate; only
 NR006 is not-applicable to this synthetic message. Empty text, media-only posts,
 and whispers cannot establish feasibility.
 

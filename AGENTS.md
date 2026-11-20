@@ -8,7 +8,7 @@ contains operational and API documentation only.
 
 ## Current implementation
 
-Application v0.3.32 uses schema 16. M1 closed at v0.2.9/schema 8, and M2
+Application v0.3.33 uses schema 16. M1 closed at v0.2.9/schema 8, and M2
 closed at v0.3.30/schema 16. M3 compatibility and catalog work is underway.
 Preserve the existing domain/storage APIs. This build is a development-only
 Discord preview.
@@ -19,8 +19,8 @@ same-round revival, manager ending, private live scores, requested public report
 gated automatic interims, compact round-end boards and ranked final standings.
 Drawing Conclusions is the supported Breaking Moment. An eligible later hand
 can draw it as one template ticket. Opening and post-mode hands are ordinary-only.
-Twenty-five ordinary predicates exist. The opening pool has five templates, and
-later offers use twenty-four non-phrase templates. NR036 is not offered by the adapter.
+Thirty-three ordinary predicates exist. The opening pool has five templates, and
+later offers use thirty-two non-phrase templates. NR036 is not offered by the adapter.
 One Word Will Do conflicts with the Clauses deck, and each terminal mark requirement
 conflicts with its matching ban. A single permitted removal must clear all blockers.
 

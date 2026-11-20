@@ -135,7 +135,7 @@ def test_no_questions_and_literal_ellipsis_are_compatible():
         ((rule("NR010"), rule("NR012")), Rejection.SLOT),
         ((rule("NR011"), rule("NR012")), Rejection.SLOT),
         ((rule("NR011"), rule("NR011", "another")), Rejection.DUPLICATE),
-        ((rule("NR037"),), Rejection.UNSUPPORTED),
+        ((rule("NR040"),), Rejection.UNSUPPORTED),
         ((phrase("a", "one"), phrase("b", "two"), phrase("c", "three")), Rejection.CAP),
     ],
 )
@@ -268,6 +268,54 @@ def test_second_person_contraction_can_block_a_frozen_phrase():
     assert assess_state(active).legal
     assert assess_state((*active, rule("NR031"))).rejection is Rejection.NO_WITNESS
     assert legal_completions(active, rule("NR031")) == ()
+
+
+@pytest.mark.parametrize("card", ["NR018", "NR020"])
+def test_minimum_brevity_witness_extends_chat_without_splitting_frozen_ending(card):
+    active = tuple(rule(item) for item in (card, "NR022", "NR033", "NR034", "NR037", "NR038"))
+    active += (phrase("duck over"),)
+    result = assess_state(active)
+    verify_witness(active, result)
+    assert result.witness.text.startswith("Please, ")
+    assert result.witness.text.endswith("Duck Over")
+
+
+def test_small_print_counts_terminal_mark_and_comma_in_whole_state():
+    forced = phrase("under the quiet bridge by the green pond")
+    active = (rule("NR021"), forced)
+    verify_witness(active, assess_state(active))
+    for punctuation_card in ("NR010", "NR038"):
+        assert assess_state((*active, rule(punctuation_card))).rejection is Rejection.NO_WITNESS
+        assert legal_completions(active, rule(punctuation_card)) == ()
+
+
+@pytest.mark.parametrize(("restriction", "text"), [("NR009", "duck ７"), ("NR039", "duckling")])
+def test_brevity_or_typography_restriction_cannot_remove_an_unrelated_clause(restriction, text):
+    active = (phrase(text),)
+    assert assess_state(active).legal
+    assert legal_completions(active, rule(restriction)) == ()
+
+
+@pytest.mark.parametrize("current", ["NR007", "NR008"])
+def test_decree_mode_reciprocally_replaces_the_other_casing_card(current):
+    keep = rule("NR033")
+    for old, new in ((current, "NR037"), ("NR037", current)):
+        (completion,) = legal_completions((rule(old), keep), rule(new))
+        assert completion.outgoing_id == old
+        assert completion.instances == (keep, rule(new))
+
+
+@pytest.mark.parametrize(
+    "cards",
+    [
+        ("NR015", "NR017", "NR034"),  # Radio Discipline
+        ("NR011", "NR025", "NR038"),  # Dramatic Pause
+        ("NR009", "NR016", "NR039"),  # Fine Print
+    ],
+)
+def test_new_typography_and_brevity_theme_cores_have_actual_witnesses(cards):
+    active = tuple(rule(card) for card in cards)
+    verify_witness(active, assess_state(active))
 
 
 def test_each_phrase_replacement_checks_the_whole_result():
