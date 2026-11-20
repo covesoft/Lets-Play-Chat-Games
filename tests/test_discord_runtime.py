@@ -12,6 +12,7 @@ from lets_play.discord_adapter.discord_io import render
 from lets_play.discord_adapter.lane import Lane, LaneUnavailable
 from lets_play.discord_adapter.runtime import OpeningRuntime
 from lets_play.new_rules.contracts import EventEnvelope, EventKind, MessageEvent
+from lets_play.presentation import default_presentation
 from lets_play.storage.game_store import open_game_store
 from lets_play.storage.opening_flow import OpeningCapabilities, OpeningStatus
 
@@ -159,7 +160,7 @@ async def test_opening_quorum_authorization_scoring_marker_dedup_and_end(tmp_pat
             )
         assert (await runtime.state(route.session_id)).admission.joined == 1
         state = await choice(runtime, route)
-        assert render(state)[0].title == "New Rules — choose the next card"
+        assert render(state)[0].title == default_presentation().text("offer.title")
         assert (
             await runtime.submit(route, "choose", actor=999, message_id=state.panel_id, index=0)
             is OpeningStatus.UNAUTHORIZED

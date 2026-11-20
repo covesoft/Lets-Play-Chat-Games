@@ -157,7 +157,7 @@ def render_ordinary(state, copy, button, *, kind=None, now=None):
             description = rule_text(copy, option.incoming)
             if mode_choice:
                 mode_label = copy.text("mode.choice_label", minutes=BREAKING_MOMENT_SECONDS // 60)
-                description = f"**{mode_label}**\n{description}"
+                description = f"*{mode_label}*\n{description}"
             if option.outgoing_ids:
                 targets = ", ".join(
                     copy.text(f"cards.{active[t].card_id}.name") for t in option.outgoing_ids

@@ -10,7 +10,13 @@ from test_ordinary_flow import NOW, execute, rows
 from test_reboot_recovery import RecoveryTransport, fire, reading
 
 from lets_play.discord_adapter.discord_io import render
-from lets_play.new_rules.breaking_moments import ModeChoice, drawing_conclusions
+from lets_play.new_rules.breaking_moments import (
+    BREAKING_MOMENT_SECONDS,
+    DRAWING_CONCLUSIONS,
+    ModeChoice,
+    drawing_conclusions,
+    mode_ends_at,
+)
 from lets_play.new_rules.contracts import (
     AttachmentSnapshot,
     EmojiIdentity,
@@ -21,6 +27,7 @@ from lets_play.new_rules.contracts import (
     ReactionEvent,
     SessionRoute,
 )
+from lets_play.presentation import default_presentation
 from lets_play.storage import bootstrap, evolution_flow
 from lets_play.storage.migrations import MIGRATIONS, SCHEMA_VERSION
 from lets_play.storage.progression import Progression
@@ -67,14 +74,14 @@ async def scheduled(runtime, monkeypatch, *, expressionless=False):
     (index,) = (i for i, o in enumerate(options) if isinstance(o.incoming, ModeChoice))
     assert options[index].outgoing_ids == ()
     embed, view = render(offer)
-    assert embed.title == "New Rules — choose the next card"
-    assert embed.fields[index].name == view.children[index].label == "Drawing Conclusions"
-    assert embed.fields[index].value == (
-        "**Breaking Moment · 2 minutes**\nPost only emojis! (Spaces are fine too)"
-    )
-    assert all(
-        "Breaking Moment ·" not in field.value for i, field in enumerate(embed.fields) if i != index
-    )
+    copy = default_presentation()
+    name = copy.text(f"cards.{DRAWING_CONCLUSIONS}.name")
+    description = copy.text(f"cards.{DRAWING_CONCLUSIONS}.description")
+    mode_label = copy.text("mode.choice_label", minutes=BREAKING_MOMENT_SECONDS // 60)
+    assert embed.title == copy.text("ordinary.offer_title")
+    assert embed.fields[index].name == view.children[index].label == name
+    assert embed.fields[index].value == f"*{mode_label}*\n{description}"
+    assert all(mode_label not in field.value for i, field in enumerate(embed.fields) if i != index)
     assert [item.style for item in view.children] == [
         discord.ButtonStyle.primary if i == index else discord.ButtonStyle.secondary
         for i in range(len(options))
@@ -94,15 +101,20 @@ async def scheduled(runtime, monkeypatch, *, expressionless=False):
     assert state.offer_display_ready
     assert state.round_number == 1 and state.mode is None
     rules_embed, _ = render(state, kind="rules")
-    assert "Drawing Conclusions" not in rules_embed.title
-    assert all(field.name != "Drawing Conclusions" for field in rules_embed.fields)
+    assert name not in rules_embed.title
+    assert all(field.name != name for field in rules_embed.fields)
     activation = next(
         s for _, kind, s in runtime.transport.messages if kind == "ordinary_activation"
     )
     embed, _ = render(activation, kind="ordinary_activation")
-    assert embed.title == "Breaking Moment — Drawing Conclusions"
-    assert embed.description.startswith("Post only emojis! (Spaces are fine too)\n\n")
-    assert f"<t:{int(state.offer.effective_at.timestamp())}:R>" in embed.description
+    assert embed.title == copy.text("mode.named_title", name=name)
+    start = state.offer.effective_at
+    timing = copy.text(
+        "mode.scheduled_description",
+        starts=int(start.timestamp()),
+        ends=int(mode_ends_at(start).timestamp()),
+    )
+    assert embed.description == f"{description}\n\n{timing}"
     assert not embed.fields
     return route, state
 
@@ -160,9 +172,12 @@ async def test_mode_cutover_scoring_timer_award_restore_and_hand_spacing(tmp_pat
         assert active.context.active_instances == original.context.active_instances
         assert route.session_id in runtime.timers
         embed, _ = render(active, kind="rules")
-        assert embed.title == "Breaking Moment — Drawing Conclusions"
-        assert embed.description.startswith("Post only emojis! (Spaces are fine too)\n\n")
-        assert f"<t:{int(active.mode.ends_at.timestamp())}:R>" in embed.description
+        copy = default_presentation()
+        name = copy.text(f"cards.{DRAWING_CONCLUSIONS}.name")
+        description = copy.text(f"cards.{DRAWING_CONCLUSIONS}.description")
+        timing = copy.text("mode.active_description", ends=int(active.mode.ends_at.timestamp()))
+        assert embed.title == copy.text("mode.named_title", name=name)
+        assert embed.description == f"{description}\n\n{timing}"
         assert not embed.fields
 
         await runtime.submit(route, "event", event=first)
@@ -213,7 +228,9 @@ async def test_mode_cutover_scoring_timer_award_restore_and_hand_spacing(tmp_pat
         assert restored.context.position.round_id == active.context.position.round_id
         assert restored.context.active_instances == original.context.active_instances
         assert restored.pacing.started_at == starts
-        assert [f.name for f in render(restored, kind="rules")[0].fields] == ["Expressionless"]
+        assert [f.name for f in render(restored, kind="rules")[0].fields] == [
+            copy.text("cards.NR006.name")
+        ]
         assert rows(db, "SELECT outcome FROM nr_breaking_moments") == [("completed",)]
         assert rows(db, "SELECT COUNT(*) FROM nr_round_resolutions") == [(1,)]
         await runtime.submit(route, "event", event=ignored)

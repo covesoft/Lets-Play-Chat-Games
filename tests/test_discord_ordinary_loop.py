@@ -20,6 +20,7 @@ from test_ordinary_flow import rows
 from lets_play.discord_adapter import runtime as runtime_module
 from lets_play.discord_adapter.discord_io import render
 from lets_play.discord_adapter.runtime import ORDINARY_CARDS
+from lets_play.presentation import default_presentation
 
 
 async def settle(runtime):
@@ -71,7 +72,7 @@ async def test_full_warning_choice_cutover_keeps_old_round_scores_and_starts_new
         original = state.context.position
         assert state.pacing.stage == "waiting"
         state = await next_offer(runtime, route)
-        assert render(state)[0].title == "New Rules — choose the next card"
+        assert render(state)[0].title == default_presentation().text("ordinary.offer_title")
         assert state.context.position.round_id == original.round_id
         assert len(state.offer.hand.options) == 3
         assert all(o.incoming.card_id in ORDINARY_CARDS for o in state.offer.hand.options)

@@ -17,6 +17,7 @@ from lets_play.bot import LetsPlayBot
 from lets_play.config import load_settings
 from lets_play.discord_adapter.discord_io import DiscordTransport, render
 from lets_play.discord_adapter.lane import LaneUnavailable
+from lets_play.presentation import default_presentation
 from lets_play.storage.offer_codec import utc_int
 
 
@@ -212,7 +213,7 @@ async def test_lost_essential_capability_stays_paused(tmp_path, monkeypatch, whe
         assert len(transport.recoveries) == (when == "before_resume")
         assert state.recovery_resume_at is None
         embed, _ = render(state, kind="rules")
-        assert "couldn’t finish recovery safely" in embed.description
+        assert embed.description == default_presentation().text("reboot.blocked_description")
 
 
 @pytest.mark.asyncio
@@ -330,15 +331,20 @@ async def test_sdk_recovery_uses_existing_panel_to_verify_marker_and_publishes_o
         )
         payload = channel.send.call_args.kwargs
         initial = int((attempted + timedelta(seconds=30)).timestamp())
-        assert f"<t:{initial}:R>" in payload["embed"].description
+        assert payload["embed"].description == transport.copy.text(
+            "reboot.notice_countdown", timestamp=initial
+        )
         assert payload["allowed_mentions"].everyone is False
-        assert payload["embed"].fields
-        assert "Unknown" not in str(payload["embed"].to_dict())
+        assert [field.name for field in payload["embed"].fields] == [
+            transport.copy.text("cards.NR034.name")
+        ]
         await transport.refresh_recovery_countdown(route, state)
         panel.edit.assert_awaited_once()
         channel.send.assert_awaited_once()
         updated = panel.edit.await_args.kwargs
-        assert f"<t:{int(state.recovery_resume_at.timestamp())}:R>" in updated["embed"].description
+        assert updated["embed"].description == transport.copy.text(
+            "reboot.notice_countdown", timestamp=int(state.recovery_resume_at.timestamp())
+        )
         assert updated["embed"].to_dict()["fields"] == payload["embed"].to_dict()["fields"]
         assert [item.custom_id for item in updated["view"].children] == [
             item.custom_id for item in payload["view"].children
@@ -362,14 +368,18 @@ async def test_rules_has_no_debug_entry_and_retired_controls_reply_privately(tmp
             await bot.game_adapter.rules(request)
             payload = request.followup.send.call_args.kwargs
             assert not any(c.custom_id.startswith("nrx:") for c in payload["view"].children)
-            assert "Unknown" not in str(payload["embed"].to_dict())
+            assert [field.name for field in payload["embed"].fields] == [
+                bot.presentation.text("cards.NR034.name")
+            ]
             request.message.flags = NS(ephemeral=True)
             request.edit_original_response = AsyncMock()
             request.data = {"custom_id": f"nrx:{route.session_id}:retired"}
             request.followup.send.reset_mock()
             await bot.game_adapter.component(request)
             request.followup.send.assert_not_awaited()
-            assert "retired" in request.edit_original_response.call_args.kwargs["content"]
+            assert request.edit_original_response.call_args.kwargs["content"] == (
+                bot.presentation.text("reboot.retired_status")
+            )
             bot.game_runtime = None
 
 

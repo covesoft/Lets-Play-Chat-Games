@@ -1,4 +1,4 @@
-# New Rules Discord preview — v0.3.26 / schema 16
+# New Rules Discord preview — v0.3.27 / schema 16
 
 This development build connects the existing ordinary engine to Discord. Run one
 bot process against a database. Private/requested scores, automatic interims and
@@ -9,8 +9,8 @@ release work are still open.
 
 ## Install and enable
 
-The current schema is **16**, with WAL and foreign keys enabled. For a v0.3.25
-installation on schema 16, stop the bot, apply v0.3.26, reinstall, and restart.
+The current schema is **16**, with WAL and foreign keys enabled. For a v0.3.26
+installation on schema 16, stop the bot, apply v0.3.27, reinstall, and restart.
 For a fresh database, run `python -m lets_play --init-db`. See
 [RECOVERY.md](RECOVERY.md) and [STORAGE.md](STORAGE.md).
 
@@ -113,8 +113,8 @@ its phrase-bank integration belongs to a later increment. No new validators are
 introduced here. Legal hands and replacements still require actual-validator
 compatibility witnesses; an incomplete hand is never published.
 
-12. When a later hand offers Drawing Conclusions, look for the **Breaking Moment
-    · 2 minutes** label and choose its blurple button. Check that `/rules`
+12. When a later hand offers Drawing Conclusions, look for the *Breaking Moment
+    · 2 minutes* label and choose its blurple button. Check that `/rules`
     shows only Drawing Conclusions during the bout. Try three distinct emoji-only
     posts and then an emoji mixed with text. Expect one marker on the mixed post.
     A whisper or reaction should add no compliance observation. After two minutes

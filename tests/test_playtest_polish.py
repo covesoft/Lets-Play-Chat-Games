@@ -47,11 +47,13 @@ async def test_warning_countdown_and_threshold_include_bot_posts_and_whispers(
         route = await opened(runtime)
         await activated(runtime, route)
         warned = await warning(runtime, route)
-        stamp = f"<t:{int(warned.pacing.selection_due_at.timestamp())}:R>"
+        copy = default_presentation()
+        timestamp = int(warned.pacing.selection_due_at.timestamp())
         public, _ = render(warned, kind="pacing_warning")
         private, _ = render(warned, kind="rules")
-        assert not public.fields and stamp in public.description
-        assert [f.name for f in private.fields] == ["Roger Wilco"]
+        assert not public.fields
+        assert public.description == copy.text("warning.countdown", timestamp=timestamp)
+        assert [f.name for f in private.fields] == [copy.text("cards.NR034.name")]
 
         bot = LetsPlayBot(load_settings(base_dir=tmp_path, environ={}))
         async with bot:
@@ -167,7 +169,8 @@ async def test_whole_game_post_freezes_the_chosen_page_and_keeps_private_scope(
             await settle(runtime)
             reply = click.edit_original_response.call_args.kwargs
             assert reply["content"] == copy.text("summary.post_queued")
-            assert reply["embed"].description.startswith("Whole game")
+            assert reply["embed"].description == private.description
+            assert reply["embed"].fields[0].name == copy.text("summary.scope_game")
             bot.game_runtime = None
 
         _, snapshot, captured = transport.summaries[0]
@@ -176,7 +179,13 @@ async def test_whole_game_post_freezes_the_chosen_page_and_keeps_private_scope(
         assert captured.players == page.players
         assert [p[0] for p in captured.players] == [315, 316, 317, 404, 505]
         public, _ = requested_summary.render(captured, copy, snapshot=snapshot, public=True)
-        assert public.description.startswith("Whole game")
+        assert public.description == copy.text(
+            "summary.game_description",
+            messages=captured.human_messages,
+            whispers=captured.whispers,
+            as_of=copy.text("summary.as_of", timestamp=int(captured.as_of.timestamp())),
+            status=copy.text("summary.captured"),
+        )
         assert public.to_dict()["fields"] == private.to_dict()["fields"]
 
 
@@ -192,6 +201,7 @@ async def test_breaking_moment_has_one_separate_lime_green_notice(tmp_path, monk
         await runtime.submit(route, "tick")
         await settle(runtime)
         active = await runtime.state(route.session_id)
+        copy = default_presentation()
         if reboot:
             await runtime.initialize()
             state = await reading(runtime, route)
@@ -202,9 +212,9 @@ async def test_breaking_moment_has_one_separate_lime_green_notice(tmp_path, monk
                 NS(settings=load_settings(environ={}), get_channel=lambda _: channel)
             )
             embed, _ = sdk._recovery_notice(route, state)
-            stamp = f"<t:{int(state.recovery_resume_at.timestamp())}:R>"
-            assert stamp in embed.description
-            assert "Scores and earned progress are saved" in embed.description
+            assert embed.description == copy.text(
+                "mode.interrupted_countdown", timestamp=int(state.recovery_resume_at.timestamp())
+            )
             await fire(runtime, route, state.recovery_resume_at)
         else:
             runtime.clock.at = active.mode.ends_at
@@ -214,9 +224,9 @@ async def test_breaking_moment_has_one_separate_lime_green_notice(tmp_path, monk
         notices = [state for _, kind, state in transport.messages if kind == "evolution_mode_ended"]
         assert len(notices) == 1
         embed, _ = render(notices[0], kind="evolution_mode_ended")
-        assert embed.colour == discord.Colour(0x32CD32)
-        assert "Regular rules are back" in embed.description
-        assert [field.name for field in embed.fields] == ["Roger Wilco"]
+        assert embed.colour == discord.Colour(copy.color("mode_ended"))
+        assert embed.description == copy.text("mode.ended_description")
+        assert [field.name for field in embed.fields] == [copy.text("cards.NR034.name")]
         assert notices[0].mode_end_rules == active.context.active_instances
 
         sent = NS(id=1780)
