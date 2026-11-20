@@ -153,6 +153,12 @@ async def test_whole_game_post_freezes_the_chosen_page_and_keeps_private_scope(
         async with runtime.store.transaction(write=False) as unit:
             page = await SummaryStore(unit).live_page(route.session_id, scope="game", actor=314)
         private, view = requested_summary.render(page, copy)
+        assert private.title == copy.text("summary.game_title")
+        assert private.fields[0].name == copy.text("summary.game_traffic_heading")
+        assert private.fields[0].value == copy.text(
+            "summary.traffic", messages=page.human_messages, whispers=page.whispers
+        )
+        assert private.fields[1].name == copy.text("results.player_heading")
         post = next(
             button.custom_id for button in view.children if button.custom_id.startswith("nrp:")
         )
@@ -169,8 +175,9 @@ async def test_whole_game_post_freezes_the_chosen_page_and_keeps_private_scope(
             await settle(runtime)
             reply = click.edit_original_response.call_args.kwargs
             assert reply["content"] == copy.text("summary.post_queued")
+            assert reply["embed"].title == private.title
             assert reply["embed"].description == private.description
-            assert reply["embed"].fields[0].name == copy.text("summary.scope_game")
+            assert reply["embed"].to_dict()["fields"] == private.to_dict()["fields"]
             bot.game_runtime = None
 
         _, snapshot, captured = transport.summaries[0]
@@ -179,10 +186,9 @@ async def test_whole_game_post_freezes_the_chosen_page_and_keeps_private_scope(
         assert captured.players == page.players
         assert [p[0] for p in captured.players] == [315, 316, 317, 404, 505]
         public, _ = requested_summary.render(captured, copy, snapshot=snapshot, public=True)
+        assert public.title == private.title
         assert public.description == copy.text(
-            "summary.game_description",
-            messages=captured.human_messages,
-            whispers=captured.whispers,
+            "summary.lead",
             as_of=copy.text("summary.as_of", timestamp=int(captured.as_of.timestamp())),
             status=copy.text("summary.captured"),
         )

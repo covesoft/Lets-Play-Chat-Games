@@ -20,17 +20,19 @@ def add_button(view, copy, session, *, label="buttons.summary"):
 
 def render(page, copy, *, snapshot=None, public=False, publication_control=None):
     automatic = bool(snapshot and snapshot.kind == "automatic")
-    embed = discord.Embed(title=copy.text("summary.title"), colour=copy.color("summary"))
-    as_of = (
-        copy.text("summary.as_of", timestamp=int(page.as_of.timestamp()))
-        if page.as_of
-        else copy.text("summary.as_of_unknown")
-    )
-    description = {
-        "messages": page.human_messages,
-        "whispers": page.whispers,
-        "as_of": as_of,
-        "status": copy.text(
+    game_scope = page.scope == "game"
+    embed = discord.Embed(colour=copy.color("summary"))
+    if automatic:
+        embed.title = copy.text("reports.mid_title")
+        embed.description = copy.text("reports.mid_description", round=page.round_number)
+    else:
+        embed.title = copy.text("summary.game_title" if game_scope else "summary.round_title")
+        as_of = (
+            copy.text("summary.as_of", timestamp=int(page.as_of.timestamp()))
+            if page.as_of
+            else copy.text("summary.as_of_unknown")
+        )
+        status = copy.text(
             "summary.captured"
             if snapshot
             else "summary.ended"
@@ -40,15 +42,19 @@ def render(page, copy, *, snapshot=None, public=False, publication_control=None)
             else "summary.paused"
             if page.lifecycle == "paused"
             else "summary.live"
-        ),
-    }
-    if page.scope == "game":
-        embed.description = copy.text("summary.game_description", **description)
-    else:
-        embed.description = copy.text("summary.description", round=page.round_number, **description)
-    if automatic:
-        embed.title = copy.text("reports.mid_title")
-        embed.description = copy.text("reports.mid_description", round=page.round_number)
+        )
+        embed.description = copy.text("summary.lead", status=status, as_of=as_of)
+        embed.add_field(
+            name=(
+                copy.text("summary.game_traffic_heading")
+                if game_scope
+                else copy.text("summary.round_traffic_heading", round=page.round_number)
+            ),
+            value=copy.text(
+                "summary.traffic", messages=page.human_messages, whispers=page.whispers
+            ),
+            inline=False,
+        )
     if snapshot and page.scope == "round":
         if not automatic:
             embed.add_field(
@@ -74,14 +80,6 @@ def render(page, copy, *, snapshot=None, public=False, publication_control=None)
             chunk += ("\n" if chunk else "") + line
         if chunk:
             embed.add_field(name=copy.text("summary.rules_heading"), value=chunk, inline=False)
-    if not automatic:
-        embed.add_field(
-            name=copy.text(
-                "summary.scope_round" if page.scope == "round" else "summary.scope_game"
-            ),
-            value=copy.text("summary.order"),
-            inline=False,
-        )
     for actor, score in page.players:
         actual = (
             copy.text("results.unrated")

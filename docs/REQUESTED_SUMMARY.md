@@ -10,6 +10,10 @@ Preplay `/rules` omits unusable game controls.
 
 Live pages show clickable, non-pinging identities, actual compliance/unrated,
 adjusted scores, raw faults, opportunities, ordinary posts and reaction faults.
+The title identifies the scope and the description shows the score status,
+`/rules` hint, and last game update. Traffic appears in a **Round N so far** or
+**Conversation** field with human post and whisper counts. Requested posts use
+the same scoped layout, with a status identifying the posted score snapshot.
 Traffic/whispers are distinct from score opportunities. Players stay ID-ordered;
 final standings separately use exact adjusted-score order. Interim views have
 no footer. All text and colors use the presentation catalog. Use `/rules` for

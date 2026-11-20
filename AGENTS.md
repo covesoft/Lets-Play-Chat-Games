@@ -8,7 +8,7 @@ contains operational and API documentation only.
 
 ## Current implementation
 
-Application v0.3.27 uses schema 16. M1 is accepted and closed at v0.2.9/schema 8;
+Application v0.3.28 uses schema 16. M1 is accepted and closed at v0.2.9/schema 8;
 M2 is in progress. Preserve the existing domain/storage APIs. This is a
 development-only Discord preview, not a public-release build.
 

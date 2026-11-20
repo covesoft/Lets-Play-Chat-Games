@@ -65,14 +65,22 @@ and surrounding text without changing application code. Preserve these names:
 | `revival.description` | `{joined}` |
 | `cards.NR036.description` | `{phrase}`; legacy display only, not offered by this preview |
 
-Private summary templates add:
+Private and requested summary templates add:
 
 | Template | Required fields |
 | --- | --- |
-| `summary.description` | `{round}`, `{messages}`, `{whispers}`, `{as_of}`, `{status}` |
+| `summary.lead` | `{status}`, `{as_of}` |
+| `summary.round_traffic_heading` | `{round}` |
+| `summary.traffic` | `{messages}`, `{whispers}` (integer formatting such as `{messages:,}` is supported) |
 | `summary.as_of` | `{timestamp}` |
 | `summary.capture_detail` | `{session}`, `{round_messages}`, `{round_whispers}`, `{game_messages}`, `{game_whispers}` |
 | `summary.rule` | `{rule}` |
+
+The shared `summary.title`, the older `summary.description` and
+`summary.game_description`, and the old scope/order keys remain accepted for
+existing override files. The renderer uses `summary.round_title`,
+`summary.game_title`, `summary.lead`, and the traffic heading and count keys above,
+including `summary.game_traffic_heading` for the game scope.
 
 Other current strings take no fields. Ordinary literal braces must be doubled as
 `{{` and `}}`. Attribute/index expressions, conversions and nested format fields
