@@ -1,7 +1,7 @@
 # Offline disruption recovery
 
 `RecoveryFlow(unit)` provides the existing engine barrier and offline recovery
-contracts. v0.3.24/schema 16 extends the bounded live automatic path through
+contracts. v0.3.25/schema 16 supports the bounded live automatic path through
 `RebootFlow(unit)` and the serial adapter publisher. Ordinary reboot needs no
 server-manager approval, Resume button or player message.
 
@@ -159,9 +159,12 @@ in the same round with its original activation time. Committed mode scores,
 game credit and Pictoglyphs survive. If a published mode start passes during
 read-in, the selected round change still commits once at its saved timestamp
 and an unobserved bout is interrupted immediately. A future start remains
-scheduled. The public read-in shows a relative deadline. The return of ordinary
-rules queues a separate lime-green notice. A claim with inconclusive delivery
-retains the ordinary paused/manager-end behavior.
+scheduled. Ordinary and interrupted-mode read-in notices show a relative
+deadline. The initial countdown is corrected once the receipt commits the
+exact resume time. The return of ordinary rules queues a lime-green notice with
+the restored rules. Its disabled status button holds the exact publication
+reference. Startup also recognizes the legacy footer reference for a notice
+sent before the update. Inconclusive delivery retains the paused/manager-end behavior.
 
 ## Inconclusive evidence and upgrades
 
@@ -170,8 +173,8 @@ unresolved. Schema-13 claims with no durable edit target cannot gain one by
 guessing. A live game stays paused and a manager can end it explicitly. A
 terminal game stays ended. No recovery scores historical chat.
 
-Stop the bot and back up the configured database with SQLite’s backup API.
-Apply v0.3.24 to v0.3.23, reinstall, verify, and run
+When upgrading from schema 15, stop the bot and back up the configured database
+with SQLite’s backup API. Apply v0.3.24 to v0.3.23, reinstall, verify, and run
 `python -m lets_play --init-db` before startup. Schema **16** adds warning
 traffic and selected summary scope and preserves existing evolution output IDs.
 Roll back by restoring the verified schema-15 backup with matching source.

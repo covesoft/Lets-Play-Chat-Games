@@ -4,7 +4,7 @@ from bisect import insort
 from dataclasses import dataclass
 from datetime import datetime
 
-from lets_play.new_rules.contracts import SessionRoute
+from lets_play.new_rules.contracts import RuleInstance, SessionRoute
 from lets_play.new_rules.evaluation import EvaluationContext
 from lets_play.new_rules.scoring import ScoreTotals
 from lets_play.storage.breaking_flow import BreakingFlow, BreakingMoment
@@ -41,6 +41,7 @@ class DisplayState:
     recovery_notice_id: int | None = None
     phase_control_id: int | None = None
     mode: BreakingMoment | None = None
+    mode_end_rules: tuple[RuleInstance, ...] = ()
 
     @property
     def recovery_control_id(self):
@@ -317,6 +318,15 @@ class DiscordStore:
             (session,),
         )
         return (row[0], utc_datetime(row[1]) if row[1] is not None else None) if row else (0, None)
+
+    async def mode_end_rules(self, session, round_id):
+        bout = await BreakingFlow(self.unit).record(session, round_id)
+        if bout is None or bout.outcome not in {"completed", "interrupted"}:
+            raise IncompatibleState("Mode restoration notice has no finished bout.")
+        offer = await OrdinaryFlow(self.unit).get_offer(session, bout.offer_id)
+        if offer is None or offer.stage != "activated":
+            raise IncompatibleState("Mode restoration notice has no saved ordinary rules.")
+        return offer.hand.active_instances
 
     async def pending(self, session):
         self.unit._check()

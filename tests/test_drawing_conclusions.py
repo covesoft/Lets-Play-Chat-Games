@@ -2,6 +2,7 @@
 
 from datetime import timedelta
 
+import discord
 import pytest
 from test_discord_ordinary_loop import next_offer, posts, settle
 from test_discord_runtime import activated, choice, event, opened, service
@@ -65,8 +66,12 @@ async def scheduled(runtime, monkeypatch, *, expressionless=False):
     options = offer.offer.hand.options
     (index,) = (i for i, o in enumerate(options) if isinstance(o.incoming, ModeChoice))
     assert options[index].outgoing_ids == ()
-    embed, _ = render(offer)
+    embed, view = render(offer)
     assert any(field.name == "Drawing Conclusions" for field in embed.fields)
+    assert [item.style for item in view.children] == [
+        discord.ButtonStyle.primary if i == index else discord.ButtonStyle.secondary
+        for i in range(len(options))
+    ]
     assert (
         await runtime.submit(
             route,

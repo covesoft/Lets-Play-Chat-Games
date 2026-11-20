@@ -1,4 +1,4 @@
-# New Rules Discord preview — v0.3.24 / schema 16
+# New Rules Discord preview — v0.3.25 / schema 16
 
 This development build connects the existing ordinary engine to Discord. Run one
 bot process against a database. Private/requested scores, automatic interims and
@@ -9,12 +9,10 @@ release work are still open.
 
 ## Install and enable
 
-The current schema is **16**, with WAL and foreign keys enabled. Stop the bot,
-back up and verify the configured schema-15 database, apply v0.3.24 to v0.3.23,
-reinstall, and run `python -m lets_play --init-db` before startup. Migration 16
-adds warning traffic metadata, public summary scope, and Breaking Moment end
-notices. No command sync is needed. To roll back, restore the schema-15 backup
-with matching source. See [RECOVERY.md](RECOVERY.md) and [STORAGE.md](STORAGE.md).
+The current schema is **16**, with WAL and foreign keys enabled. For a v0.3.24
+installation on schema 16, stop the bot, apply v0.3.25, reinstall, and restart.
+For a fresh database, run `python -m lets_play --init-db`. See
+[RECOVERY.md](RECOVERY.md) and [STORAGE.md](STORAGE.md).
 
 
 Keep token, owner IDs and actual emoji markup in the private `.env`:
@@ -115,12 +113,11 @@ its phrase-bank integration belongs to a later increment. No new validators are
 introduced here. Legal hands and replacements still require actual-validator
 compatibility witnesses; an incomplete hand is never published.
 
-12. When a later hand offers Drawing Conclusions, choose it. Check that `/rules`
+12. When a later hand offers Drawing Conclusions, choose its blurple button. Check that `/rules`
     shows only Drawing Conclusions during the bout. Try three distinct emoji-only
     posts and then an emoji mixed with text. Expect one marker on the mixed post.
     A whisper or reaction should add no compliance observation. After two minutes
-    a lime-green notice marks the return of the previous rules in the same
-    round. Its next hand is ordinary-only. In a separate bout, restart after the
+    a lime-green notice lists the restored rules in the same round. Its next hand is ordinary-only. In a separate bout, restart after the
     third valid post and check the recovery countdown, the green notice when
     play resumes, and the saved scores.
 

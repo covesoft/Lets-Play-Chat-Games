@@ -8,7 +8,7 @@ contains operational and API documentation only.
 
 ## Current implementation
 
-Application v0.3.24 uses schema 16. M1 is accepted and closed at v0.2.9/schema 8;
+Application v0.3.25 uses schema 16. M1 is accepted and closed at v0.2.9/schema 8;
 M2 is in progress. Preserve the existing domain/storage APIs. This is a
 development-only Discord preview, not a public-release build.
 
@@ -142,8 +142,11 @@ migration or command sync; documentation-only patches need no reinstall/restart.
   the open round, scores and original publication-owned clock. Quorum itself
   neither closes the round nor grants another game credit.
 - Restoring ordinary rules from a Breaking Moment queues one lime-green notice
-  in the same transaction. Claim it before HTTP. A known unclaimed notice may
-  publish once after recovery. An uncertain claim needs exact new-post proof.
+  in the same transaction. Render the restored rules from that bout's frozen
+  offer. The disabled status button carries the receipt reference. Startup can
+  verify older notices by their original footer reference. Claim before HTTP.
+  Publish an unclaimed notice once after recovery and require exact new-post proof
+  for uncertain claims.
 - Credit/live flag/global increment/Familiar Face commit together. Resolve real
   closures in creation order before final Very Careful evaluation and purge.
   finalize_ended neither authorizes nor ends a game. Missing evidence/version

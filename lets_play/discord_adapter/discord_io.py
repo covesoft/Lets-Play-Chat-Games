@@ -124,11 +124,22 @@ def reaction_snapshot(payload, route, received, *, source_id):
     return ReactionEvent(frame, payload.message_id, identity, payload.member.bot)
 
 
-def button(view, label, session, action, index=None, target_index=None):
+def button(
+    view,
+    label,
+    session,
+    action,
+    index=None,
+    target_index=None,
+    *,
+    style=discord.ButtonStyle.secondary,
+):
     suffix = f":{index}" if index is not None else ""
     if target_index is not None:
         suffix += f":{target_index}"
-    view.add_item(discord.ui.Button(label=label, custom_id=f"nr:{session}:{action}{suffix}"))
+    view.add_item(
+        discord.ui.Button(label=label, custom_id=f"nr:{session}:{action}{suffix}", style=style)
+    )
 
 
 def phase_recovery_link(state, route, copy):
@@ -143,6 +154,25 @@ def phase_recovery_link(state, route, copy):
         url=f"https://discord.com/channels/{route.guild_id}/{route.channel_id}/{state.phase_control_id}",
         deadline=copy.text("ordinary.deadline", timestamp=int(deadline.timestamp())),
     )
+
+
+_RECOVERY_COUNTDOWN_KEYS = frozenset({"reboot.notice_countdown", "mode.interrupted_countdown"})
+
+
+def _recovery_notice_key(state):
+    if state.mode:
+        return "mode.interrupted_countdown"
+    if state.context is None:
+        return (
+            "reboot.opening_activation" if state.admission.stage == "selected" else "reboot.preplay"
+        )
+    if state.revival and state.revival.stage == "published":
+        return "reboot.revival"
+    if scheduled_mode(state):
+        return "mode.scheduled_notice"
+    if state.offer and state.offer.stage == "selected" and state.offer_display_ready:
+        return "reboot.activation_description"
+    return "reboot.notice_countdown"
 
 
 def render(state, *, kind=None, page=0, presentation=None, now=None):
@@ -323,6 +353,14 @@ class DiscordTransport:
                 embed.set_footer(
                     text=self._publication_reference(route, "ordinary", "offer", publication_id)
                 )
+            elif kind == "evolution_mode_ended":
+                view.add_item(
+                    discord.ui.Button(
+                        label=self.copy.text("buttons.rules_restored"),
+                        custom_id=self._mode_end_control(route, publication_id),
+                        disabled=True,
+                    )
+                )
             elif kind in {"closed", "evolution_closed_silent"}:
                 family = "opening" if kind == "closed" else "evolution"
                 view.add_item(
@@ -353,7 +391,6 @@ class DiscordTransport:
             "activation": ("opening", "activation"),
             "ordinary_activation": ("ordinary", "activation"),
             "evolution_held": ("evolution", "held"),
-            "evolution_mode_ended": ("evolution", "mode_ended"),
         }.get(kind)
         if publication_id is not None and reference_kind is not None:
             embed.set_footer(
@@ -368,6 +405,10 @@ class DiscordTransport:
     def _terminal_control(route, family, output_id):
         return f"nrt:{route.session_id}:{family}:{output_id}"
 
+    @staticmethod
+    def _mode_end_control(route, output_id):
+        return f"nrm:{route.session_id}:end:{output_id}"
+
     async def find_choice_edit(self, route, output_id, target_id, attempted_at):
         reference = self._publication_reference(route, "ordinary", "offer", output_id)
         return await self._find_exact_edit(
@@ -381,8 +422,11 @@ class DiscordTransport:
         return await self._find_referenced_post(route, "ordinary", "offer", output_id, attempted_at)
 
     async def find_mode_end_publication(self, route, output_id, attempted_at):
-        return await self._find_referenced_post(
-            route, "evolution", "mode_ended", output_id, attempted_at
+        return await self._find_control_post(
+            route,
+            self._mode_end_control(route, output_id),
+            attempted_at,
+            legacy_footer=self._publication_reference(route, "evolution", "mode_ended", output_id),
         )
 
     async def find_terminal_publication(self, route, output, target_id, attempted_at):
@@ -517,10 +561,9 @@ class DiscordTransport:
         embed, view = render(state, kind="rules", presentation=self.copy)
         embed.title = self.copy.text("reboot.notice_title")
         embed.clear_fields()
+        key = _recovery_notice_key(state)
         if state.context is None:
-            selected = state.admission.stage == "selected"
-            key = "reboot.opening_activation" if selected else "reboot.preplay"
-            if selected and state.selected_card:
+            if state.admission.stage == "selected" and state.selected_card:
                 card = state.selected_card
                 embed.add_field(
                     name=self.copy.text(f"cards.{card}.name"),
@@ -528,26 +571,17 @@ class DiscordTransport:
                     inline=False,
                 )
         else:
-            key = "reboot.notice_description"
-            if state.revival and state.revival.stage == "published":
-                key = "reboot.revival"
-            elif scheduled_mode(state):
-                key = "mode.scheduled_notice"
-            elif state.offer and state.offer.stage == "selected" and state.offer_display_ready:
-                key = "reboot.activation_description"
             for instance in resumption_rules(state):
                 embed.add_field(
                     name=self.copy.text(f"cards.{instance.card_id}.name"),
                     value=rule_text(self.copy, instance),
                     inline=False,
                 )
-        if state.mode:
+        if key in _RECOVERY_COUNTDOWN_KEYS:
             deadline = state.recovery_resume_at or self._now() + timedelta(
                 seconds=RECOVERY_READ_IN_SECONDS
             )
-            embed.description = self.copy.text(
-                "mode.interrupted_countdown", timestamp=int(deadline.timestamp())
-            )
+            embed.description = self.copy.text(key, timestamp=int(deadline.timestamp()))
         else:
             embed.description = self.copy.text(key, seconds=RECOVERY_READ_IN_SECONDS)
         if state.offer_panel_id:
@@ -573,7 +607,11 @@ class DiscordTransport:
         return message.id
 
     async def refresh_recovery_countdown(self, route, state):
-        if not (state.mode and state.recovery_resume_at and state.recovery_notice_id):
+        if (
+            not state.recovery_resume_at
+            or not state.recovery_notice_id
+            or _recovery_notice_key(state) not in _RECOVERY_COUNTDOWN_KEYS
+        ):
             return
         try:
             async with asyncio.timeout(5):

@@ -633,6 +633,13 @@ class OpeningRuntime:
                                     state = replace(
                                         state, panel_id=proof_target["target_message_id"]
                                     )
+                                elif pending.kind == "mode_ended":
+                                    state = replace(
+                                        state,
+                                        mode_end_rules=await store.mode_end_rules(
+                                            route.session_id, pending.token
+                                        ),
+                                    )
                             identified = getattr(self.transport, "publish_identified", None)
                             if identified is not None and (
                                 pending.family == "pacing"
@@ -887,19 +894,18 @@ class OpeningRuntime:
                 await self._show_pause(route)
                 return False
             return True
-        async with self.network_slots, asyncio.timeout(20):
-            if not await self.submit(route, "recovery_claim", recovery_id=recovery):
-                return False
-            state = await self.state(session)
-            if state.recovery_id != recovery:
-                return False
-            message_id = await self.transport.publish_recovery(route, state)
-            await asyncio.shield(
-                self.submit(route, "recovery_ack", recovery_id=recovery, message_id=message_id)
-            )
-            if state.mode and (
-                refresh := getattr(self.transport, "refresh_recovery_countdown", None)
-            ):
+        async with self.network_slots:
+            async with asyncio.timeout(20):
+                if not await self.submit(route, "recovery_claim", recovery_id=recovery):
+                    return False
+                state = await self.state(session)
+                if state.recovery_id != recovery:
+                    return False
+                message_id = await self.transport.publish_recovery(route, state)
+                await asyncio.shield(
+                    self.submit(route, "recovery_ack", recovery_id=recovery, message_id=message_id)
+                )
+            if refresh := getattr(self.transport, "refresh_recovery_countdown", None):
                 reading = await self.state(session)
                 if reading.recovery_id == recovery:
                     await refresh(route, reading)

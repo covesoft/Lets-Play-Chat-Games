@@ -148,3 +148,7 @@ color. Automatic reports use the new underway lead-in; manual/private Summary
 panels keep their existing text. Round leaderboards show only each adjusted
 score heading and clickable player mention, without a footer. All existing
 placeholders and newer owner copy are preserved.
+
+Ordinary reboot notices use `reboot.notice_countdown` with the relative Discord
+timestamp `<t:{timestamp}:R>`. The legacy `reboot.notice_description` key is
+still accepted in existing override files.

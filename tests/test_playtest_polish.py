@@ -216,6 +216,61 @@ async def test_breaking_moment_has_one_separate_lime_green_notice(tmp_path, monk
         embed, _ = render(notices[0], kind="evolution_mode_ended")
         assert embed.colour == discord.Colour(0x32CD32)
         assert "Regular rules are back" in embed.description
+        assert [field.name for field in embed.fields] == ["Roger Wilco"]
+        assert notices[0].mode_end_rules == active.context.active_instances
+
+        sent = NS(id=1780)
+        channel = NS(guild=NS(id=route.guild_id), send=AsyncMock(return_value=sent))
+        sdk = DiscordTransport(
+            NS(settings=load_settings(environ={}), user=NS(id=55), get_channel=lambda _: channel)
+        )
+        assert (
+            await sdk.publish(route, "evolution_mode_ended", notices[0], publication_id=2)
+            == sent.id
+        )
+        payload = channel.send.await_args.kwargs
+        assert "footer" not in payload["embed"].to_dict()
+        (marker,) = [item for item in payload["view"].children if item.disabled]
+        assert marker.custom_id == sdk._mode_end_control(route, 2)
+        attempted = runtime.clock.now()
+        message = NS(
+            id=sent.id,
+            author=NS(id=55),
+            channel=NS(id=route.channel_id),
+            webhook_id=None,
+            created_at=attempted + timedelta(seconds=1),
+            edited_at=None,
+            components=[
+                NS(
+                    children=[
+                        discord.Button(item.to_component_dict())
+                        for item in payload["view"].children
+                    ]
+                )
+            ],
+            embeds=[payload["embed"]],
+        )
+
+        async def history(**kwargs):
+            yield message
+
+        channel.history = history
+        assert await sdk.find_mode_end_publication(route, 2, attempted) == (
+            sent.id,
+            message.created_at,
+        )
+        assert await sdk.find_mode_end_publication(route, 3, attempted) is None
+        # The same lookup can settle a pre-upgrade send with a lost ACK.
+        message.components = []
+        message.embeds = [
+            discord.Embed().set_footer(
+                text=sdk._publication_reference(route, "evolution", "mode_ended", 2)
+            )
+        ]
+        assert await sdk.find_mode_end_publication(route, 2, attempted) == (
+            sent.id,
+            message.created_at,
+        )
         await runtime.submit(route, "tick")
         await settle(runtime)
         assert sum(kind == "evolution_mode_ended" for _, kind, _ in transport.messages) == 1

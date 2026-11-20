@@ -1,6 +1,7 @@
 """Unattended ordinary reboot recovery, durable notice fences and real SDK I/O."""
 
 import asyncio
+from dataclasses import replace
 from datetime import timedelta
 from types import SimpleNamespace as NS
 from unittest.mock import AsyncMock
@@ -294,12 +295,15 @@ async def test_ready_notice_claim_is_single_use_and_rolls_back_with_its_receipt(
 async def test_sdk_recovery_uses_existing_panel_to_verify_marker_and_publishes_one_friendly_notice(
     tmp_path, monkeypatch
 ):
-    async with service(tmp_path, monkeypatch) as runtime:
+    recovery_transport = RecoveryTransport()
+    recovery_transport.refresh_recovery_countdown = AsyncMock()
+    async with service(tmp_path, monkeypatch, transport=recovery_transport) as runtime:
         route = await opened(runtime)
         await activated(runtime, route)
         await runtime.initialize()
         state = await reading(runtime, route)
-        panel = NS(add_reaction=AsyncMock(), remove_reaction=AsyncMock())
+        recovery_transport.refresh_recovery_countdown.assert_awaited_once_with(route, state)
+        panel = NS(add_reaction=AsyncMock(), remove_reaction=AsyncMock(), edit=AsyncMock())
         message = NS(id=777)
         channel = NS(
             guild=NS(id=101, me=object()),
@@ -307,24 +311,38 @@ async def test_sdk_recovery_uses_existing_panel_to_verify_marker_and_publishes_o
             get_partial_message=lambda _: panel,
             permissions_for=lambda _: discord.Permissions.all(),
         )
+        attempted = state.recovery_resume_at - timedelta(seconds=32)
         bot = NS(
             settings=load_settings(
                 environ={"CHATGAMES_DING_EMOJI": "<a:example:123456789012345678>"}
             ),
             user=NS(id=55),
             get_channel=lambda _: channel,
+            game_runtime=NS(clock=NS(now=lambda: attempted)),
         )
         transport = DiscordTransport(bot)
         assert (await transport.recovery_capabilities(route, state.panel_id)).available
         panel.add_reaction.assert_awaited_once_with(transport.marker)
         panel.remove_reaction.assert_awaited_once_with(transport.marker, bot.user)
         channel.send.assert_not_awaited()
-        assert await transport.publish_recovery(route, state) == 777
+        assert (
+            await transport.publish_recovery(route, replace(state, recovery_resume_at=None)) == 777
+        )
         payload = channel.send.call_args.kwargs
-        assert "30 seconds" in payload["embed"].description
+        initial = int((attempted + timedelta(seconds=30)).timestamp())
+        assert f"<t:{initial}:R>" in payload["embed"].description
         assert payload["allowed_mentions"].everyone is False
         assert payload["embed"].fields
         assert "Unknown" not in str(payload["embed"].to_dict())
+        await transport.refresh_recovery_countdown(route, state)
+        panel.edit.assert_awaited_once()
+        channel.send.assert_awaited_once()
+        updated = panel.edit.await_args.kwargs
+        assert f"<t:{int(state.recovery_resume_at.timestamp())}:R>" in updated["embed"].description
+        assert updated["embed"].to_dict()["fields"] == payload["embed"].to_dict()["fields"]
+        assert [item.custom_id for item in updated["view"].children] == [
+            item.custom_id for item in payload["view"].children
+        ]
         channel.permissions_for = lambda _: discord.Permissions.none()
         with pytest.raises(LaneUnavailable):
             await transport.recovery_capabilities(route, state.panel_id)

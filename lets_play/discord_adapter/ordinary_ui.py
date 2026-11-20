@@ -77,6 +77,7 @@ def render_ordinary(state, copy, button, *, kind=None, now=None):
         embed.title = copy.text("mode.ended_title")
         embed.colour = copy.color("mode_ended")
         embed.description = copy.text("mode.ended_description")
+        rules(state.mode_end_rules)
     elif state.recovery_id or (p.lifecycle == "paused" and p.pause_reason != "revival"):
         embed.title = copy.text("paused.title")
         embed.colour = copy.color("paused")
@@ -168,7 +169,12 @@ def render_ordinary(state, copy, button, *, kind=None, now=None):
                         target_index,
                     )
             else:
-                button(view, label, session, "pick", index)
+                style = (
+                    discord.ButtonStyle.primary
+                    if isinstance(option.incoming, ModeChoice)
+                    else discord.ButtonStyle.secondary
+                )
+                button(view, label, session, "pick", index, style=style)
         if chosen:
             embed.description = copy.text(
                 "ordinary.target_description", picker=offer.hand.picker_id, deadline=clock

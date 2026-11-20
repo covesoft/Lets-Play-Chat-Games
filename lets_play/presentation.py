@@ -39,6 +39,7 @@ TEMPLATE_FIELDS = {
     "reboot.choice_resumed": frozenset({"url", "deadline"}),
     "reboot.activation_description": frozenset({"seconds"}),
     "reboot.activation_reading_description": frozenset({"timestamp"}),
+    "reboot.notice_countdown": frozenset({"timestamp"}),
     "reboot.notice_description": frozenset({"seconds"}),
     "reboot.reading_description": frozenset({"timestamp"}),
     "recovery.description": frozenset({"generation", "stage"}),
