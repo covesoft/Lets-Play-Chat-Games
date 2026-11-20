@@ -161,10 +161,12 @@ read-in, the selected round change still commits once at its saved timestamp
 and an unobserved bout is interrupted immediately. A future start remains
 scheduled. Ordinary and interrupted-mode read-in notices show a relative
 deadline. The initial countdown is corrected once the receipt commits the
-exact resume time. The return of ordinary rules queues a lime-green notice with
-the restored rules. Its disabled status button holds the exact publication
-reference. Startup also recognizes the legacy footer reference for a notice
-sent before the update. Inconclusive delivery retains the paused/manager-end behavior.
+exact resume time. On recovery, the rules panel is edited to show the restored
+rules. Natural expiry queues a separate lime-green notice whose disabled button
+holds the exact publication reference. Startup retires older interruption
+notices that were never claimed. Claimed notices still require proof, including
+the legacy footer reference where present. Inconclusive delivery retains the
+paused/manager-end behavior.
 
 ## Inconclusive evidence and upgrades
 

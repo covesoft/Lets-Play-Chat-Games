@@ -108,7 +108,11 @@ async def test_score_recovery_uses_original_publication_and_watermark(
         )
         publish = sdk.publish_round if family == "round" else sdk.publish_summary
         await publish(route, output, page)
-        assert not send.call_args.kwargs["embed"].footer.text
+        payload = send.call_args.kwargs
+        assert not payload["embed"].footer.text
+        if family == "round":
+            assert payload["embed"].colour == discord.Colour(sdk.copy.color("round_results"))
+            assert payload["view"].children[-1].label == sdk.copy.text("buttons.summary_current")
         assert await sdk.find_score_publication(route, family, output_id, attempted) == (
             1775,
             published,

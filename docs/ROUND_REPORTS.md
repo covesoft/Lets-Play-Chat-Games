@@ -38,7 +38,8 @@ the old round's final results. Held/revival transitions do not invent a closure.
 Game ending uses existing final game standings instead of another round report;
 inactivity ending continues to edit only its known panel.
 
-Each field contains only `Scoring 82.35` and the player's clickable mention.
+The completed-round embed uses the dark-blue `round_results` color. Each field
+contains only `Scoring 82.35` and the player's clickable mention.
 Order by the round's exact adjusted score descending, unrated last, actor ID for
 exact ties. No raw faults, opportunities, ordinary-post detail or footer is
 added. Up to 20 players appear on a page. Additional page buttons open a private
@@ -51,7 +52,8 @@ their existing layout and ten-player page size are unchanged.
 `nr_round_reports` stores only send state, original attempt time, actual message
 identity, delivery time and captured traffic watermarks. It references an actual
 `nr_round_resolutions` activation closure. Claim before HTTP; ACK through the
-ordered lane; unknown delivery pauses and is never blindly retried. Known success
+ordered lane; the **Check current scores** button carries the exact report
+reference for recovery. Unknown delivery pauses and is never blindly retried. Known success
 can commit during concurrent pause/ending without resuming play. These receipts
 cascade with session/round retention. A round report takes precedence over a
 routine interim. Delivery of the old-round board does not consume new-round posts.

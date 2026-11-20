@@ -295,6 +295,8 @@ async def test_reopen_interrupts_bout_or_finishes_the_announced_round(
         assert resumed.round_number == 2 and resumed.pacing.started_at == cutover
         assert rows(db, "SELECT outcome FROM nr_breaking_moments") == [("interrupted",)]
         assert rows(db, "SELECT COUNT(*) FROM nr_round_resolutions") == [(1,)]
+        assert rows(db, "SELECT output_id FROM nr_evolution_outputs WHERE kind='mode_ended'") == []
+        assert not any(kind == "evolution_mode_ended" for _, kind, _ in transport.messages)
         assert len(transport.probes) == 2
         await runtime.submit(route, "event", event=during_read_in)
         await runtime.submit(route, "event", event=event(runtime, route, 81601, "over", 707))

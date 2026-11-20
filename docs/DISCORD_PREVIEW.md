@@ -1,4 +1,4 @@
-# New Rules Discord preview — v0.3.28 / schema 16
+# New Rules Discord preview — v0.3.29 / schema 16
 
 This development build connects the existing ordinary engine to Discord. Run one
 bot process against a database. Private/requested scores, automatic interims and
@@ -9,8 +9,8 @@ release work are still open.
 
 ## Install and enable
 
-The current schema is **16**, with WAL and foreign keys enabled. For a v0.3.27
-installation on schema 16, stop the bot, apply v0.3.28, reinstall, and restart.
+The current schema is **16**, with WAL and foreign keys enabled. For a v0.3.28
+installation on schema 16, stop the bot, apply v0.3.29, reinstall, and restart.
 For a fresh database, run `python -m lets_play --init-db`. See
 [RECOVERY.md](RECOVERY.md) and [STORAGE.md](STORAGE.md).
 
@@ -118,9 +118,10 @@ compatibility witnesses; an incomplete hand is never published.
     shows only Drawing Conclusions during the bout. Try three distinct emoji-only
     posts and then an emoji mixed with text. Expect one marker on the mixed post.
     A whisper or reaction should add no compliance observation. After two minutes
-    a lime-green notice lists the restored rules in the same round. Its next hand is ordinary-only. In a separate bout, restart after the
-    third valid post and check the recovery countdown, the green notice when
-    play resumes, and the saved scores.
+    a lime-green notice lists the restored rules in the same round. Its next
+    hand is ordinary-only. In a separate bout, restart after the third valid
+    post and check the recovery countdown, the edited rules panel when play
+    resumes, and the saved scores. Expect no separate green notice after read-in.
 
 ## Delivery and ordering
 

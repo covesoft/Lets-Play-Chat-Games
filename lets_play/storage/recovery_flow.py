@@ -238,6 +238,22 @@ class RecoveryFlow:
         )
         if admission["stage"] == "ended":
             return "ended"
+        # Older builds queued a notice when recovery restored the rules. Retire
+        # only those that never had a send claim. Claimed output still needs proof.
+        await _execute(
+            self.conn,
+            """UPDATE nr_evolution_outputs AS o SET retired_at_utc=?
+               WHERE o.session_id=? AND o.kind='mode_ended' AND o.retired_at_utc IS NULL
+               AND o.acknowledged_at_utc IS NULL AND o.message_id IS NULL
+               AND EXISTS(
+                   SELECT 1 FROM nr_breaking_moments b
+                   WHERE b.session_id=o.session_id AND b.round_id=o.token AND b.outcome='interrupted'
+               ) AND NOT EXISTS(
+                   SELECT 1 FROM nr_discord_deliveries d
+                   WHERE d.session_id=o.session_id AND d.family='evolution' AND d.output_id=o.output_id
+               )""",
+            (utc_int(frame.received_at), session),
+        )
         previous = await active_recovery(self.unit, session)
         work = []
         if previous is None:

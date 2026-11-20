@@ -93,11 +93,13 @@ class BreakingFlow:
             (new.ruleset_version, new.revision, p.route.session_id, p.round_id),
         )
 
-        await _execute(
-            self.conn,
-            "INSERT INTO nr_evolution_outputs(session_id,token,kind) VALUES (?,?,'mode_ended')",
-            (p.route.session_id, p.round_id),
-        )
+        # After an interruption the recovery panel already shows the restored rules.
+        if not interrupted:
+            await _execute(
+                self.conn,
+                "INSERT INTO nr_evolution_outputs(session_id,token,kind) VALUES (?,?,'mode_ended')",
+                (p.route.session_id, p.round_id),
+            )
 
     async def close(self, position):
         await _execute(

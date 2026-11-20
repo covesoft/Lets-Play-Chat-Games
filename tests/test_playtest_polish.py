@@ -10,7 +10,7 @@ from test_discord_ordinary_loop import next_offer, posts, settle
 from test_discord_runtime import activated, event, opened, service, until
 from test_drawing_conclusions import scheduled
 from test_live_feedback import interaction
-from test_ordinary_flow import rows
+from test_ordinary_flow import execute, rows
 from test_public_summary import PublicTransport
 from test_reboot_recovery import RecoveryTransport, fire, reading
 
@@ -196,8 +196,7 @@ async def test_whole_game_post_freezes_the_chosen_page_and_keeps_private_scope(
 
 
 @pytest.mark.asyncio
-@pytest.mark.parametrize("reboot", [False, True])
-async def test_breaking_moment_has_one_separate_lime_green_notice(tmp_path, monkeypatch, reboot):
+async def test_breaking_moment_expiry_posts_one_separate_lime_green_notice(tmp_path, monkeypatch):
     transport = RecoveryTransport()
     async with service(
         tmp_path, monkeypatch, transport=transport, include_breaking_moment=True
@@ -208,24 +207,9 @@ async def test_breaking_moment_has_one_separate_lime_green_notice(tmp_path, monk
         await settle(runtime)
         active = await runtime.state(route.session_id)
         copy = default_presentation()
-        if reboot:
-            await runtime.initialize()
-            state = await reading(runtime, route)
-            channel = NS(
-                guild=NS(id=route.guild_id), get_partial_message=lambda _: NS(edit=AsyncMock())
-            )
-            sdk = DiscordTransport(
-                NS(settings=load_settings(environ={}), get_channel=lambda _: channel)
-            )
-            embed, _ = sdk._recovery_notice(route, state)
-            assert embed.description == copy.text(
-                "mode.interrupted_countdown", timestamp=int(state.recovery_resume_at.timestamp())
-            )
-            await fire(runtime, route, state.recovery_resume_at)
-        else:
-            runtime.clock.at = active.mode.ends_at
-            await runtime.submit(route, "tick")
-            await settle(runtime)
+        runtime.clock.at = active.mode.ends_at
+        await runtime.submit(route, "tick")
+        await settle(runtime)
 
         notices = [state for _, kind, state in transport.messages if kind == "evolution_mode_ended"]
         assert len(notices) == 1
@@ -296,7 +280,63 @@ async def test_breaking_moment_has_one_separate_lime_green_notice(tmp_path, monk
 
 
 @pytest.mark.asyncio
-async def test_lost_mode_end_send_is_recovered_as_one_known_post(tmp_path, monkeypatch):
+async def test_reboot_restores_rules_and_retires_a_legacy_unsent_interruption_notice(
+    tmp_path, monkeypatch
+):
+    transport = RecoveryTransport()
+    db = tmp_path / "game.sqlite3"
+    async with service(
+        tmp_path, monkeypatch, transport=transport, include_breaking_moment=True
+    ) as runtime:
+        route, before = await scheduled(runtime, monkeypatch)
+        runtime.clock.at = before.offer.effective_at
+        await runtime.submit(route, "tick")
+        await settle(runtime)
+        active = await runtime.state(route.session_id)
+        await runtime.initialize()
+        state = await reading(runtime, route)
+        copy = default_presentation()
+        panel = NS(edit=AsyncMock())
+        channel = NS(guild=NS(id=route.guild_id), get_partial_message=lambda _: panel)
+        sdk = DiscordTransport(
+            NS(settings=load_settings(environ={}), get_channel=lambda _: channel)
+        )
+        embed, _ = sdk._recovery_notice(route, state)
+        assert embed.description == copy.text(
+            "mode.interrupted_countdown", timestamp=int(state.recovery_resume_at.timestamp())
+        )
+        await fire(runtime, route, state.recovery_resume_at)
+        state = await runtime.state(route.session_id)
+        assert state.round_number == active.round_number and state.mode is None
+        assert state.context.active_instances == active.context.active_instances
+        await sdk.refresh(route, state)
+        embed = panel.edit.await_args.kwargs["embed"]
+        assert embed.colour == discord.Colour(copy.color("active"))
+        assert [field.name for field in embed.fields] == [copy.text("cards.NR034.name")]
+        assert rows(db, "SELECT output_id FROM nr_evolution_outputs WHERE kind='mode_ended'") == []
+        assert not any(kind == "evolution_mode_ended" for _, kind, _ in transport.messages)
+
+        execute(
+            db,
+            "INSERT INTO nr_evolution_outputs(session_id,token,kind) "
+            "SELECT session_id,round_id,'mode_ended' FROM nr_breaking_moments",
+        )
+        await runtime.initialize()
+        state = await reading(runtime, route)
+        await fire(runtime, route, state.recovery_resume_at)
+        assert rows(
+            db,
+            "SELECT retired_at_utc IS NOT NULL,message_id FROM nr_evolution_outputs "
+            "WHERE kind='mode_ended'",
+        ) == [(1, None)]
+        assert not any(kind == "evolution_mode_ended" for _, kind, _ in transport.messages)
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("legacy_interruption", [False, True])
+async def test_lost_mode_end_send_is_recovered_as_one_known_post(
+    tmp_path, monkeypatch, legacy_interruption
+):
     transport = RecoveryTransport()
     async with service(
         tmp_path, monkeypatch, transport=transport, include_breaking_moment=True
@@ -311,6 +351,11 @@ async def test_lost_mode_end_send_is_recovered_as_one_known_post(tmp_path, monke
         await runtime.submit(route, "tick")
         await settle(runtime)
         assert (await runtime.state(route.session_id)).recovery_id
+        if legacy_interruption:
+            execute(
+                tmp_path / "game.sqlite3",
+                "UPDATE nr_breaking_moments SET outcome='interrupted' WHERE outcome='completed'",
+            )
         runtime.clock.at += timedelta(seconds=5)
         transport.find_mode_end_publication = AsyncMock(
             return_value=(1778, active.mode.ends_at + timedelta(seconds=1))
@@ -332,7 +377,6 @@ async def test_lost_mode_end_send_is_recovered_as_one_known_post(tmp_path, monke
 @pytest.mark.asyncio
 async def test_schema_16_preserves_evolution_output_identity_and_allocator(tmp_path, monkeypatch):
     from test_discord_delivery_migration import released_nine
-    from test_ordinary_flow import execute
 
     from lets_play.storage import bootstrap
 
