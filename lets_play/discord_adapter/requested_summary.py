@@ -56,19 +56,6 @@ def render(page, copy, *, snapshot=None, public=False, publication_control=None)
             inline=False,
         )
     if snapshot and page.scope == "round":
-        if not automatic:
-            embed.add_field(
-                name=copy.text("summary.capture_heading"),
-                value=copy.text(
-                    "summary.capture_detail",
-                    session=snapshot.session_id[:8],
-                    game_messages=snapshot.human_messages,
-                    game_whispers=snapshot.whispers,
-                    round_messages=snapshot.round_messages,
-                    round_whispers=snapshot.round_whispers,
-                ),
-                inline=False,
-            )
         # Names only here; /rules retains the complete current instructions.
         names = [copy.text(f"cards.{r.card_id}.name") for r in snapshot.rules]
         chunk = ""

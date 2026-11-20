@@ -299,7 +299,7 @@ async def test_public_transport_uses_saved_rules_no_footer_and_suppresses_mentio
             "buttons.summary_current"
         )
         copy = default_presentation()
-        bad = replace(copy, strings={**copy.strings, "summary.capture_detail": "x" * 1100})
+        bad = replace(copy, strings={**copy.strings, "summary.traffic": "x" * 1100})
         with pytest.raises(PresentationError):
             requested_summary.render(page, bad, snapshot=snapshot, public=True)
 

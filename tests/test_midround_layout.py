@@ -53,7 +53,7 @@ async def test_automatic_layout_keeps_rules_and_player_entries_without_report_or
         assert manual.fields[0].value == copy.text(
             "summary.traffic", messages=page.human_messages, whispers=page.whispers
         )
-        assert any(f.name == copy.text("summary.capture_heading") for f in manual.fields)
+        assert not any(f.name == copy.text("summary.capture_heading") for f in manual.fields)
         async with runtime.store.transaction(write=False) as unit:
             live = await SummaryStore(unit).live_page(route.session_id)
         detailed, _ = requested_summary.render(live, copy)
