@@ -159,6 +159,7 @@ async def test_opening_quorum_authorization_scoring_marker_dedup_and_end(tmp_pat
             )
         assert (await runtime.state(route.session_id)).admission.joined == 1
         state = await choice(runtime, route)
+        assert render(state)[0].title == "New Rules — choose the next card"
         assert (
             await runtime.submit(route, "choose", actor=999, message_id=state.panel_id, index=0)
             is OpeningStatus.UNAUTHORIZED

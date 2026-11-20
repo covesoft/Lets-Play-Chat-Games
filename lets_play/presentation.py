@@ -20,6 +20,8 @@ TEMPLATE_FIELDS = {
     "warning.countdown": frozenset({"timestamp"}),
     "mode.interrupted_countdown": frozenset({"timestamp"}),
     "summary.game_description": frozenset({"messages", "whispers", "as_of", "status"}),
+    "mode.named_title": frozenset({"name"}),
+    "mode.choice_label": frozenset({"minutes"}),
     "mode.active_description": frozenset({"ends"}),
     "mode.scheduled_description": frozenset({"starts", "ends"}),
     "mode.interrupted_notice": frozenset({"seconds"}),
@@ -147,6 +149,7 @@ def _validate_strings(strings):
                             "detail",
                             "session",
                             "rule",
+                            "name",
                         }
                         else 1
                     )

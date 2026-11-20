@@ -4,7 +4,7 @@ from datetime import UTC, datetime, timedelta
 
 import discord
 
-from lets_play.new_rules.breaking_moments import ModeChoice, mode_ends_at
+from lets_play.new_rules.breaking_moments import BREAKING_MOMENT_SECONDS, ModeChoice, mode_ends_at
 from lets_play.new_rules.pacing import WARNING_SECONDS
 
 
@@ -73,6 +73,12 @@ def render_ordinary(state, copy, button, *, kind=None, now=None):
                 inline=False,
             )
 
+    def show_mode(choice, timing):
+        name = copy.text(f"cards.{choice.card_id}.name")
+        embed.title = copy.text("mode.named_title", name=name)
+        embed.colour = copy.color("mode")
+        embed.description = f"{rule_text(copy, choice)}\n\n{timing}"
+
     if kind == "evolution_mode_ended":
         embed.title = copy.text("mode.ended_title")
         embed.colour = copy.color("mode_ended")
@@ -123,12 +129,10 @@ def render_ordinary(state, copy, button, *, kind=None, now=None):
         else:
             rules(state.context.active_instances)
     elif state.mode:
-        embed.title = copy.text("mode.title")
-        embed.colour = copy.color("mode")
-        embed.description = copy.text(
-            "mode.active_description", ends=int(state.mode.ends_at.timestamp())
+        show_mode(
+            state.mode.choice,
+            copy.text("mode.active_description", ends=int(state.mode.ends_at.timestamp())),
         )
-        rules((state.mode.choice,))
     elif offer and offer.stage in {"prepared", "published"} and not rules_only:
         embed.title = copy.text("ordinary.offer_title")
         embed.colour = copy.color("offer")
@@ -148,8 +152,12 @@ def render_ordinary(state, copy, button, *, kind=None, now=None):
             if chosen and option.incoming.instance_id != chosen:
                 continue
             card = option.incoming.card_id
+            mode_choice = isinstance(option.incoming, ModeChoice)
             label = copy.text(f"cards.{card}.name")
             description = rule_text(copy, option.incoming)
+            if mode_choice:
+                mode_label = copy.text("mode.choice_label", minutes=BREAKING_MOMENT_SECONDS // 60)
+                description = f"**{mode_label}**\n{description}"
             if option.outgoing_ids:
                 targets = ", ".join(
                     copy.text(f"cards.{active[t].card_id}.name") for t in option.outgoing_ids
@@ -170,9 +178,7 @@ def render_ordinary(state, copy, button, *, kind=None, now=None):
                     )
             else:
                 style = (
-                    discord.ButtonStyle.primary
-                    if isinstance(option.incoming, ModeChoice)
-                    else discord.ButtonStyle.secondary
+                    discord.ButtonStyle.primary if mode_choice else discord.ButtonStyle.secondary
                 )
                 button(view, label, session, "pick", index, style=style)
         if chosen:
@@ -180,22 +186,22 @@ def render_ordinary(state, copy, button, *, kind=None, now=None):
                 "ordinary.target_description", picker=offer.hand.picker_id, deadline=clock
             )
     elif offer and offer.stage == "selected" and kind != "rules":
-        embed.title = copy.text("ordinary.scheduled_title")
-        embed.colour = copy.color("scheduled")
-        embed.description = copy.text(
-            "ordinary.scheduled_description", timestamp=int(offer.effective_at.timestamp())
-        )
         option = selected_option(offer)
         if isinstance(option.incoming, ModeChoice):
-            embed.title = copy.text("mode.title")
-            embed.colour = copy.color("mode")
-            embed.description = copy.text(
-                "mode.scheduled_description",
-                starts=int(offer.effective_at.timestamp()),
-                ends=int(mode_ends_at(offer.effective_at).timestamp()),
+            show_mode(
+                option.incoming,
+                copy.text(
+                    "mode.scheduled_description",
+                    starts=int(offer.effective_at.timestamp()),
+                    ends=int(mode_ends_at(offer.effective_at).timestamp()),
+                ),
             )
-            rules((option.incoming,))
         else:
+            embed.title = copy.text("ordinary.scheduled_title")
+            embed.colour = copy.color("scheduled")
+            embed.description = copy.text(
+                "ordinary.scheduled_description", timestamp=int(offer.effective_at.timestamp())
+            )
             rules(
                 next(
                     c.instances

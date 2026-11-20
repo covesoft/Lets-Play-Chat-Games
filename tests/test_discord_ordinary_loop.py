@@ -71,6 +71,7 @@ async def test_full_warning_choice_cutover_keeps_old_round_scores_and_starts_new
         original = state.context.position
         assert state.pacing.stage == "waiting"
         state = await next_offer(runtime, route)
+        assert render(state)[0].title == "New Rules — choose the next card"
         assert state.context.position.round_id == original.round_id
         assert len(state.offer.hand.options) == 3
         assert all(o.incoming.card_id in ORDINARY_CARDS for o in state.offer.hand.options)

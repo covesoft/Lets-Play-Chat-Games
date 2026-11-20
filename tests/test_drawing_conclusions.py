@@ -67,7 +67,14 @@ async def scheduled(runtime, monkeypatch, *, expressionless=False):
     (index,) = (i for i, o in enumerate(options) if isinstance(o.incoming, ModeChoice))
     assert options[index].outgoing_ids == ()
     embed, view = render(offer)
-    assert any(field.name == "Drawing Conclusions" for field in embed.fields)
+    assert embed.title == "New Rules — choose the next card"
+    assert embed.fields[index].name == view.children[index].label == "Drawing Conclusions"
+    assert embed.fields[index].value == (
+        "**Breaking Moment · 2 minutes**\nPost only emojis! (Spaces are fine too)"
+    )
+    assert all(
+        "Breaking Moment ·" not in field.value for i, field in enumerate(embed.fields) if i != index
+    )
     assert [item.style for item in view.children] == [
         discord.ButtonStyle.primary if i == index else discord.ButtonStyle.secondary
         for i in range(len(options))
@@ -86,15 +93,17 @@ async def scheduled(runtime, monkeypatch, *, expressionless=False):
     state = await runtime.state(route.session_id)
     assert state.offer_display_ready
     assert state.round_number == 1 and state.mode is None
-    assert all(
-        field.name != "Drawing Conclusions" for field in render(state, kind="rules")[0].fields
-    )
+    rules_embed, _ = render(state, kind="rules")
+    assert "Drawing Conclusions" not in rules_embed.title
+    assert all(field.name != "Drawing Conclusions" for field in rules_embed.fields)
     activation = next(
         s for _, kind, s in runtime.transport.messages if kind == "ordinary_activation"
     )
     embed, _ = render(activation, kind="ordinary_activation")
-    assert embed.title == "Breaking Moment!"
-    assert [field.name for field in embed.fields] == ["Drawing Conclusions"]
+    assert embed.title == "Breaking Moment — Drawing Conclusions"
+    assert embed.description.startswith("Post only emojis! (Spaces are fine too)\n\n")
+    assert f"<t:{int(state.offer.effective_at.timestamp())}:R>" in embed.description
+    assert not embed.fields
     return route, state
 
 
@@ -150,7 +159,11 @@ async def test_mode_cutover_scoring_timer_award_restore_and_hand_spacing(tmp_pat
         assert active.mode.ends_at == starts + timedelta(seconds=120) == active.next_deadline
         assert active.context.active_instances == original.context.active_instances
         assert route.session_id in runtime.timers
-        assert [f.name for f in render(active, kind="rules")[0].fields] == ["Drawing Conclusions"]
+        embed, _ = render(active, kind="rules")
+        assert embed.title == "Breaking Moment — Drawing Conclusions"
+        assert embed.description.startswith("Post only emojis! (Spaces are fine too)\n\n")
+        assert f"<t:{int(active.mode.ends_at.timestamp())}:R>" in embed.description
+        assert not embed.fields
 
         await runtime.submit(route, "event", event=first)
         ignored = reaction(runtime, route, "mode-reaction")
