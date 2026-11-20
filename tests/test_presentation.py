@@ -14,7 +14,7 @@ from lets_play.cli import main
 from lets_play.config import load_settings
 from lets_play.discord_adapter.discord_io import DiscordTransport, render
 from lets_play.discord_adapter.lane import LaneUnavailable
-from lets_play.discord_adapter.runtime import OPENING_CARDS
+from lets_play.discord_adapter.runtime import ORDINARY_CARDS
 from lets_play.presentation import PresentationError, load_presentation
 
 
@@ -145,7 +145,7 @@ def test_catalog_covers_sent_keys_and_card_labels_without_inline_english():
                     k.arg in {"color", "colour"} and isinstance(k.value, ast.Constant)
                     for k in node.keywords
                 )
-    for card in OPENING_CARDS:
+    for card in ORDINARY_CARDS:
         assert copy.text(f"cards.{card}.name") and copy.text(f"cards.{card}.description")
 
 

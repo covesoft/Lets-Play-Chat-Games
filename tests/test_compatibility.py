@@ -67,7 +67,7 @@ def test_pair_assessments_never_certify_a_failing_witness(cards):
         verify_witness(instances, result)
     else:
         assert result.witness is None
-        assert result.rejection in {Rejection.CAP, Rejection.SLOT, Rejection.NO_WITNESS}
+        assert result.rejection in {Rejection.CAP, Rejection.SLOT, Rejection.CONFLICT}
 
 
 def test_pairwise_legal_phrases_collectively_exceed_briefly():
@@ -109,11 +109,10 @@ def test_case_transform_preserves_phrase_matching_and_terminal_composition():
 @pytest.mark.parametrize(
     "active",
     [
-        (rule("NR010"), rule("NR013")),
         (rule("NR025"), phrase("sorry duck")),
         (rule("NR027"), phrase("maybe duck")),
         (rule("NR022"), phrase("red red duck")),
-        (rule("NR019"), rule("NR033"), rule("NR034")),
+        (rule("NR022"), rule("NR034"), phrase("over here")),
     ],
 )
 def test_contradictions_cannot_be_certified_by_empty_media_or_whisper(active):
@@ -133,6 +132,8 @@ def test_no_questions_and_literal_ellipsis_are_compatible():
         ((rule("NR007"), rule("NR008")), Rejection.SLOT),
         ((rule("NR024"), rule("NR033")), Rejection.SLOT),
         ((rule("NR010"), rule("NR011")), Rejection.SLOT),
+        ((rule("NR010"), rule("NR012")), Rejection.SLOT),
+        ((rule("NR011"), rule("NR012")), Rejection.SLOT),
         ((rule("NR011"), rule("NR011", "another")), Rejection.DUPLICATE),
         ((rule("NR037"),), Rejection.UNSUPPORTED),
         ((phrase("a", "one"), phrase("b", "two"), phrase("c", "three")), Rejection.CAP),
@@ -163,11 +164,55 @@ def test_no_total_active_limit_or_blanket_typography_cap_is_added():
 
 
 def test_brevity_replacement_targets_only_the_brevity_instance():
-    active = (rule("NR017"), rule("NR034"), rule("NR004"))
+    active = (rule("NR017"), rule("NR004"))
     results = legal_completions(active, rule("NR019", "incoming"))
     assert len(results) == 1 and results[0].outgoing_id == "NR017"
-    assert {i.card_id for i in results[0].instances} == {"NR019", "NR034", "NR004"}
+    assert {i.card_id for i in results[0].instances} == {"NR019", "NR004"}
     verify_witness(results[0].instances, assess_state(results[0].instances))
+
+
+@pytest.mark.parametrize(
+    "left,right,passing_text",
+    [
+        (rule("NR019"), rule("NR024"), "yes"),
+        (rule("NR019"), rule("NR033"), "please"),
+        (rule("NR019"), rule("NR034"), "over"),
+        (rule("NR019"), phrase("duck"), "duck"),
+        (rule("NR010"), rule("NR013"), None),
+        (rule("NR012"), rule("NR014"), None),
+    ],
+)
+def test_reciprocal_direct_conflicts_replace_only_the_counterpart(left, right, passing_text):
+    keep = rule("NR004")
+    if passing_text:
+        view = parse_message(passing_text)
+        assert all(evaluate_text_rule(view, card).outcome is Outcome.PASS for card in (left, right))
+    for current, incoming in ((left, right), (right, left)):
+        assert assess_state((current, incoming)).rejection is Rejection.CONFLICT
+        (completion,) = legal_completions((current, keep), incoming)
+        assert completion.outgoing_id == current.instance_id
+        assert completion.instances == (keep, incoming)
+
+
+@pytest.mark.parametrize(
+    "cards,text",
+    [
+        (("NR007", "NR013", "NR014"), "hello"),
+        (("NR010", "NR014", "NR034"), "over?"),
+        (("NR012", "NR013", "NR034"), "over!"),
+    ],
+)
+def test_nonmatching_punctuation_rules_can_stack(cards, text):
+    active = tuple(rule(card) for card in cards)
+    result = assess_state(active)
+    verify_witness(active, result)
+    assert result.witness.text == text
+
+
+def test_terminal_slot_and_direct_conflict_cannot_remove_two_cards():
+    active = (rule("NR011"), rule("NR014"))
+    assert assess_state(active).legal
+    assert legal_completions(active, rule("NR012")) == ()
 
 
 def test_slot_replacement_removes_the_required_prefix_not_unrelated_clauses():
@@ -197,10 +242,16 @@ def test_each_phrase_replacement_checks_the_whole_result():
     assert results[0].witness.text == "red duck pond grows"
 
 
-def test_no_supported_single_removal_can_repair_two_required_phrase_conflicts():
-    active = (rule("NR019"), phrase("duck", "clause"))
+@pytest.mark.parametrize(
+    "active",
+    [
+        (phrase("red", "first"), phrase("duck", "second")),
+        (rule("NR017"), rule("NR034"), rule("NR004")),
+    ],
+)
+def test_no_supported_single_removal_can_clear_multiple_blockers(active):
     assert assess_state(active).legal
-    assert legal_completions(active, phrase("red duck", "incoming")) == ()
+    assert legal_completions(active, rule("NR019", "incoming")) == ()
 
 
 def test_search_budget_is_not_a_new_player_rule_or_a_truncated_proof():

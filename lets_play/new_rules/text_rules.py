@@ -8,8 +8,10 @@ TEXT_FAILURE_REASONS = {
     "NR008": "uppercase_required",
     "NR010": "required_question_ending",
     "NR011": "required_three_periods",
-    "NR016": "formatting_forbidden",
+    "NR012": "required_exclamation_ending",
     "NR013": "questions_forbidden",
+    "NR014": "exclamations_forbidden",
+    "NR016": "formatting_forbidden",
     "NR017": "maximum_five_words",
     "NR019": "exactly_one_word",
     "NR022": "repeated_word",
@@ -21,6 +23,7 @@ TEXT_FAILURE_REASONS = {
     "NR036": "required_phrase",
 }
 SUPPORTED_TEXT_RULES = frozenset(TEXT_FAILURE_REASONS)
+REQUIRED_ENDINGS = {"NR010": "?", "NR011": "...", "NR012": "!"}
 
 
 class RuleConfigurationError(ValueError):
@@ -80,10 +83,12 @@ def evaluate_text_rule(view: MessageView, instance: RuleInstance) -> RuleEvaluat
             passed = view.logical == view.logical.lower()
         case "NR008":
             passed = view.logical == view.logical.upper()
-        case "NR010":
-            passed = view.ending.endswith("?")
+        case "NR010" | "NR011" | "NR012":
+            passed = view.ending.endswith(REQUIRED_ENDINGS[instance.card_id])
         case "NR013":
             passed = "?" not in view.logical
+        case "NR014":
+            passed = "!" not in view.logical
         case "NR017":
             passed = len(view.words) <= 5
         case "NR019":
@@ -98,9 +103,6 @@ def evaluate_text_rule(view: MessageView, instance: RuleInstance) -> RuleEvaluat
             passed = forbidden not in view.word_keys
         case "NR034":
             passed = view.ends_with_word("over")
-        case "NR011":
-            ending = view.ending
-            passed = ending.endswith("...")  # … support tbd
         case "NR016":
             passed = not view.formatting
         case "NR036":

@@ -8,9 +8,10 @@ contains operational and API documentation only.
 
 ## Current implementation
 
-Application v0.3.30 uses schema 16. M1 is accepted and closed at v0.2.9/schema 8;
-M2 is in progress. Preserve the existing domain/storage APIs. This is a
-development-only Discord preview, not a public-release build.
+Application v0.3.31 uses schema 16. M1 closed at v0.2.9/schema 8, and M2
+closed at v0.3.30/schema 16. M3 compatibility and catalog work is underway.
+Preserve the existing domain/storage APIs. This build is a development-only
+Discord preview.
 
 Implemented: persisted three-human opening, message/raw-reaction scoring and
 markers, ordinary warning/picker/choice/replacement/timeout/cutover, held play,
@@ -18,8 +19,10 @@ same-round revival, manager ending, private live scores, requested public report
 gated automatic interims, compact round-end boards and ranked final standings.
 Drawing Conclusions is the supported Breaking Moment. An eligible later hand
 can draw it as one template ticket. Opening and post-mode hands are ordinary-only.
-Seventeen ordinary predicates exist; opening offers five proven templates and
-later offers sixteen non-phrase templates. NR036 is not offered by the adapter.
+Nineteen ordinary predicates exist. The opening pool has five templates, and
+later offers use eighteen non-phrase templates. NR036 is not offered by the adapter.
+One Word Will Do conflicts with the Clauses deck, and each terminal mark requirement
+conflicts with its matching ban. A single permitted removal must clear all blockers.
 
 Startup/reconnect fences every saved route before publishers/timers. Settled
 ordinary rounds now recover without manager input: fresh channel/marker checks,
@@ -69,7 +72,7 @@ proposed next steps are historical; use current source and owner instructions.
   JSON in wheel/sdist builds. See `docs/PRESENTATION.md`.
 - Do not contact/invite collaborators, push the repository, deploy or run a live
   bot merely to verify an offline edit. Keep any supplied token/IDs private.
-  Routine implementation is delegated; M2 work is authorized in bounded bites.
+  Routine implementation is delegated in bounded increments.
 
 ## Development and verification
 
@@ -285,5 +288,5 @@ a claimed close, without reopening a game or occupying capacity.
 Inconclusive evidence keeps the claim unresolved. A live route stays paused
 and can be explicitly ended by a manager. An ended route remains ended without
 replaying an uncertain result. The existing authorized ending is the operator
-disposition for stalled games. Next work includes human M2 exit checks.
+disposition for stalled games. Next M3 work expands the ordinary catalog and phrase-bank integration.
 The owner’s soft patch-size limit is 200 KB.

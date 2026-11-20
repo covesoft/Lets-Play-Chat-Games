@@ -3,7 +3,7 @@
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from enum import StrEnum
-from itertools import permutations
+from itertools import combinations, permutations
 
 from lets_play.new_rules.catalog import (
     CARD_SPECS,
@@ -25,7 +25,7 @@ from lets_play.new_rules.contracts import (
 )
 from lets_play.new_rules.evaluation import EvaluationContext, evaluate_message
 from lets_play.new_rules.parsing import MAX_PARSER_CODEPOINTS, ParserLimitError, parse_message
-from lets_play.new_rules.text_rules import RuleConfigurationError, phrase_keys
+from lets_play.new_rules.text_rules import REQUIRED_ENDINGS, RuleConfigurationError, phrase_keys
 
 
 class Rejection(StrEnum):
@@ -34,6 +34,7 @@ class Rejection(StrEnum):
     DUPLICATE = "duplicate_template"
     CAP = "mechanical_cap"
     SLOT = "exclusive_slot"
+    CONFLICT = "direct_conflict"
     NO_WITNESS = "no_witness"
     SEARCH_LIMIT = "witness_search_limit"
 
@@ -72,6 +73,15 @@ class Assessment:
 _ROUTE = SessionRoute(1, 1, "witness")
 _POSITION = SessionPosition(_ROUTE, Lifecycle.PLAYING, round_id="witness")
 _TIME = datetime(2000, 1, 1, tzinfo=UTC)
+_MATCHING_MARK_CONFLICTS = frozenset({("NR010", "NR013"), ("NR012", "NR014")})
+
+
+def _direct_conflict(left: str, right: str) -> bool:
+    if left == "NR019":
+        return CARD_SPECS[right].deck is Deck.CLAUSES
+    if right == "NR019":
+        return CARD_SPECS[left].deck is Deck.CLAUSES
+    return (left, right) in _MATCHING_MARK_CONFLICTS or (right, left) in _MATCHING_MARK_CONFLICTS
 
 
 def inventory_rejection(instances: tuple[RuleInstance, ...]) -> Rejection | None:
@@ -95,6 +105,8 @@ def inventory_rejection(instances: tuple[RuleInstance, ...]) -> Rejection | None
     slots = [CARD_SPECS[i.card_id].slot for i in instances if CARD_SPECS[i.card_id].slot]
     if len(set(slots)) != len(slots):
         return Rejection.SLOT
+    if any(_direct_conflict(left, right) for left, right in combinations(cards, 2)):
+        return Rejection.CONFLICT
     return None
 
 
@@ -128,7 +140,7 @@ def assess_state(
     cards = {i.card_id for i in instances}
     prefix = ("yes",) if "NR024" in cards else ("please",) if "NR033" in cards else ()
     suffix = ("over",) if "NR034" in cards else ()
-    punctuation = "..." if "NR011" in cards else "?" if "NR010" in cards else ""
+    punctuation = next((ending for card, ending in REQUIRED_ENDINGS.items() if card in cards), "")
     candidates: set[tuple[str, ...]] = set()
     limited = False
     # At most two phrase instances by the mechanical cap. Every stage is bounded;
@@ -178,13 +190,17 @@ def assess_state(
 def replacement_targets(
     active: tuple[RuleInstance, ...], incoming: RuleInstance
 ) -> tuple[str | None, ...]:
-    """Only capped-deck/exclusive-slot removals; no unrelated retirement escape."""
+    """Find removals permitted by the caps, slots, and direct conflicts."""
     if incoming.card_id not in CARD_SPECS:
         raise NotImplementedError("This template has no implemented compatibility metadata.")
     if incoming.card_id != "NR036" and any(i.card_id == incoming.card_id for i in active):
         return ()
     spec = CARD_SPECS[incoming.card_id]
-    groups = []
+    groups = [
+        {instance.instance_id}
+        for instance in active
+        if _direct_conflict(incoming.card_id, instance.card_id)
+    ]
     if spec.slot:
         occupants = {i.instance_id for i in active if CARD_SPECS[i.card_id].slot == spec.slot}
         if occupants:

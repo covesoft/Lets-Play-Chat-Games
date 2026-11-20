@@ -8,7 +8,7 @@ hands. The full catalog and other Breaking Moments are still pending.
 
 ## Implemented catalog
 
-`catalog.CARD_SPECS` is immutable metadata for these 17 implemented validators:
+`catalog.CARD_SPECS` is immutable metadata for these 19 implemented validators:
 
 | ID | Card | Check / mechanical group |
 | --- | --- | --- |
@@ -18,14 +18,16 @@ hands. The full catalog and other Breaking Moments are still pending.
 | NR008 | SPEAK UP | Uppercase mapping; casing slot |
 | NR010 | Questionable Conduct | ASCII question-mark ending; terminal slot |
 | NR011 | Are You Sure? | At least three consecutive terminal ASCII periods; terminal slot |
-| NR013 | No Questions | No ASCII question marks; independent Typography restriction |
+| NR012 | With Gusto | ASCII exclamation-mark ending; terminal slot |
+| NR013 | No Questions | No ASCII question marks; conflicts with NR010 |
+| NR014 | Curb The Enthusiasm | No ASCII exclamation marks; conflicts with NR012 |
 | NR016 | Plain Clothes | No supported formatting; independent Typography restriction |
 | NR017 | Briefly | At most five words; Brevity |
 | NR019 | One Word Will Do | Exactly one word; Brevity |
 | NR022 | No Echoes | No repeated normalized word; Vocabulary |
 | NR024 | So Agreeable | Distinct first word `yes`; prefix slot |
 | NR025 | No Apologies | No whole word `sorry`; Vocabulary |
-| NR027 | Indecisiveness Banned | No whole word `maybe`; Vocabulary |
+| NR027 | No Doubts | No whole word `maybe`; Vocabulary |
 | NR033 | Please Proceed | Distinct first word `please`; prefix slot |
 | NR034 | Roger Wilco | Ending word `over`; separate from terminal punctuation |
 | NR036 | Don’t Forget | Frozen phrase; two independent instances |
@@ -42,8 +44,10 @@ the same deck/slot. Predicate/Unicode details are in [PARSER.md](PARSER.md).
 
 `compatibility.assess_state(instances)` returns an `Assessment`: a `Witness` when
 feasibility is established, otherwise a stable rejection reason. It checks
-instance/template identity, caps/slots, parameters, and the entire resulting
-state. It constructs nonempty ordinary text from required prefix/phrase/ending
+instance/template identity, caps, slots, direct conflicts, parameters, and the
+entire resulting state. NR019 conflicts with every Clauses instance, including
+one-word phrases. NR010 conflicts with NR013, and NR012 with NR014. The two
+bans can coexist, and either required mark can coexist with the other mark's ban. It constructs nonempty ordinary text from required prefix/phrase/ending
 words, trying containment/overlap/order alternatives, then applies case/terminal
 requirements. The actual evaluator must pass every applicable predicate; only
 NR006 is not-applicable to this synthetic message. Empty text, media-only posts,
@@ -56,8 +60,9 @@ pond` can share a word and pass No Echoes as `red duck pond`.
 `legal_completions(active, incoming)` returns every proven permitted single
 removal/addition. At a capped deck, outgoing targets come from that deck; an
 exclusive slot targets that slot; a full NR036 allotment targets NR036 instances.
-Each result is rechecked in full. A cross-deck conflict cannot retire an unrelated
-rule, and a candidate requiring more removals is withheld. Already-active
+Either card in a direct conflict can replace its counterpart. The same outgoing
+instance must satisfy every applicable restriction, and the entire resulting
+state must pass. A phrase-specific witness failure grants no removal on its own. Already-active
 non-phrase templates do not become redundant draw tickets. Callers must begin
 with a valid current state; the hand builder verifies it explicitly.
 

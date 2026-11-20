@@ -20,8 +20,9 @@ result = evaluate_text_rule(view, RuleInstance("example-instance", "NR034"))
 
 `RuleEvaluation` returns an instance ID, typed pass/fail/not-applicable outcome,
 and a stable reason code on failure. Supported text IDs are NR007, NR008, NR010,
-NR011, NR013, NR016, NR017, NR019, NR022, NR024, NR025, NR027, NR033, NR034, and
-NR036. The current [ordinary subset](HANDS.md) lists their behavior and metadata.
+NR011, NR012, NR013, NR014, NR016, NR017, NR019, NR022, NR024, NR025, NR027,
+NR033, NR034, and NR036. See the [ordinary subset](HANDS.md) for their behavior
+and metadata.
 Other card IDs raise `NotImplementedError`; they never receive a default successful result.
 The engine must select the active instances and phase before invoking ordinary
 predicates. No ordinary predicate should run as mode enforcement.
@@ -122,9 +123,10 @@ Uncased scripts/numbers do not require an alphabetic letter to be present; a
 titlecase letter must meet the selected mapping, and lowercase `ß` fails uppercase
 while `SS` passes. Markup wrappers/object identifiers are not displayed letters.
 
-NR010 requires the quote-aware logical ending to finish with ASCII `?`; repeated
-question marks are allowed. NR013 forbids ASCII `?` anywhere in logical content,
-including code/spoilers. Fullwidth `？` is not silently mapped to ASCII.
+NR010 and NR012 require the quote-aware logical ending to finish with ASCII
+`?` and `!` respectively. Repeated marks are allowed. NR013 and NR014 forbid
+their matching ASCII mark anywhere in logical content, including code and
+spoilers. Fullwidth `？` and `！` retain their own identities.
 
 NR017 counts at most five parser words; NR019 requires exactly one. Numbers count
 as words, contractions retain internal apostrophes, hyphens split words, and opaque
@@ -140,9 +142,8 @@ Leading whitespace/quote/punctuation may precede a required first word; a leadin
 visible symbol, emoji, or Discord object blocks it. Heading wrappers are already
 handled in the logical view.
 
-The original 73 parser fixtures remain; `ordinary_rule_examples.json` adds 100
-independently specified boundary/applicability/composition examples for these
-eleven additional predicates. This does not implement the remaining catalog.
+The parser fixtures and `ordinary_rule_examples.json` cover boundary,
+applicability, and composition examples for the supported predicates.
 
 ## Bounds and verification
 

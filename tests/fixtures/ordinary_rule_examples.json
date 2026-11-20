@@ -598,5 +598,77 @@
     "card": "NR033",
     "content": "“please",
     "outcome": "pass"
+  },
+  {
+    "id": "NR012-m3-0",
+    "card": "NR012",
+    "content": "over!",
+    "outcome": "pass"
+  },
+  {
+    "id": "NR012-m3-1",
+    "card": "NR012",
+    "content": "“**over!!**”",
+    "outcome": "pass"
+  },
+  {
+    "id": "NR012-m3-2",
+    "card": "NR012",
+    "content": "over！",
+    "outcome": "fail"
+  },
+  {
+    "id": "NR012-m3-3",
+    "card": "NR012",
+    "content": "over!?",
+    "outcome": "fail"
+  },
+  {
+    "id": "NR012-m3-4",
+    "card": "NR012",
+    "content": "",
+    "outcome": "not_applicable"
+  },
+  {
+    "id": "NR012-m3-5",
+    "card": "NR012",
+    "content": "-# duck",
+    "outcome": "not_applicable"
+  },
+  {
+    "id": "NR014-m3-0",
+    "card": "NR014",
+    "content": "duck?",
+    "outcome": "pass"
+  },
+  {
+    "id": "NR014-m3-1",
+    "card": "NR014",
+    "content": "**duck!**",
+    "outcome": "fail"
+  },
+  {
+    "id": "NR014-m3-2",
+    "card": "NR014",
+    "content": "||duck!||",
+    "outcome": "fail"
+  },
+  {
+    "id": "NR014-m3-3",
+    "card": "NR014",
+    "content": "duck！",
+    "outcome": "pass"
+  },
+  {
+    "id": "NR014-m3-4",
+    "card": "NR014",
+    "content": "",
+    "outcome": "not_applicable"
+  },
+  {
+    "id": "NR014-m3-5",
+    "card": "NR014",
+    "content": "-# duck!",
+    "outcome": "not_applicable"
   }
 ]
