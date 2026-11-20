@@ -1,4 +1,4 @@
-# New Rules Discord preview — v0.3.29 / schema 16
+# New Rules Discord preview — v0.3.30 / schema 16
 
 This development build connects the existing ordinary engine to Discord. Run one
 bot process against a database. Private/requested scores, automatic interims and
@@ -9,8 +9,8 @@ release work are still open.
 
 ## Install and enable
 
-The current schema is **16**, with WAL and foreign keys enabled. For a v0.3.28
-installation on schema 16, stop the bot, apply v0.3.29, reinstall, and restart.
+The current schema is **16**, with WAL and foreign keys enabled. For a v0.3.29
+installation on schema 16, stop the bot, apply v0.3.30, reinstall, and restart.
 For a fresh database, run `python -m lets_play --init-db`. See
 [RECOVERY.md](RECOVERY.md) and [STORAGE.md](STORAGE.md).
 

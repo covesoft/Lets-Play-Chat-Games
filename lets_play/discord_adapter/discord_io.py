@@ -642,8 +642,9 @@ class DiscordTransport:
         embed, view = round_report_ui.render(route.session_id, report.round_number, page, self.copy)
         view.add_item(
             discord.ui.Button(
-                label=self.copy.text("buttons.summary_current"),
+                label=self.copy.text("buttons.round_continues"),
                 custom_id=f"nrq:{route.session_id}:score:round:{report.round_number}",
+                disabled=True,
             )
         )
         channel = await self.channel(route)

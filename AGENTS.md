@@ -8,7 +8,7 @@ contains operational and API documentation only.
 
 ## Current implementation
 
-Application v0.3.29 uses schema 16. M1 is accepted and closed at v0.2.9/schema 8;
+Application v0.3.30 uses schema 16. M1 is accepted and closed at v0.2.9/schema 8;
 M2 is in progress. Preserve the existing domain/storage APIs. This is a
 development-only Discord preview, not a public-release build.
 
@@ -271,8 +271,8 @@ A verified held post leaves the idle clock in place. Proof of a superseded
 recovery notice clears that generation’s uncertain send. The current generation
 still requires its own access verification, announcement, and read-in.
 
-Public score posts, including completed-round leaderboards, use the current-scores
-button for proof, with no footer.
+Public summary posts use the current-scores button for proof. Completed-round
+leaderboards use the disabled The game goes on button. Both are footer-free.
 Recovery notices use a read-only Game status button and editable footer copy.
 Score reconciliation keeps the original snapshot, cutover and traffic watermark.
 

@@ -164,6 +164,7 @@
     "buttons.summary_post": "Post this summary",
     "buttons.summary_saved": "View saved scores",
     "buttons.summary_current": "Check current scores",
+    "buttons.round_continues": "The game goes on",
     "summary.captured": "Scores when posted. Check current scores to see how things stand now.",
     "summary.capture_heading": "This report",
     "summary.capture_detail": "Game {session} · Round traffic: {round_messages} posts, {round_whispers} whispers · Game traffic: {game_messages} posts, {game_whispers} whispers.",

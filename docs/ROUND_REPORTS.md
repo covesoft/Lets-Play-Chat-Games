@@ -52,7 +52,7 @@ their existing layout and ten-player page size are unchanged.
 `nr_round_reports` stores only send state, original attempt time, actual message
 identity, delivery time and captured traffic watermarks. It references an actual
 `nr_round_resolutions` activation closure. Claim before HTTP; ACK through the
-ordered lane; the **Check current scores** button carries the exact report
+ordered lane. The disabled **The game goes on** button carries the exact report
 reference for recovery. Unknown delivery pauses and is never blindly retried. Known success
 can commit during concurrent pause/ending without resuming play. These receipts
 cascade with session/round retention. A round report takes precedence over a
