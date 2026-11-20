@@ -215,6 +215,16 @@ def test_blocked_single_word_offer_does_not_fill_a_partial_hand():
     assert result.eligible_templates == ("NR004", "NR006")
 
 
+def test_royal_clause_can_replace_single_word_and_keep_other_rules():
+    ctx = context("NR019", "NR008")
+    hand = build(ctx, cards=("NR004", "NR006", "NR035")).hand
+    assert option(hand, "NR035").outgoing_ids == ("NR019",)
+    result = resolve(hand, ctx, "NR035")
+    assert result.status is ChoiceStatus.READY
+    assert {i.card_id for i in result.completion.instances} == {"NR008", "NR035"}
+    assert result.completion.witness.text in {"WE", "OUR", "US"}
+
+
 def test_candidate_with_no_supported_removal_is_suppressed_not_repaired_cross_deck():
     clause = PhraseChoice("p", "maybe duck", "r1").instantiate("clause")
     ctx = context(instances=(clause, RuleInstance("apology", "NR025")))

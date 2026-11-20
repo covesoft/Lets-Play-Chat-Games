@@ -20,8 +20,8 @@ result = evaluate_text_rule(view, RuleInstance("example-instance", "NR034"))
 
 `RuleEvaluation` returns an instance ID, typed pass/fail/not-applicable outcome,
 and a stable reason code on failure. Supported text IDs are NR007, NR008, NR010,
-NR011, NR012, NR013, NR014, NR016, NR017, NR019, NR022, NR024, NR025, NR027,
-NR033, NR034, and NR036. See the [ordinary subset](HANDS.md) for their behavior
+NR011, NR012, NR013, NR014, NR016, NR017, NR019, NR022, NR024 through NR031,
+and NR033 through NR036. See the [ordinary subset](HANDS.md) for their behavior
 and metadata.
 Other card IDs raise `NotImplementedError`; they never receive a default successful result.
 The engine must select the active instances and phase before invoking ordinary
@@ -136,11 +136,17 @@ word identities; canonical Unicode, case and apostrophe variants compare equally
 
 NR024/NR033 require the first logical word to be `yes`/`please`, through supported
 heading/formatting wrappers. `yesterday`/`pleased` and an earlier different word
-do not qualify. NR025/NR027 forbid whole word identities `sorry`/`maybe` without
-substring matching or contraction expansion (`sorry's` is its own word).
-Leading whitespace/quote/punctuation may precede a required first word; a leading
-visible symbol, emoji, or Discord object blocks it. Heading wrappers are already
-handled in the logical view.
+do not qualify. Leading whitespace, quotes, and punctuation may precede a
+required first word. A leading visible symbol, emoji, or Discord object blocks
+it. Heading wrappers are already handled in the logical view.
+
+Word-list cards use complete normalized word identities. For example, No
+Objections allows `butter`, and Selfless Conversation allows `I'm`. No Second
+Person forbids `you`, `your`, `you're`, `you've`, `you'll`, `you'd`,
+`you'd've`, and `you'll've`, including their supported apostrophe and case
+variants. `Yours` is a separate word. The Royal We requires one of
+`we`, `our`, or `us`. `We're`, `Wednesday`, `your`, and `USA` do
+not meet that requirement.
 
 The parser fixtures and `ordinary_rule_examples.json` cover boundary,
 applicability, and composition examples for the supported predicates.

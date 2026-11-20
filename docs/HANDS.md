@@ -8,7 +8,7 @@ hands. The full catalog and other Breaking Moments are still pending.
 
 ## Implemented catalog
 
-`catalog.CARD_SPECS` is immutable metadata for these 19 implemented validators:
+`catalog.CARD_SPECS` is immutable metadata for these 25 implemented validators:
 
 | ID | Card | Check / mechanical group |
 | --- | --- | --- |
@@ -27,9 +27,15 @@ hands. The full catalog and other Breaking Moments are still pending.
 | NR022 | No Echoes | No repeated normalized word; Vocabulary |
 | NR024 | So Agreeable | Distinct first word `yes`; prefix slot |
 | NR025 | No Apologies | No whole word `sorry`; Vocabulary |
+| NR026 | No Laughing Matter | No `lol`, `lmao`, or `haha`; Vocabulary |
 | NR027 | No Doubts | No whole word `maybe`; Vocabulary |
+| NR028 | No Excuses | No whole word `because`; Vocabulary |
+| NR029 | No Objections | No whole word `but`; Vocabulary |
+| NR030 | Selfless Conversation | No standalone `i`, `me`, or `my`; Vocabulary |
+| NR031 | No Second Person | No `you`, `your`, or listed contractions; Vocabulary |
 | NR033 | Please Proceed | Distinct first word `please`; prefix slot |
 | NR034 | Roger Wilco | Ending word `over`; separate from terminal punctuation |
+| NR035 | The Royal We | Include `we`, `our`, or `us`; Clauses |
 | NR036 | Don’t Forget | Frozen phrase; two independent instances |
 
 Mechanical settings are code constants in `catalog.py`:
@@ -47,9 +53,10 @@ feasibility is established, otherwise a stable rejection reason. It checks
 instance/template identity, caps, slots, direct conflicts, parameters, and the
 entire resulting state. NR019 conflicts with every Clauses instance, including
 one-word phrases. NR010 conflicts with NR013, and NR012 with NR014. The two
-bans can coexist, and either required mark can coexist with the other mark's ban. It constructs nonempty ordinary text from required prefix/phrase/ending
-words, trying containment/overlap/order alternatives, then applies case/terminal
-requirements. The actual evaluator must pass every applicable predicate; only
+bans can coexist, and either required mark can coexist with the other mark's ban.
+The witness search composes required prefixes, phrases, inclusion words, and
+endings, then applies casing and punctuation. If a required phrase already
+contains a Royal We word, the witness can use that same occurrence. The actual evaluator must pass every applicable predicate; only
 NR006 is not-applicable to this synthetic message. Empty text, media-only posts,
 and whispers cannot establish feasibility.
 

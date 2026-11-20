@@ -177,6 +177,7 @@ def test_brevity_replacement_targets_only_the_brevity_instance():
         (rule("NR019"), rule("NR024"), "yes"),
         (rule("NR019"), rule("NR033"), "please"),
         (rule("NR019"), rule("NR034"), "over"),
+        (rule("NR019"), rule("NR035"), "we"),
         (rule("NR019"), phrase("duck"), "duck"),
         (rule("NR010"), rule("NR013"), None),
         (rule("NR012"), rule("NR014"), None),
@@ -232,6 +233,41 @@ def test_full_vocabulary_deck_offers_each_legal_outgoing_without_extra_tickets()
 def test_cross_deck_conflict_cannot_retire_an_unrelated_clause():
     active = (phrase("maybe duck"), rule("NR025"))
     assert legal_completions(active, rule("NR027", "incoming")) == ()
+
+
+@pytest.mark.parametrize(
+    "frozen,text",
+    [
+        ("please our ducks swim over", "please our ducks swim over"),
+        ("red duck over", "please our red duck over"),
+    ],
+)
+def test_royal_witness_reuses_frozen_words_and_preserves_the_ending(frozen, text):
+    active = tuple(rule(card) for card in ("NR017", "NR022", "NR033", "NR034", "NR035"))
+    active += (phrase(frozen),)
+    result = assess_state(active)
+    verify_witness(active, result)
+    assert result.witness.text == text
+
+
+@pytest.mark.parametrize(
+    "cards",
+    [
+        ("NR008", "NR012", "NR035"),  # Public Address
+        ("NR013", "NR028", "NR029"),  # No Further Questions
+        ("NR013", "NR019", "NR028"),  # No Comment
+    ],
+)
+def test_newly_reachable_theme_cores_have_actual_witnesses(cards):
+    active = tuple(rule(card) for card in cards)
+    verify_witness(active, assess_state(active))
+
+
+def test_second_person_contraction_can_block_a_frozen_phrase():
+    active = (phrase("you’re welcome"), rule("NR033"))
+    assert assess_state(active).legal
+    assert assess_state((*active, rule("NR031"))).rejection is Rejection.NO_WITNESS
+    assert legal_completions(active, rule("NR031")) == ()
 
 
 def test_each_phrase_replacement_checks_the_whole_result():

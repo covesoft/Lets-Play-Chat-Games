@@ -1,4 +1,4 @@
-# New Rules Discord preview — v0.3.31 / schema 16
+# New Rules Discord preview — v0.3.32 / schema 16
 
 This development build connects the existing ordinary engine to Discord. Run one
 bot process against a database. Private/requested scores, automatic interims and
@@ -9,9 +9,9 @@ release work are still open.
 
 ## Install and enable
 
-The current schema is **16**, with WAL and foreign keys enabled. For a v0.3.30
-installation on schema 16, finish any games and stop the bot before applying
-v0.3.31. Reinstall and restart.
+The current schema is **16**, with WAL and foreign keys enabled. For a v0.3.31
+installation on schema 16, stop the bot before applying v0.3.32. Reinstall and
+restart.
 For a fresh database, run `python -m lets_play --init-db`. See
 [RECOVERY.md](RECOVERY.md) and [STORAGE.md](STORAGE.md).
 
@@ -63,7 +63,7 @@ badge map, voice library or additional intent is needed.
    bot posts, the chooser gets one new message and the warning stays in chat.
    The acknowledged panel's buttons remain authoritative and actual delivery
    starts the 60-second choice deadline. An uncertain edit or send enters recovery.
-   Later hands use eighteen implemented non-phrase templates. Choices can
+   Later hands use twenty-four implemented non-phrase templates. Choices can
    add a rule or replace one legal existing occupant. When several outgoing rules are legal, choosing the incoming
    card reveals the outgoing buttons. The original deadline does not restart;
    timeout keeps the chosen incoming card and completes a legal outgoing choice.
@@ -108,10 +108,9 @@ badge map, voice library or additional intent is needed.
     Manager ending remains available. Deleted/missing ACK evidence does not allow
     a blind resend. Actual marker/client/channel behavior still needs human checks.
 
-Later pool: NR004, NR006, NR007, NR008, NR010, NR011, NR012, NR013, NR014,
-NR016, NR017, NR019, NR022, NR024, NR025, NR027, NR033 and NR034. With Gusto
-and Curb The Enthusiasm join the pool. See [HANDS.md](HANDS.md) for conflicts
-and replacements. NR036 awaits live phrase-bank integration. Every displayed
+Later pool: all implemented templates in [HANDS.md](HANDS.md) other than NR036.
+The Royal We and five Vocabulary cards join this pool. See that reference
+for conflicts and replacements. NR036 awaits live phrase-bank integration. Every displayed
 choice must have a proven legal outcome, and every hand has three choices.
 
 12. When a later hand offers Drawing Conclusions, look for the *Breaking Moment

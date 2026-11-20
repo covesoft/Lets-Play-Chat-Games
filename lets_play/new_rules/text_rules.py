@@ -17,13 +17,31 @@ TEXT_FAILURE_REASONS = {
     "NR022": "repeated_word",
     "NR024": "required_yes_prefix",
     "NR025": "sorry_forbidden",
+    "NR026": "laughter_word_forbidden",
     "NR027": "maybe_forbidden",
+    "NR028": "because_forbidden",
+    "NR029": "but_forbidden",
+    "NR030": "first_person_word_forbidden",
+    "NR031": "second_person_word_forbidden",
     "NR033": "required_please_prefix",
     "NR034": "required_ending_word",
+    "NR035": "required_royal_word",
     "NR036": "required_phrase",
 }
 SUPPORTED_TEXT_RULES = frozenset(TEXT_FAILURE_REASONS)
 REQUIRED_ENDINGS = {"NR010": "?", "NR011": "...", "NR012": "!"}
+ROYAL_WORDS = frozenset({"we", "our", "us"})
+_FORBIDDEN_WORDS = {
+    "NR025": frozenset({"sorry"}),
+    "NR026": frozenset({"lol", "lmao", "haha"}),
+    "NR027": frozenset({"maybe"}),
+    "NR028": frozenset({"because"}),
+    "NR029": frozenset({"but"}),
+    "NR030": frozenset({"i", "me", "my"}),
+    "NR031": frozenset(
+        {"you", "your", "you're", "you've", "you'll", "you'd", "you'd've", "you'll've"}
+    ),
+}
 
 
 class RuleConfigurationError(ValueError):
@@ -98,11 +116,12 @@ def evaluate_text_rule(view: MessageView, instance: RuleInstance) -> RuleEvaluat
         case "NR024" | "NR033":
             required = "yes" if instance.card_id == "NR024" else "please"
             passed = view.starts_with_word(required)
-        case "NR025" | "NR027":
-            forbidden = "sorry" if instance.card_id == "NR025" else "maybe"
-            passed = forbidden not in view.word_keys
+        case card if card in _FORBIDDEN_WORDS:
+            passed = _FORBIDDEN_WORDS[card].isdisjoint(view.word_keys)
         case "NR034":
             passed = view.ends_with_word("over")
+        case "NR035":
+            passed = not ROYAL_WORDS.isdisjoint(view.word_keys)
         case "NR016":
             passed = not view.formatting
         case "NR036":

@@ -670,5 +670,281 @@
     "card": "NR014",
     "content": "-# duck!",
     "outcome": "not_applicable"
+  },
+  {
+    "id": "NR026-m3-0",
+    "card": "NR026",
+    "content": "lollygag and hahaha",
+    "outcome": "pass"
+  },
+  {
+    "id": "NR026-m3-1",
+    "card": "NR026",
+    "content": "LOL!",
+    "outcome": "fail"
+  },
+  {
+    "id": "NR026-m3-2",
+    "card": "NR026",
+    "content": "**lmao**",
+    "outcome": "fail"
+  },
+  {
+    "id": "NR026-m3-3",
+    "card": "NR026",
+    "content": "||haha||",
+    "outcome": "fail"
+  },
+  {
+    "id": "NR026-m3-4",
+    "card": "NR026",
+    "content": "",
+    "outcome": "not_applicable"
+  },
+  {
+    "id": "NR026-m3-5",
+    "card": "NR026",
+    "content": "-# we lol because but my you’re",
+    "outcome": "not_applicable"
+  },
+  {
+    "id": "NR028-m3-0",
+    "card": "NR028",
+    "content": "because of ducks",
+    "outcome": "fail"
+  },
+  {
+    "id": "NR028-m3-1",
+    "card": "NR028",
+    "content": "BECAUSE!",
+    "outcome": "fail"
+  },
+  {
+    "id": "NR028-m3-2",
+    "card": "NR028",
+    "content": "just in case",
+    "outcome": "pass"
+  },
+  {
+    "id": "NR028-m3-3",
+    "card": "NR028",
+    "content": "be-cause",
+    "outcome": "pass"
+  },
+  {
+    "id": "NR028-m3-4",
+    "card": "NR028",
+    "content": "",
+    "outcome": "not_applicable"
+  },
+  {
+    "id": "NR028-m3-5",
+    "card": "NR028",
+    "content": "-# we lol because but my you’re",
+    "outcome": "not_applicable"
+  },
+  {
+    "id": "NR029-m3-0",
+    "card": "NR029",
+    "content": "but why",
+    "outcome": "fail"
+  },
+  {
+    "id": "NR029-m3-1",
+    "card": "NR029",
+    "content": "`BuT`",
+    "outcome": "fail"
+  },
+  {
+    "id": "NR029-m3-2",
+    "card": "NR029",
+    "content": "butter and butler",
+    "outcome": "pass"
+  },
+  {
+    "id": "NR029-m3-3",
+    "card": "NR029",
+    "content": "yes—but no",
+    "outcome": "fail"
+  },
+  {
+    "id": "NR029-m3-4",
+    "card": "NR029",
+    "content": "",
+    "outcome": "not_applicable"
+  },
+  {
+    "id": "NR029-m3-5",
+    "card": "NR029",
+    "content": "-# we lol because but my you’re",
+    "outcome": "not_applicable"
+  },
+  {
+    "id": "NR030-m3-0",
+    "card": "NR030",
+    "content": "I brought ducks",
+    "outcome": "fail"
+  },
+  {
+    "id": "NR030-m3-1",
+    "card": "NR030",
+    "content": "for ME",
+    "outcome": "fail"
+  },
+  {
+    "id": "NR030-m3-2",
+    "card": "NR030",
+    "content": "**MY** duck",
+    "outcome": "fail"
+  },
+  {
+    "id": "NR030-m3-3",
+    "card": "NR030",
+    "content": "myself, time, and mine",
+    "outcome": "pass"
+  },
+  {
+    "id": "NR030-m3-4",
+    "card": "NR030",
+    "content": "I’m here",
+    "outcome": "pass"
+  },
+  {
+    "id": "NR030-m3-5",
+    "card": "NR030",
+    "content": "",
+    "outcome": "not_applicable"
+  },
+  {
+    "id": "NR030-m3-6",
+    "card": "NR030",
+    "content": "-# we lol because but my you’re",
+    "outcome": "not_applicable"
+  },
+  {
+    "id": "NR031-m3-0",
+    "card": "NR031",
+    "content": "You brought ducks",
+    "outcome": "fail"
+  },
+  {
+    "id": "NR031-m3-1",
+    "card": "NR031",
+    "content": "YOUR duck",
+    "outcome": "fail"
+  },
+  {
+    "id": "NR031-m3-2",
+    "card": "NR031",
+    "content": "**YOU’RE** welcome",
+    "outcome": "fail"
+  },
+  {
+    "id": "NR031-m3-3",
+    "card": "NR031",
+    "content": "you've arrived",
+    "outcome": "fail"
+  },
+  {
+    "id": "NR031-m3-4",
+    "card": "NR031",
+    "content": "you'll see",
+    "outcome": "fail"
+  },
+  {
+    "id": "NR031-m3-5",
+    "card": "NR031",
+    "content": "you'd think",
+    "outcome": "fail"
+  },
+  {
+    "id": "NR031-m3-6",
+    "card": "NR031",
+    "content": "you’d’ve laughed",
+    "outcome": "fail"
+  },
+  {
+    "id": "NR031-m3-7",
+    "card": "NR031",
+    "content": "you'll've seen it",
+    "outcome": "fail"
+  },
+  {
+    "id": "NR031-m3-8",
+    "card": "NR031",
+    "content": "yours and youth",
+    "outcome": "pass"
+  },
+  {
+    "id": "NR031-m3-9",
+    "card": "NR031",
+    "content": "you's a token",
+    "outcome": "pass"
+  },
+  {
+    "id": "NR031-m3-10",
+    "card": "NR031",
+    "content": "",
+    "outcome": "not_applicable"
+  },
+  {
+    "id": "NR031-m3-11",
+    "card": "NR031",
+    "content": "-# we lol because but my you’re",
+    "outcome": "not_applicable"
+  },
+  {
+    "id": "NR035-m3-0",
+    "card": "NR035",
+    "content": "**We** adore ducks",
+    "outcome": "pass"
+  },
+  {
+    "id": "NR035-m3-1",
+    "card": "NR035",
+    "content": "Our ducks quack",
+    "outcome": "pass"
+  },
+  {
+    "id": "NR035-m3-2",
+    "card": "NR035",
+    "content": "Join uS!",
+    "outcome": "pass"
+  },
+  {
+    "id": "NR035-m3-3",
+    "card": "NR035",
+    "content": "Wednesday, your USA",
+    "outcome": "fail"
+  },
+  {
+    "id": "NR035-m3-4",
+    "card": "NR035",
+    "content": "we’re together",
+    "outcome": "fail"
+  },
+  {
+    "id": "NR035-m3-5",
+    "card": "NR035",
+    "content": "<:our:101>",
+    "outcome": "fail"
+  },
+  {
+    "id": "NR035-m3-6",
+    "card": "NR035",
+    "content": "...",
+    "outcome": "fail"
+  },
+  {
+    "id": "NR035-m3-7",
+    "card": "NR035",
+    "content": "",
+    "outcome": "not_applicable"
+  },
+  {
+    "id": "NR035-m3-8",
+    "card": "NR035",
+    "content": "-# we lol because but my you’re",
+    "outcome": "not_applicable"
   }
 ]

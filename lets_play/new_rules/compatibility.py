@@ -25,7 +25,12 @@ from lets_play.new_rules.contracts import (
 )
 from lets_play.new_rules.evaluation import EvaluationContext, evaluate_message
 from lets_play.new_rules.parsing import MAX_PARSER_CODEPOINTS, ParserLimitError, parse_message
-from lets_play.new_rules.text_rules import REQUIRED_ENDINGS, RuleConfigurationError, phrase_keys
+from lets_play.new_rules.text_rules import (
+    REQUIRED_ENDINGS,
+    ROYAL_WORDS,
+    RuleConfigurationError,
+    phrase_keys,
+)
 
 
 class Rejection(StrEnum):
@@ -122,6 +127,17 @@ def _extensions(left: tuple[str, ...], right: tuple[str, ...]):
             yield left + right[size:]
 
 
+def _required_part_orders(phrases: tuple[tuple[str, ...], ...], *, require_royal: bool):
+    needs_word = require_royal and all(ROYAL_WORDS.isdisjoint(phrase) for phrase in phrases)
+    for order in permutations(phrases):
+        if not needs_word:
+            yield order
+            continue
+        for word in sorted(ROYAL_WORDS):
+            for index in range(len(order) + 1):
+                yield (*order[:index], (word,), *order[index:])
+
+
 def assess_state(
     instances: tuple[RuleInstance, ...], *, budget: WitnessBudget = DEFAULT_WITNESS_BUDGET
 ) -> Assessment:
@@ -143,9 +159,10 @@ def assess_state(
     punctuation = next((ending for card, ending in REQUIRED_ENDINGS.items() if card in cards), "")
     candidates: set[tuple[str, ...]] = set()
     limited = False
-    # At most two phrase instances by the mechanical cap. Every stage is bounded;
-    # these budgets withhold an unproven state, never truncate a scored message.
-    for order_index, order in enumerate(permutations(phrases)):
+    # At most two phrases and one extra inclusion word. Every stage is bounded;
+    # these budgets withhold an unproven state and leave scored messages intact.
+    orders = _required_part_orders(phrases, require_royal="NR035" in cards)
+    for order_index, order in enumerate(orders):
         if order_index >= budget.max_candidates:
             limited = True
             break

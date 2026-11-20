@@ -51,9 +51,15 @@ CARD_SPECS = MappingProxyType(
             CardSpec("NR022", "No Echoes", Deck.VOCABULARY),
             CardSpec("NR024", "So Agreeable", Deck.CLAUSES, Slot.PREFIX),
             CardSpec("NR025", "No Apologies", Deck.VOCABULARY),
+            CardSpec("NR026", "No Laughing Matter", Deck.VOCABULARY),
             CardSpec("NR027", "No Doubts", Deck.VOCABULARY),
+            CardSpec("NR028", "No Excuses", Deck.VOCABULARY),
+            CardSpec("NR029", "No Objections", Deck.VOCABULARY),
+            CardSpec("NR030", "Selfless Conversation", Deck.VOCABULARY),
+            CardSpec("NR031", "No Second Person", Deck.VOCABULARY),
             CardSpec("NR033", "Please Proceed", Deck.CLAUSES, Slot.PREFIX),
             CardSpec("NR034", "Roger Wilco", Deck.CLAUSES),
+            CardSpec("NR035", "The Royal We", Deck.CLAUSES),
             CardSpec("NR036", "Don’t Forget", Deck.CLAUSES),
         )
     }
