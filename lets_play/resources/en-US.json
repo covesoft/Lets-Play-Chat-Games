@@ -121,7 +121,7 @@
     "round.description": "Round {round} · Everyone posting here participates. Start with `-# ` to whisper.",
     "ordinary.offer_title": "New Rules — choose the next card",
     "ordinary.offer_description": "<@{picker}>, choose one card.\nI'll choose for you {deadline}.\nCurrent rules remain enforced; use /rules to see them.",
-    "ordinary.target_description": "<@{picker}>, choose which rule to replace. The same deadline is {deadline}. Current rules remain enforced.",
+    "ordinary.target_description": "<@{picker}>, choose which rule to replace. The same deadline is {deadline}.",
     "ordinary.clock_pending": "set after publication",
     "ordinary.deadline": "<t:{timestamp}:R>",
     "ordinary.replacement": "{description}\n*Replaces one of:* {targets}.",
