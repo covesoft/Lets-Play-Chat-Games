@@ -124,7 +124,7 @@
     "ordinary.target_description": "<@{picker}>, choose which rule to replace. The same deadline is {deadline}. Current rules remain enforced.",
     "ordinary.clock_pending": "set after publication",
     "ordinary.deadline": "<t:{timestamp}:R>",
-    "ordinary.replacement": "{description}\nReplaces one of: {targets}.",
+    "ordinary.replacement": "{description}\n*Replaces one of:* {targets}.",
     "ordinary.scheduled_title": "New Rules — next rule scheduled",
     "ordinary.scheduled_description": "These rules take effect <t:{timestamp}:T>. Until then, the old round and rules remain enforced; /rules shows them.",
     "ordinary.current_until": "Current rules remain enforced until <t:{timestamp}:T>. The announced change starts the next round.",
