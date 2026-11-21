@@ -9,7 +9,8 @@ fresh committed scores. There is no Refresh button or additional slash command.
 Preplay `/rules` omits unusable game controls.
 
 Live pages show clickable, non-pinging identities, actual compliance/unrated,
-adjusted scores, raw faults, opportunities, ordinary posts and reaction faults.
+whole-point scores beside player mentions, raw faults, opportunities, ordinary
+posts, and reaction faults.
 The title identifies the scope and the description shows the score status,
 `/rules` hint, and last game update. Traffic appears in a **Round N so far** or
 **Conversation** field with human post and whisper counts. Requested posts use

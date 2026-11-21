@@ -115,7 +115,13 @@ async def test_real_manager_results_rank_highest_adjusted_score_first(tmp_path, 
         assert runtime.transport.messages[-1][1] == "closed"
         assert [actor for actor, _ in state.scores] == [707, 606, 303, 404, 505]
         embed, _ = render(state)
-        assert "<@707>" in embed.fields[0].value
+        assert embed.fields[0].value.splitlines()[:2] == [
+            "<@707> — **933**",
+            "Actual compliance: 100.00%",
+        ]
+        assert embed.fields[1].value.startswith("<@606> — **818**\n")
+        assert embed.fields[2].value.startswith("<@303> — **---**\nActual compliance: Unrated\n")
+        assert embed.footer.text == "Results page 1 · highest score first"
 
 
 async def ranked_fixture(runtime, route):
@@ -162,6 +168,12 @@ async def test_ranked_pages_cover_all_players_with_exact_ties_and_unrated_last(
                 break
             state = await runtime.state(route.session_id, result_anchor=state.scores[-1][0])
         assert actors == [*range(600, 731), 599, 303, 404, 505]
+        embed, _ = render(state)
+        assert [field.value.splitlines()[0] for field in embed.fields[:3]] == [
+            "<@730> — **909**",
+            "<@599> — **909**",
+            "<@303> — **---**",
+        ]
         second = await runtime.state(route.session_id, result_anchor=first.scores[-1][0])
         previous = await runtime.state(
             route.session_id, result_anchor=second.scores[0][0], result_backwards=True

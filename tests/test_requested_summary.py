@@ -191,7 +191,7 @@ async def test_overlong_custom_copy_returns_private_unavailable_response(tmp_pat
         async with bot:
             bot.game_runtime = runtime
             strings = dict(bot.presentation.strings)
-            strings["results.detail"] = "x" * 2000 + strings["results.detail"]
+            strings["results.score_detail"] = "x" * 2000 + strings["results.score_detail"]
             bot.presentation = replace(bot.presentation, strings=strings)
             request = interaction()
             request.data = {"custom_id": f"nrs:{route.session_id}:round:0:0:n"}

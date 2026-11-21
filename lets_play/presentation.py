@@ -52,6 +52,7 @@ TEMPLATE_FIELDS = {
     "reports.mid_description": frozenset({"round"}),
     "reports.round_description": frozenset({"round"}),
     "reports.score": frozenset({"percent"}),
+    "reports.player_score": frozenset({"player", "score"}),
     "summary.capture_detail": frozenset(
         {"session", "round_messages", "round_whispers", "game_messages", "game_whispers"}
     ),
@@ -73,10 +74,15 @@ TEMPLATE_FIELDS = {
     "cards.NR036.description": frozenset({"phrase"}),
     "results.actual": frozenset({"percent"}),
     "results.ranking": frozenset({"percent"}),
+    "results.score": frozenset({"points"}),
+    "results.player_score": frozenset({"player", "score"}),
     "results.player": frozenset({"actor"}),
     "results.player_entry": frozenset({"player", "detail"}),
     "results.detail": frozenset(
         {"actual", "ranking", "faults", "opportunities", "ordinary_posts", "reaction_failures"}
+    ),
+    "results.score_detail": frozenset(
+        {"actual", "faults", "opportunities", "ordinary_posts", "reaction_failures"}
     ),
     "results.footer": frozenset({"page"}),
     "offer.description": frozenset({"picker"}),
@@ -143,6 +149,7 @@ def _validate_strings(strings):
                             "status",
                             "actual",
                             "ranking",
+                            "score",
                             "deadline",
                             "url",
                             "description",

@@ -15,6 +15,8 @@ from lets_play.config import load_settings
 from lets_play.discord_adapter.discord_io import DiscordTransport, render
 from lets_play.discord_adapter.lane import LaneUnavailable
 from lets_play.discord_adapter.runtime import ORDINARY_CARDS
+from lets_play.discord_adapter.score_ui import detailed_player_entry, player_score_line
+from lets_play.new_rules.scoring import ScoreTotals
 from lets_play.presentation import PresentationError, load_presentation
 
 
@@ -22,6 +24,39 @@ def override(tmp_path, data):
     path = tmp_path / "copy.json"
     path.write_text(json.dumps(data), encoding="utf-8")
     return path
+
+
+def test_score_copy_supports_custom_layout_and_accepts_old_overrides(tmp_path):
+    copy = load_presentation(
+        override(
+            tmp_path,
+            {
+                "strings": {
+                    "results.score": "{points:,} pts",
+                    "results.score_unrated": "Pending",
+                    "results.player_score": "{score} | {player}",
+                    "reports.player_score": "{player} ({score})",
+                    "results.ranking": "{percent:.1f}",
+                    "reports.score": "Scoring {percent:.1f}",
+                }
+            },
+        )
+    )
+    unrated = ScoreTotals()
+    clean = ScoreTotals(
+        human_messages=1990,
+        ordinary_posts=1990,
+        ordinary_observations=1990,
+        ordinary_quality=1990,
+    )
+    assert detailed_player_entry(copy, 123, unrated).splitlines()[:2] == [
+        "Pending | <@123>",
+        "Actual compliance: Unrated",
+    ]
+    assert player_score_line(copy, 123, clean) == "1,000 pts | <@123>"
+    assert (
+        player_score_line(copy, 123, clean, template="reports.player_score") == "<@123> (1,000 pts)"
+    )
 
 
 def test_marker_has_no_fallback_and_settings_hide_private_configuration(tmp_path, monkeypatch):

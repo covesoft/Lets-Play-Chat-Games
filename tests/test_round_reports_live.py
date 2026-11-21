@@ -200,7 +200,14 @@ async def test_100_players_round_scores_include_selection_posts_and_rank_all_pag
             "reports.round_description", round=1
         )
         assert embed.footer.text is None and len(embed.fields) == 20
-        assert all(f.name.startswith("Scoring ") and f.value.startswith("<@") for f in embed.fields)
+        assert [(field.name, field.value) for field in embed.fields] == [
+            (
+                "Score",
+                f"<@{actor}> — **{round(10 * rank) if rank is not None else '---'}**",
+            )
+            for actor, totals in first[0]
+            for rank in (totals.ranking_percent(),)
+        ]
         assert all(len(b.custom_id) <= 100 for b in view.children)
         assert rows(tmp_path / "game.sqlite3", "SELECT COUNT(*) FROM nr_summary_scores") == [(0,)]
         async with runtime.store.transaction(write=False) as unit:

@@ -4,6 +4,7 @@ import re
 
 import discord
 
+from lets_play.discord_adapter.score_ui import detailed_player_entry
 from lets_play.presentation import PresentationError
 from lets_play.storage.summary_store import SUMMARY_PAGE_SIZE
 
@@ -68,31 +69,9 @@ def render(page, copy, *, snapshot=None, public=False, publication_control=None)
         if chunk:
             embed.add_field(name=copy.text("summary.rules_heading"), value=chunk, inline=False)
     for actor, score in page.players:
-        actual = (
-            copy.text("results.unrated")
-            if score.actual_percent is None
-            else copy.text("results.actual", percent=float(score.actual_percent))
-        )
-        ranking = (
-            copy.text("results.unrated")
-            if score.ranking_percent() is None
-            else copy.text("results.ranking", percent=float(score.ranking_percent()))
-        )
         embed.add_field(
             name=copy.text("results.player_heading"),
-            value=copy.text(
-                "results.player_entry",
-                player=copy.text("results.player", actor=actor),
-                detail=copy.text(
-                    "results.detail",
-                    actual=actual,
-                    ranking=ranking,
-                    faults=score.raw_faults,
-                    opportunities=score.opportunities,
-                    ordinary_posts=score.ordinary_posts,
-                    reaction_failures=score.reaction_failures,
-                ),
-            ),
+            value=detailed_player_entry(copy, actor, score),
             inline=False,
         )
     if not page.players:
