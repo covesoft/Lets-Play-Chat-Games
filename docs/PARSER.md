@@ -140,8 +140,12 @@ required first word. A leading visible symbol, emoji, or Discord object blocks
 it. Heading wrappers are already handled in the logical view.
 
 Word-list cards use complete normalized word identities. For example, No
-Objections allows `butter`, and Selfless Conversation allows `I'm`. No Second
-Person forbids `you`, `your`, `you're`, `you've`, `you'll`, `you'd`,
+Objections allows `butter`. Selfless Conversation forbids `I`, `me`, `my`,
+`I'm`, `I've`, `I'd`, `I'll`, `I'd've`, and `I'll've`, including their
+supported apostrophe and case variants. `Time`, `myth`, `mine`, and `myself`
+pass. The expanded check applies to new messages after the v0.3.36 update,
+including resumed rounds. No Second Person forbids
+`you`, `your`, `you're`, `you've`, `you'll`, `you'd`,
 `you'd've`, and `you'll've`, including their supported apostrophe and case
 variants. `Yours` is a separate word. The Royal We requires one of
 `we`, `our`, or `us`. `We're`, `Wednesday`, `your`, and `USA` do

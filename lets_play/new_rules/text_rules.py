@@ -49,7 +49,7 @@ _FORBIDDEN_WORDS = {
     "NR027": frozenset({"maybe"}),
     "NR028": frozenset({"because"}),
     "NR029": frozenset({"but"}),
-    "NR030": frozenset({"i", "me", "my"}),
+    "NR030": frozenset({"i", "me", "my", "i'm", "i've", "i'd", "i'll", "i'd've", "i'll've"}),
     "NR031": frozenset(
         {"you", "your", "you're", "you've", "you'll", "you'd", "you'd've", "you'll've"}
     ),

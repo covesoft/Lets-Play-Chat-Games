@@ -36,7 +36,7 @@ hands. The full catalog and other Breaking Moments are still pending.
 | NR027 | No Doubts | No whole word `maybe`; Vocabulary |
 | NR028 | No Excuses | No whole word `because`; Vocabulary |
 | NR029 | No Objections | No whole word `but`; Vocabulary |
-| NR030 | Selfless Conversation | No standalone `i`, `me`, or `my`; Vocabulary |
+| NR030 | Selfless Conversation | No `I`, `me`, `my`, or the listed contractions (Vocabulary) |
 | NR031 | No Second Person | No `you`, `your`, or listed contractions; Vocabulary |
 | NR033 | Please Proceed | Distinct first word `please`; prefix slot |
 | NR034 | Roger Wilco | Ending word `over`; separate from terminal punctuation |

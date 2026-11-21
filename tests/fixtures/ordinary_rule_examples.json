@@ -807,7 +807,7 @@
     "id": "NR030-m3-4",
     "card": "NR030",
     "content": "I’m here",
-    "outcome": "pass"
+    "outcome": "fail"
   },
   {
     "id": "NR030-m3-5",
@@ -819,6 +819,60 @@
     "id": "NR030-m3-6",
     "card": "NR030",
     "content": "-# we lol because but my you’re",
+    "outcome": "not_applicable"
+  },
+  {
+    "id": "NR030-contractions-0",
+    "card": "NR030",
+    "content": "I'm hungry",
+    "outcome": "fail"
+  },
+  {
+    "id": "NR030-contractions-1",
+    "card": "NR030",
+    "content": "I've never heard of it",
+    "outcome": "fail"
+  },
+  {
+    "id": "NR030-contractions-2",
+    "card": "NR030",
+    "content": "I'd go, but I've never heard of it, or I'd've gone before.",
+    "outcome": "fail"
+  },
+  {
+    "id": "NR030-contractions-3",
+    "card": "NR030",
+    "content": "**I’D** go",
+    "outcome": "fail"
+  },
+  {
+    "id": "NR030-contractions-4",
+    "card": "NR030",
+    "content": "I’ll try",
+    "outcome": "fail"
+  },
+  {
+    "id": "NR030-contractions-5",
+    "card": "NR030",
+    "content": "I’d’ve gone",
+    "outcome": "fail"
+  },
+  {
+    "id": "NR030-contractions-6",
+    "card": "NR030",
+    "content": "I’LL’VE gone",
+    "outcome": "fail"
+  },
+  {
+    "id": "NR030-contractions-7",
+    "card": "NR030",
+    "content": "time, myth, mine, and myself",
+    "outcome": "pass"
+  },
+  {
+    "id": "NR030-contractions-8",
+    "card": "NR030",
+    "content": "-# I’m here",
     "outcome": "not_applicable"
   },
   {
