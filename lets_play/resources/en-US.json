@@ -24,7 +24,7 @@
     "reports.round_description": "The results for Round {round} are in, and here's how you did:",
     "reports.score": "Scoring {percent:.2f}",
     "reports.unrated": "Scoring unrated",
-    "reports.score_heading": "Score",
+    "reports.score_heading": "Player",
     "reports.player_score": "{player} — **{score}**",
     "reports.unavailable": "Those round results are no longer available.",
     "game.title": "New Rules",
