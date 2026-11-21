@@ -1,4 +1,4 @@
-# New Rules Discord preview — v0.3.34 / schema 16
+# New Rules Discord preview — v0.3.35 / schema 16
 
 This development build connects the existing ordinary engine to Discord. Run one
 bot process against a database. Private/requested scores, automatic interims and
@@ -9,8 +9,8 @@ release work are still open.
 
 ## Install and enable
 
-The current schema is **16**, with WAL and foreign keys enabled. For a v0.3.33
-installation on schema 16, stop the bot before applying v0.3.34. Reinstall and
+The current schema is **16**, with WAL and foreign keys enabled. For a v0.3.34
+installation on schema 16, stop the bot before applying v0.3.35. Reinstall and
 restart.
 For a fresh database, run `python -m lets_play --init-db`. See
 [RECOVERY.md](RECOVERY.md) and [STORAGE.md](STORAGE.md).
@@ -64,9 +64,11 @@ badge map, voice library or additional intent is needed.
    The acknowledged panel's buttons remain authoritative and actual delivery
    starts the 60-second choice deadline. An uncertain edit or send enters recovery.
    Later hands use thirty-two implemented non-phrase templates. Choices can
-   add a rule or replace one legal existing occupant. When several outgoing rules are legal, choosing the incoming
-   card reveals the outgoing buttons. The original deadline does not restart;
-   timeout keeps the chosen incoming card and completes a legal outgoing choice.
+   add a rule or replace one legal existing occupant. When several outgoing rules
+   are legal, choosing the incoming card opens **New Rules — choose a rule to
+   remove**. The panel lists each outgoing rule's name and description in button
+   order. It uses the original deadline. Timeout keeps the chosen incoming card
+   and completes a legal outgoing choice.
 5. Confirm old rules remain enforced during the entire choice and announced
    transition. `/rules` shows those current rules, while the public transition
    shows the future set and exact effective time. At cutover the old round resolves

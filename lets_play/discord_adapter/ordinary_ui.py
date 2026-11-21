@@ -134,7 +134,6 @@ def render_ordinary(state, copy, button, *, kind=None, now=None):
             copy.text("mode.active_description", ends=int(state.mode.ends_at.timestamp())),
         )
     elif offer and offer.stage in {"prepared", "published"} and not rules_only:
-        embed.title = copy.text("ordinary.offer_title")
         embed.colour = copy.color("offer")
         clock = (
             copy.text(
@@ -143,14 +142,31 @@ def render_ordinary(state, copy, button, *, kind=None, now=None):
             if offer.published_at
             else copy.text("ordinary.clock_pending")
         )
+        active = {i.instance_id: i for i in state.context.active_instances}
+        if offer.selected_incoming:
+            option = selected_option(offer)
+            index = offer.hand.options.index(option)
+            targets = tuple(active[target] for target in option.outgoing_ids)
+            embed.title = copy.text("ordinary.target_title")
+            embed.description = copy.text(
+                "ordinary.target_description", picker=offer.hand.picker_id, deadline=clock
+            )
+            rules(targets)
+            for target_index, target in enumerate(targets):
+                button(
+                    view,
+                    copy.text(f"cards.{target.card_id}.name"),
+                    session,
+                    "target",
+                    index,
+                    target_index,
+                )
+            return embed, view
+        embed.title = copy.text("ordinary.offer_title")
         embed.description = copy.text(
             "ordinary.offer_description", picker=offer.hand.picker_id, deadline=clock
         )
-        chosen = offer.selected_incoming
-        active = {i.instance_id: i for i in state.context.active_instances}
         for index, option in enumerate(offer.hand.options):
-            if chosen and option.incoming.instance_id != chosen:
-                continue
             card = option.incoming.card_id
             mode_choice = isinstance(option.incoming, ModeChoice)
             label = copy.text(f"cards.{card}.name")
@@ -166,25 +182,8 @@ def render_ordinary(state, copy, button, *, kind=None, now=None):
                     "ordinary.replacement", description=description, targets=targets
                 )
             embed.add_field(name=label, value=description, inline=False)
-            if chosen:
-                for target_index, target in enumerate(option.outgoing_ids):
-                    button(
-                        view,
-                        copy.text(f"cards.{active[target].card_id}.name"),
-                        session,
-                        "target",
-                        index,
-                        target_index,
-                    )
-            else:
-                style = (
-                    discord.ButtonStyle.primary if mode_choice else discord.ButtonStyle.secondary
-                )
-                button(view, label, session, "pick", index, style=style)
-        if chosen:
-            embed.description = copy.text(
-                "ordinary.target_description", picker=offer.hand.picker_id, deadline=clock
-            )
+            style = discord.ButtonStyle.primary if mode_choice else discord.ButtonStyle.secondary
+            button(view, label, session, "pick", index, style=style)
     elif offer and offer.stage == "selected" and kind != "rules":
         option = selected_option(offer)
         if isinstance(option.incoming, ModeChoice):
