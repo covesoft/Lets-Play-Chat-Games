@@ -630,3 +630,35 @@ class GameUnitOfWork:
         if type(intent_id) is not int or intent_id <= 0:
             raise ValueError("A positive marker intent ID is required.")
         await _execute(self._conn, "DELETE FROM nr_marker_intents WHERE intent_id=?", (intent_id,))
+
+    async def erase_session(self, session_id: str) -> int:
+        """Erase a session and its associated admissions/cascading data."""
+        self._check(write=True)
+        if not session_id:
+            raise ValueError("A session ID is required.")
+        return await self._erase_session_mutating(session_id)
+
+    @_mutating
+    async def _erase_session_mutating(self, session_id: str) -> int:
+        count = await _execute(
+            self._conn, "DELETE FROM nr_admissions WHERE session_id=?", (session_id,)
+        )
+        count += await _execute(
+            self._conn, "DELETE FROM nr_sessions WHERE session_id=?", (session_id,)
+        )
+        return count
+
+    async def erase_guild(self, guild_id: int) -> int:
+        """Erase all sessions and admissions for a guild."""
+        self._check(write=True)
+        if type(guild_id) is not int or guild_id <= 0:
+            raise ValueError("A positive guild ID is required.")
+        return await self._erase_guild_mutating(guild_id)
+
+    @_mutating
+    async def _erase_guild_mutating(self, guild_id: int) -> int:
+        count = await _execute(
+            self._conn, "DELETE FROM nr_admissions WHERE guild_id=?", (guild_id,)
+        )
+        count += await _execute(self._conn, "DELETE FROM nr_sessions WHERE guild_id=?", (guild_id,))
+        return count
