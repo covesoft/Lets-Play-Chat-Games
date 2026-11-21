@@ -173,7 +173,9 @@ that word. `Don't` and `DoN’T` illustrate a pass and a failure. Hyphen-separat
 words are checked individually, and uncased words pass the casing check.
 
 The parser fixtures and `ordinary_rule_examples.json` cover boundary,
-applicability, and composition examples for the supported predicates.
+applicability, and composition examples for the supported predicates, including
+quoted and parenthesized endings, Markdown escapes and formatting, and
+normalized repeated words.
 
 ## Bounds and verification
 

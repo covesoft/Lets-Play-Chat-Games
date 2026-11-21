@@ -195,14 +195,13 @@ async def test_100_players_round_scores_include_selection_posts_and_rank_all_pag
         )
         assert all_players == expected
         assert dict(all_players)[1001].ordinary_posts == 6
-        embed, view = round_report_ui.render(route.session_id, 1, first, default_presentation())
-        assert embed.description == default_presentation().text(
-            "reports.round_description", round=1
-        )
+        copy = default_presentation()
+        embed, view = round_report_ui.render(route.session_id, 1, first, copy)
+        assert embed.description == copy.text("reports.round_description", round=1)
         assert embed.footer.text is None and len(embed.fields) == 20
         assert [(field.name, field.value) for field in embed.fields] == [
             (
-                "Score",
+                copy.text("reports.score_heading"),
                 f"<@{actor}> — **{round(10 * rank)}**" if rank is not None else f"<@{actor}>",
             )
             for actor, totals in first[0]
