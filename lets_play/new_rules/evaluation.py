@@ -2,11 +2,12 @@
 
 The caller supplies the authoritative position and frozen active instances. A
 future transactional store must deduplicate and apply derived scores together.
-This module does not implement a full event router, session engine, or mode.
+The flow supplies the saved Breaking Moment choice when one owns enforcement.
 """
 
 from dataclasses import dataclass
 
+from lets_play.new_rules.breaking_moments import ModeChoice, drawing_conclusions
 from lets_play.new_rules.catalog import CHATGAMES_MAX_ACTIVE_DONT_FORGET
 from lets_play.new_rules.contracts import (
     EmojiIdentity,
@@ -21,7 +22,13 @@ from lets_play.new_rules.contracts import (
     SessionPosition,
 )
 from lets_play.new_rules.parsing import parse_message
-from lets_play.new_rules.scoring import ScoreTotals, ordinary_score, reaction_score, whisper_score
+from lets_play.new_rules.scoring import (
+    ScoreTotals,
+    mode_score,
+    ordinary_score,
+    reaction_score,
+    whisper_score,
+)
 from lets_play.new_rules.text_rules import (
     SUPPORTED_TEXT_RULES,
     TEXT_FAILURE_REASONS,
@@ -85,11 +92,11 @@ class MessageDecision:
 
     @property
     def enroll(self) -> bool:
-        return bool(self.score.ordinary_posts)
+        return bool(self.score.ordinary_posts or self.score.mode_observations)
 
     @property
     def needs_marker(self) -> bool:
-        return bool(self.score.ordinary_offending_messages)
+        return bool(self.score.offending_messages)
 
 
 @dataclass(frozen=True, slots=True)
@@ -110,7 +117,9 @@ class ReactionDecision:
         return False
 
 
-def evaluate_message(event: MessageEvent, context: EvaluationContext) -> MessageDecision | None:
+def evaluate_message(
+    event: MessageEvent, context: EvaluationContext, *, mode: ModeChoice | None = None
+) -> MessageDecision | None:
     position = context.position
     if (
         event.envelope.route != position.route
@@ -122,9 +131,12 @@ def evaluate_message(event: MessageEvent, context: EvaluationContext) -> Message
     # attachments. Oversize whispers need no unnecessary parser work.
     if event.content is not None and event.content.startswith("-# "):
         evaluations, score = (), whisper_score()
-    else:
-        if position.phase is not Phase.ORDINARY:
+    elif position.phase is Phase.MODE:
+        if mode is None:
             raise NotImplementedError("Non-whisper mode messages need a mode validator.")
+        evaluation = drawing_conclusions(event, mode)
+        evaluations, score = (evaluation,), mode_score(evaluation)
+    else:
         view = parse_message(event.content)
         results = []
         for instance in context.active_instances:

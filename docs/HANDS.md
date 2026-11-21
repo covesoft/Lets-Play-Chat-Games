@@ -3,12 +3,12 @@
 The package can prepare legal ordinary additions/replacements, construct a
 complete three-template offer, and revalidate a frozen choice. It performs no
 I/O, publication, activation, phrase consumption, round closure, or awards.
-The live shell does not invoke this API. The full catalog and mode-aware deck
-are not implemented; every option currently produced is ordinary.
+The live adapter enables the Drawing Conclusions ticket for eligible later
+hands. The full catalog and other Breaking Moments are still pending.
 
 ## Implemented catalog
 
-`catalog.CARD_SPECS` is immutable metadata for these 17 implemented validators:
+`catalog.CARD_SPECS` is immutable metadata for these 33 implemented validators:
 
 | ID | Card | Check / mechanical group |
 | --- | --- | --- |
@@ -16,19 +16,35 @@ are not implemented; every option currently produced is ordinary.
 | NR006 | Expressionless | Prohibited reaction actors; Expression |
 | NR007 | Inside Voice | Lowercase mapping; casing slot |
 | NR008 | SPEAK UP | Uppercase mapping; casing slot |
+| NR009 | No Accounting | No Unicode digits or specified number emoji (Typography) |
 | NR010 | Questionable Conduct | ASCII question-mark ending; terminal slot |
 | NR011 | Are You Sure? | At least three consecutive terminal ASCII periods; terminal slot |
-| NR013 | No Questions | No ASCII question marks; independent Typography restriction |
+| NR012 | With Gusto | ASCII exclamation-mark ending; terminal slot |
+| NR013 | No Questions | No ASCII question marks; conflicts with NR010 |
+| NR014 | Curb The Enthusiasm | No ASCII exclamation marks; conflicts with NR012 |
+| NR015 | One Breath | No original CR or LF (Typography) |
 | NR016 | Plain Clothes | No supported formatting; independent Typography restriction |
 | NR017 | Briefly | At most five words; Brevity |
+| NR018 | Use Your Words | At least five words (Brevity) |
 | NR019 | One Word Will Do | Exactly one word; Brevity |
+| NR020 | Room to Elaborate | At least twenty graphemes (Brevity) |
+| NR021 | Small Print | At most forty graphemes (Brevity) |
 | NR022 | No Echoes | No repeated normalized word; Vocabulary |
 | NR024 | So Agreeable | Distinct first word `yes`; prefix slot |
 | NR025 | No Apologies | No whole word `sorry`; Vocabulary |
-| NR027 | Indecisiveness Banned | No whole word `maybe`; Vocabulary |
+| NR026 | No Laughing Matter | No `lol`, `lmao`, or `haha`; Vocabulary |
+| NR027 | No Doubts | No whole word `maybe`; Vocabulary |
+| NR028 | No Excuses | No whole word `because`; Vocabulary |
+| NR029 | No Objections | No whole word `but`; Vocabulary |
+| NR030 | Selfless Conversation | No `I`, `me`, `my`, or the listed contractions (Vocabulary) |
+| NR031 | No Second Person | No `you`, `your`, or listed contractions; Vocabulary |
 | NR033 | Please Proceed | Distinct first word `please`; prefix slot |
 | NR034 | Roger Wilco | Ending word `over`; separate from terminal punctuation |
+| NR035 | The Royal We | Include `we`, `our`, or `us`; Clauses |
 | NR036 | Don’t Forget | Frozen phrase; two independent instances |
+| NR037 | Decree Mode | Title case words of at least three graphemes (casing slot) |
+| NR038 | A Small Pause | Include an ASCII comma (Typography) |
+| NR039 | Little Words | Up to six Unicode letters per word (Brevity) |
 
 Mechanical settings are code constants in `catalog.py`:
 `CHATGAMES_MAX_ACTIVE_BREVITY_RULES=1`,
@@ -42,10 +58,13 @@ the same deck/slot. Predicate/Unicode details are in [PARSER.md](PARSER.md).
 
 `compatibility.assess_state(instances)` returns an `Assessment`: a `Witness` when
 feasibility is established, otherwise a stable rejection reason. It checks
-instance/template identity, caps/slots, parameters, and the entire resulting
-state. It constructs nonempty ordinary text from required prefix/phrase/ending
-words, trying containment/overlap/order alternatives, then applies case/terminal
-requirements. The actual evaluator must pass every applicable predicate; only
+instance/template identity, caps, slots, direct conflicts, parameters, and the
+entire resulting state. NR019 conflicts with every Clauses instance, including
+one-word phrases. NR010 conflicts with NR013, and NR012 with NR014. The two
+bans can coexist, and either required mark can coexist with the other mark's ban.
+The witness search composes required prefixes, phrases, inclusion words, and
+endings, then applies casing and punctuation. If a required phrase already
+contains a Royal We word, the witness can use that same occurrence. Minimum-length rules can add distinct filler words while preserving the required start and ending. The actual evaluator must pass every applicable predicate; only
 NR006 is not-applicable to this synthetic message. Empty text, media-only posts,
 and whispers cannot establish feasibility.
 
@@ -56,8 +75,9 @@ pond` can share a word and pass No Echoes as `red duck pond`.
 `legal_completions(active, incoming)` returns every proven permitted single
 removal/addition. At a capped deck, outgoing targets come from that deck; an
 exclusive slot targets that slot; a full NR036 allotment targets NR036 instances.
-Each result is rechecked in full. A cross-deck conflict cannot retire an unrelated
-rule, and a candidate requiring more removals is withheld. Already-active
+Either card in a direct conflict can replace its counterpart. The same outgoing
+instance must satisfy every applicable restriction, and the entire resulting
+state must pass. A phrase-specific witness failure grants no removal on its own. Already-active
 non-phrase templates do not become redundant draw tickets. Callers must begin
 with a valid current state; the hand builder verifies it explicitly.
 
@@ -98,7 +118,9 @@ The builder samples distinct templates without replacement. NR036 has one ticket
 regardless of phrase count; it freezes an eligible phrase only after selecting
 that template. Replacement targets likewise do not create extra tickets.
 Injected RNG is the sole source of randomness; fixed inputs/seeds reproduce an
-offer. No automatic fallback, guaranteed mode, or spontaneous mode timer exists.
+offer. When enabled, Drawing Conclusions contributes a single ticket. It has
+one completion that preserves the exact ordinary inventory. Opening hands and
+the hand after a mode-led round use ordinary tickets only.
 
 The ordered `PhraseChoice` snapshot accepts at most 15 entries. The supplied
 session window is 5 or 15: slice **before** filtering used/incompatible wording,

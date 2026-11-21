@@ -12,6 +12,7 @@ from lets_play.discord_adapter.discord_io import render
 from lets_play.discord_adapter.lane import Lane, LaneUnavailable
 from lets_play.discord_adapter.runtime import OpeningRuntime
 from lets_play.new_rules.contracts import EventEnvelope, EventKind, MessageEvent
+from lets_play.presentation import default_presentation
 from lets_play.storage.game_store import open_game_store
 from lets_play.storage.opening_flow import OpeningCapabilities, OpeningStatus
 
@@ -76,10 +77,15 @@ class Transport:
 
 
 @asynccontextmanager
-async def service(tmp_path, monkeypatch, *, transport=None):
+async def service(tmp_path, monkeypatch, *, transport=None, include_breaking_moment=False):
     monkeypatch.setattr(runtime_module, "OPENING_CARDS", frozenset({"NR004", "NR006", "NR034"}))
     async with open_game_store(tmp_path / "game.sqlite3") as store:
-        runtime = OpeningRuntime(store, transport or Transport(), clock=Clock())
+        runtime = OpeningRuntime(
+            store,
+            transport or Transport(),
+            clock=Clock(),
+            include_breaking_moment=include_breaking_moment,
+        )
         await runtime.initialize()
         try:
             yield runtime
@@ -154,6 +160,7 @@ async def test_opening_quorum_authorization_scoring_marker_dedup_and_end(tmp_pat
             )
         assert (await runtime.state(route.session_id)).admission.joined == 1
         state = await choice(runtime, route)
+        assert render(state)[0].title == default_presentation().text("offer.title")
         assert (
             await runtime.submit(route, "choose", actor=999, message_id=state.panel_id, index=0)
             is OpeningStatus.UNAUTHORIZED

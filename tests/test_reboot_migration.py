@@ -38,7 +38,7 @@ async def test_schema_twelve_recovery_claims_scores_and_clocks_survive_upgrade(
     before = snapshot(path)
     with closing(sqlite3.connect(path)) as conn:
         columns = {t: [r[1] for r in conn.execute(f"PRAGMA table_info({t})")] for t in before}
-    assert (await bootstrap.initialize_database(path)).schema_version == 13
+    assert (await bootstrap.initialize_database(path)).schema_version == bootstrap.SCHEMA_VERSION
     for table, values in before.items():
         if table != "schema_migrations":
             assert rows(path, f"SELECT {','.join(columns[table])} FROM {table}") == values
@@ -64,4 +64,4 @@ async def test_each_notice_migration_statement_rolls_back_without_losing_previou
             await bootstrap.initialize_database(path)
     assert rows(path, "PRAGMA user_version") == [(12,)]
     assert snapshot(path) == before
-    assert (await bootstrap.initialize_database(path)).schema_version == 13
+    assert (await bootstrap.initialize_database(path)).schema_version == bootstrap.SCHEMA_VERSION

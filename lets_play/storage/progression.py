@@ -7,6 +7,10 @@ after its commit. Theme/mode predicates, delivery, deletion and purge are separa
 from dataclasses import dataclass
 from enum import StrEnum
 
+from lets_play.new_rules.breaking_moments import (
+    EMOJI_BADGE_MIN_MESSAGES,
+    EMOJI_GAMEPLAY_MIN_MESSAGES,
+)
 from lets_play.new_rules.contracts import Lifecycle
 from lets_play.storage.game_codec import MAX_SQLITE_INTEGER, IncompatibleState
 from lets_play.storage.game_store import GameUnitOfWork, _execute, _row
@@ -111,8 +115,8 @@ class Progression:
 
     async def _badge(self, actor_id, badge):
         # Internal only: callers must prove a supported predicate from saved facts.
-        if badge not in GENERAL_BADGES:
-            raise ValueError("Unsupported general badge.")
+        if badge not in GENERAL_BADGES and badge != "mode_emoji":
+            raise ValueError("Unsupported badge.")
         await _execute(
             self.conn,
             "INSERT INTO nr_profiles(actor_id) VALUES (?) ON CONFLICT(actor_id) DO NOTHING",
@@ -131,13 +135,43 @@ class Progression:
             _actor(actor_id)
         if await self._context(session_id) is None:
             return
-        where = "p.session_id=? AND p.game_count_credited=0 AND s.ordinary_posts>=5"
+        eligible = """SELECT p.actor_id FROM nr_player_progress AS p
+            JOIN nr_participants AS s USING(session_id,actor_id)
+            WHERE p.session_id=? AND p.game_count_credited=0 AND s.ordinary_posts>=5"""
         values = (session_id,)
         if actor_id is not None:
-            where += " AND p.actor_id=?"
+            eligible += " AND p.actor_id=?"
             values += (actor_id,)
-        eligible = f"""SELECT p.actor_id FROM nr_player_progress AS p
-            JOIN nr_participants AS s USING(session_id,actor_id) WHERE {where}"""
+        await self._credit(session_id, eligible, values)
+
+    @_write
+    async def credit_drawing_conclusions(self, session_id, round_id, actor_id):
+        _actor(actor_id)
+        context = await self._context(session_id)
+        if context is None or context.position.round_id != round_id:
+            return
+        row = await _row(
+            self.conn,
+            """SELECT s.mode_quality_n FROM nr_round_scores s
+            JOIN nr_breaking_moments m USING(session_id,round_id)
+            WHERE s.session_id=? AND s.round_id=? AND s.actor_id=?
+            AND m.kind='drawing_conclusions'""",
+            (session_id, round_id, actor_id),
+        )
+        if row is None:
+            return
+        successful_posts = int(row[0])
+        if successful_posts >= EMOJI_GAMEPLAY_MIN_MESSAGES:
+            await self._credit(
+                session_id,
+                """SELECT actor_id FROM nr_player_progress
+                WHERE session_id=? AND actor_id=? AND game_count_credited=0""",
+                (session_id, actor_id),
+            )
+        if successful_posts >= EMOJI_BADGE_MIN_MESSAGES:
+            await self._badge(actor_id, "mode_emoji")
+
+    async def _credit(self, session_id, eligible, values):
         if await _row(self.conn, f"SELECT 1 FROM ({eligible}) LIMIT 1", values) is None:
             return
         await _execute(

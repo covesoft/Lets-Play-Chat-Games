@@ -52,10 +52,13 @@ and surrounding text without changing application code. Preserve these names:
 | --- | --- |
 | `offer.description` | `{picker}` |
 | `scheduled.description` | `{timestamp}` |
-| `results.actual`, `results.ranking` | `{percent}` (numeric format specs such as `:.2f` are supported) |
+| `results.actual`, legacy `results.ranking` | `{percent}` (numeric format specs such as `:.2f` are supported) |
 | `results.player` | `{actor}`; this mention is rendered in the field value |
-| `results.player_entry` | `{player}`, `{detail}` |
-| `results.detail` | `{actual}`, `{ranking}`, `{faults}`, `{opportunities}`, `{ordinary_posts}`, `{reaction_failures}` |
+| `results.score` | `{points}` (whole points, with numeric formatting such as `:,d`) |
+| `results.player_score`, `reports.player_score` | `{player}`, `{score}` |
+| `results.player_entry` | `{player}` (the scored player line), `{detail}` |
+| `results.score_detail` | `{actual}`, `{faults}`, `{opportunities}`, `{ordinary_posts}`, `{reaction_failures}` |
+| Legacy `results.detail` | `{actual}`, `{ranking}`, `{faults}`, `{opportunities}`, `{ordinary_posts}`, `{reaction_failures}` |
 | `results.footer` | `{page}` |
 | `round.description` | `{round}` |
 | `ordinary.offer_description`, `ordinary.target_description` | `{picker}`, `{deadline}` |
@@ -65,14 +68,22 @@ and surrounding text without changing application code. Preserve these names:
 | `revival.description` | `{joined}` |
 | `cards.NR036.description` | `{phrase}`; legacy display only, not offered by this preview |
 
-Private summary templates add:
+Private and requested summary templates add:
 
 | Template | Required fields |
 | --- | --- |
-| `summary.description` | `{round}`, `{messages}`, `{whispers}`, `{as_of}`, `{status}` |
+| `summary.lead` | `{status}`, `{as_of}` |
+| `summary.round_traffic_heading` | `{round}` |
+| `summary.traffic` | `{messages}`, `{whispers}` (integer formatting such as `{messages:,}` is supported) |
 | `summary.as_of` | `{timestamp}` |
 | `summary.capture_detail` | `{session}`, `{round_messages}`, `{round_whispers}`, `{game_messages}`, `{game_whispers}` |
 | `summary.rule` | `{rule}` |
+
+The shared `summary.title`, the older `summary.description` and
+`summary.game_description`, and the old scope/order keys remain accepted for
+existing override files. The renderer uses `summary.round_title`,
+`summary.game_title`, `summary.lead`, and the traffic heading and count keys above,
+including `summary.game_traffic_heading` for the game scope.
 
 Other current strings take no fields. Ordinary literal braces must be doubled as
 `{{` and `}}`. Attribute/index expressions, conversions and nested format fields
@@ -148,3 +159,28 @@ color. Automatic reports use the new underway lead-in; manual/private Summary
 panels keep their existing text. Round leaderboards show only each adjusted
 score heading and clickable player mention, without a footer. All existing
 placeholders and newer owner copy are preserved.
+
+Ordinary reboot notices use `reboot.notice_countdown` with the relative Discord
+timestamp `<t:{timestamp}:R>`. The legacy `reboot.notice_description` key is
+still accepted in existing override files.
+
+
+### Whole-point score display (v0.3.37)
+
+`results.score` formats ten times the exact adjusted score rounded to whole
+points. Since v0.3.38, unrated players show only their mention in the score
+line by default. Set `SHOW_UNRATED_SCORE_PLACEHOLDER = True` in
+`lets_play/discord_adapter/score_ui.py` to include the separator and the
+`results.score_unrated` placeholder. Actual compliance uses `results.actual`
+and `results.unrated` independently.
+
+Customize the detailed player line with `results.player_score`, the score
+details with `results.score_detail`, and their placement with
+`results.player_entry`. The `{player}` in `results.player_entry` is the
+already-formatted player line. Round leaderboards use `reports.score_heading`
+and `reports.player_score` for a compact row. The final standings footer
+uses `results.footer`.
+
+Existing overrides for `results.ranking`, `results.detail`, `reports.score`,
+and `reports.unrated` still load. Move any score copy you want to retain to
+the new templates. Previously sent messages keep their original text.

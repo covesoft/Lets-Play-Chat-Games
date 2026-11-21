@@ -3,7 +3,7 @@
 import json
 from datetime import UTC, datetime, timedelta
 
-from lets_play.new_rules.compatibility import legal_completions
+from lets_play.new_rules.breaking_moments import DRAWING_CONCLUSIONS, ModeChoice
 from lets_play.new_rules.contracts import (
     Advancement,
     Deadline,
@@ -16,7 +16,7 @@ from lets_play.new_rules.contracts import (
     SessionRoute,
 )
 from lets_play.new_rules.evaluation import EVALUATOR_VERSION
-from lets_play.new_rules.hands import HandOption, OrdinaryHand
+from lets_play.new_rules.hands import HandOption, OrdinaryHand, choice_completions
 from lets_play.new_rules.parsing import PARSER_VERSION
 from lets_play.storage.game_codec import IncompatibleState
 
@@ -137,9 +137,9 @@ def decode_hand(value: str) -> OrdinaryHand:
         active = tuple(_read_rule(i) for i in data["active"])
         options = []
         for raw, targets in data["options"]:
-            incoming = _read_rule(raw)
+            incoming = decode_choice(raw)
             completions = tuple(
-                c for c in legal_completions(active, incoming) if c.outgoing_id in targets
+                c for c in choice_completions(active, incoming) if c.outgoing_id in targets
             )
             if [c.outgoing_id for c in completions] != targets:
                 raise ValueError
@@ -159,3 +159,10 @@ def decode_hand(value: str) -> OrdinaryHand:
         raise IncompatibleState(
             "Stored offer needs explicit recovery; it cannot be reinterpreted."
         ) from None
+
+
+def decode_choice(data):
+    instance, card, params = data
+    if card == DRAWING_CONCLUSIONS and params == []:
+        return ModeChoice(instance)
+    return _read_rule(data)

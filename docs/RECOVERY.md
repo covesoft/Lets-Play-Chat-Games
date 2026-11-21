@@ -1,28 +1,37 @@
 # Offline disruption recovery
 
 `RecoveryFlow(unit)` provides the existing engine barrier and offline recovery
-contracts. v0.3.14/schema 13 adds a bounded live automatic path through
+contracts. v0.3.25/schema 16 supports the bounded live automatic path through
 `RebootFlow(unit)` and the serial adapter publisher. Ordinary reboot needs no
 server-manager approval, Resume button or player message.
 
-## Automatic settled-round path
+## Automatic recovery for published phases
 
 1. Startup drains admitted work and enters every saved route's barrier before
    allowing publishers/timers. Work finishing during initialization cannot
    recreate normal timers or senders.
-2. A candidate has an active ordinary/idle round, waiting pacing, unchanged
-   recovery ownership, no partial choice/transition or prior independent pause,
-   and no unresolved output. Independent scoped existence checks cover all four
-   engine-output families, adapter delivery claims, summary receipts, round-report
+2. A candidate has unchanged recovery ownership and no unresolved output. Known
+   phases include ordinary idle/waiting, acknowledged warnings and choices, announced
+   activations, held play, revival, lobby and opening setup. The saved revival is
+   the only prior pause this path restores. Phase-specific proof joins the scoped engine
+   output to its adapter receipt: same message, real publication time and positive
+   ordered ACK. Warning/activation clocks must match that proof. A refreshed offer
+   may inherit an earlier choice clock. Independent scoped existence checks cover
+   all four engine-output families, adapter delivery claims, summary receipts, round-report
    receipts and older recovery-notice attempts. A complete engine list alone is
    insufficient. Prepared summaries with no send attempt can wait for resume.
 3. Outside database write units, verify essential channel permissions and really
    add/remove the configured marker on the existing known panel. No separate
-   start-game probe is posted. Missing panel/access or marker failure stays paused.
+   start-game probe is posted. Published lobby, choice and revival controls require their original
+   panel to remain accessible, before notice and again before resume.
+   Missing panel/access or marker failure stays paused.
 4. Ordered internal approval uses the original RecoveryFlow contracts. Claim the
    recovery notice durably before its HTTP send. Publish one friendly resumption
-   notice with the preserved rules and a 30-second read-in. Actual successful
-   publication/ACK owns the persisted boundary. No scores or public summary
+   notice with the preserved rules and a 30-second read-in. For an already-announced
+   activation it shows the saved incoming rules, labeled to take effect on resume;
+   no early activation or round closure occurs. Published choices include a link
+   back to their original cards and the unchanged absolute deadline. Actual
+   successful publication/ACK owns the persisted boundary. No scores or public summary
    baselines change. The known notice becomes the phase panel in ACK order.
 5. During read-in, /rules shows a concise countdown and the preserved rules.
    Ingress is guarded without scoring; even a post after the scheduled boundary
@@ -30,7 +39,15 @@ server-manager approval, Resume button or player message.
    access is checked, and an ordered internal receipt performs continuation.
    Historical-source guards, original round clocks/rules/scores and due-boundary
    ordering remain the engine's responsibility. Overdue pacing runs after resume.
-   The notice is then refreshed as the current phase panel.
+   Published card buttons stay on the original ACK-bound message, including any
+   partial outgoing-target selection. Refresh restores that panel and edits the
+   notice into a link, without duplicate card buttons or a new choice minute.
+   An expired choice runs the normal timeout workflow after read-in; an already
+   announced overdue activation commits once with its original effective clock.
+   Lobby and revival expiry use an independent timer and take precedence even
+   during read-in or blocked recovery. Revival expiry edits an existing panel
+   and releases capacity. Held play retains its saved idle clock and round.
+   Opening never creates a round before the original activation is due.
 
 Schema 13 appends `notice_attempted_at_utc`, `notice_ack_sequence` and an index to
 `nr_recoveries`. Claims survive lost ACKs, timeout, cancellation and another
@@ -46,25 +63,124 @@ Technical guards are internal. If this limited path cannot establish safe recove
 the known panel and /rules give a brief host-contact explanation and retain
 manager ending. Do not automatically retry a failed/uncertain notice in this build.
 
-## Remaining integration and upgrading
+## Interrupted lobby and opening-card sends
 
-This increment does not continue interrupted warnings, choices/activations, held
-play, revival, preplay or modes automatically. Their engine contracts already
-exist where documented below; wiring their publication proofs and continuation
-is next. No unknown send is inferred healthy, missing/late message proof is not
-never-sent evidence, and no chat history is backfilled for scoring. No new manager
-recovery gate or diagnostic UI is planned. Full mode/retention/erasure/live evidence
-remains open.
+At startup, an unresolved durable lobby or opening-card send can be matched
+against one bounded lookup in its exact channel. Inspect the oldest messages
+after the saved attempt time, up to 50. Require a single unedited post by this
+bot with the exact saved session's Join button or its three opening-card
+controls. An empty, ambiguous, inaccessible or capped lookup leaves the claim
+unresolved. This lookup uses publication metadata and controls without reading
+or retaining chat bodies.
 
-Apply the two v0.3.14 patches in order while the bot is stopped: cleanup/preparation,
-then automatic recovery. The second requires **schema 13**. Back up and verify the
-stopped schema-12 database with SQLite's backup API before applying/upgrading;
-use the database path selected by `load_settings()` so private .env overrides are
-honored. Reinstall, run offline checks, then `python -m lets_play --init-db` and
-start. No command sync is needed. Released migrations 1–12 are unchanged; failure
-in any schema-13 statement rolls back completely. Rollback requires the verified
-schema-12 backup and matching v0.3.13 source; do not downgrade a schema-13 file.
-See [STORAGE.md](STORAGE.md) for backup policy.
+An ordered receipt rechecks the original claim and recovery generation. It
+commits the engine proof and adapter acknowledgement together. Discord's
+original message creation time starts the original lobby or choice clock.
+An expired lobby closes immediately. An expired opening choice completes via
+normal timeout after read-in. Confirmed posts keep their original buttons.
+
+## Interrupted warning and revival posts
+
+New warning and revival posts include a reference tied to the exact session,
+output and kind. On startup the bot uses the same bounded original-post lookup
+and rechecks that the round and attempt still own the unresolved claim. It
+commits the original Discord publication time and adapter acknowledgement in
+one ordered receipt. A recovered warning retains its original 30-second cutoff
+and advances after read-in if already due. A recovered revival retains its
+original five-minute deadline and Continue button. If it already expired the
+round ends through the normal silent closure path.
+
+A post from before this version may lack the reference. Old, edited, ambiguous
+or capped results leave the claim unresolved.
+
+## Interrupted activation announcements
+
+Opening and ordinary activation announcements carry separate output references.
+Startup checks the original bot-authored post in the exact channel and rechecks
+the saved selection, recovery generation and durable output. It accepts a
+creation timestamp strictly before the recorded cutover only. A post created at
+or after cutover, an edited post, and a post without proof leave the claim
+unresolved. With timely proof, no replacement announcement is sent. The
+existing read-in completes before the original activation is applied once at
+its saved effective time.
+
+## Interrupted held and recovery notices
+
+A new held notice can be verified from its original reference. The ordered
+receipt checks the live round, held token, recovery generation and durable
+claim. The existing idle deadline still controls when revival is due.
+
+A lost acknowledgement on a recovery notice can be reconciled after a later
+startup supersedes that generation. The lookup matches the old generation’s
+reference. Recording that proof clears only its old claim. Before the game
+can resume, the current generation still checks access, publishes its own
+announcement and observes its own read-in.
+
+## Interrupted public score posts
+
+Requested summaries, automatic interims and round leaderboards carry the
+durable output identity on the Check current scores button. The bounded
+lookup checks the original bot-authored post and its exact control. It
+acknowledges only the matching active claim in the ordered lane, using the
+original publication time and that claim’s saved traffic watermark. The existing
+public score rendering remains footer-free. A round leaderboard includes the
+same private current-scores entry point as a summary.
+
+New recovery notices identify their generation through the read-only Game
+status button, so the visible footer can be customized. The lookup also accepts
+the exact reference on older notices that originally carried it in their footer.
+
+## Interrupted choice-panel publication and terminal delivery
+
+The claim persists the exact message to edit before Discord receives the call.
+Startup fetches that exact message, requiring the correct bot, route, output
+reference and an edit timestamp at or after the claim. Discord creation time
+cannot start a choice deadline. A verified edit retains its original deadline
+and controls. During uncertainty the pause publisher leaves the target intact.
+A busy-warning choice claim explicitly records a new post. Startup can verify
+the unedited bot-authored post by exact output reference and creation time.
+Its creation time owns the original choice deadline. A legacy claim without
+a publication target record provides neither proof.
+
+An ended game has a separate delivery path. Startup discovers unresolved
+final results without registering the old session as active. A queued output
+with no send claim can be published once. A claimed output is acknowledged
+only after verification of the exact edit target or the original bot-authored
+result post with the output-specific View final results control. Silent ending
+edits only the saved panel. If the panel is gone, the claim stays unresolved
+without a replacement post.
+
+## Drawing Conclusions
+
+Startup requires the saved bout, its original acknowledged activation, and the
+same delivery and fresh-access checks as an ordinary round. The notice announces
+the interruption. Once read-in finishes, the exact suspended cards are restored
+in the same round with its original activation time. Committed mode scores,
+game credit and Pictoglyphs survive. If a published mode start passes during
+read-in, the selected round change still commits once at its saved timestamp
+and an unobserved bout is interrupted immediately. A future start remains
+scheduled. Ordinary and interrupted-mode read-in notices show a relative
+deadline. The initial countdown is corrected once the receipt commits the
+exact resume time. On recovery, the rules panel is edited to show the restored
+rules. Natural expiry queues a separate lime-green notice whose disabled button
+holds the exact publication reference. Startup retires older interruption
+notices that were never claimed. Claimed notices still require proof, including
+the legacy footer reference where present. Inconclusive delivery retains the
+paused/manager-end behavior.
+
+## Inconclusive evidence and upgrades
+
+Missing, inaccessible, edited-over or ambiguous evidence leaves an output
+unresolved. Schema-13 claims with no durable edit target cannot gain one by
+guessing. A live game stays paused and a manager can end it explicitly. A
+terminal game stays ended. No recovery scores historical chat.
+
+When upgrading from schema 15, stop the bot and back up the configured database
+with SQLite’s backup API. Apply v0.3.24 to v0.3.23, reinstall, verify, and run
+`python -m lets_play --init-db` before startup. Schema **16** adds warning
+traffic and selected summary scope and preserves existing evolution output IDs.
+Roll back by restoring the verified schema-15 backup with matching source.
+See [STORAGE.md](STORAGE.md) for the backup policy.
 
 ## Enter before timers
 

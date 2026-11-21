@@ -272,7 +272,7 @@ def test_active_instance_identity_template_and_phrase_caps_are_validated():
     with pytest.raises(RuleConfigurationError):
         EvaluationContext(POSITION, (phrase("red duck"), phrase("RED-DUCK", "other")))
     with pytest.raises(NotImplementedError):
-        context("NR037")
+        context("NR040")
 
 
 def test_derived_decisions_never_retain_content_attachment_names_or_frozen_phrase_text():

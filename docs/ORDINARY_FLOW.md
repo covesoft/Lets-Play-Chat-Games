@@ -3,11 +3,11 @@
 `storage.ordinary_flow.OrdinaryFlow` coordinates a schema-3 unit of work for
 already-playing ordinary sessions. It persists frozen offers, publication facts,
 selection, announced cutover, phrase usage, and old-round closure boundaries.
-It performs no Discord I/O. The live shell still does not invoke gameplay.
+It performs no Discord I/O.
 
 This is a later-round foundation. Schema 7 [EvolutionFlow](EVOLUTION.md) composes
-ordinary refresh/held/revival. Mode flow, specialized failure recovery, theme/mode resolution,
-cleanup and delivery workers remain separate work.
+ordinary refresh/held/revival. Schema 15 composes Drawing Conclusions with the
+same receipt lane and cutover. Additional modes and cleanup remain separate work.
 Schema 4 [general progression](PROGRESSION.md) is composed with successful cutover.
 Schema 5 [ordinary pacing](PACING.md) shares ingress and cutover: registered rounds
 must obtain their frozen picker before an offer can be prepared. At activation,
@@ -131,7 +131,7 @@ ended work. Live rows use foreign-key cleanup; no purge service is implemented.
 `nr_round_resolutions` and applies general progression in the same cutover unit:
 ordinary credit reconciliation, clean/party progress, streak notice intents and
 activated deliberate-choice Rulemaker. A failure rolls back the whole cutover.
-Theme/mode resolution is still absent; no general guard certifies those predicates.
+Drawing Conclusions action awards are committed when the qualifying post scores.
 Legacy pending closures must resolve in order before further cutovers. Do not
 purge evidence until all required finalization/delivery is complete.
 No per-game history service is created.
@@ -140,7 +140,9 @@ Reopening a database handle is tested. A disruptive bot/Gateway restart is a
 different event: the startup adapter must invoke explicit recovery,
 announce it and apply its resume policy before dispatching ordinary receipts.
 Loading these records alone does not authorize silent resume or prove observed
-mode survival. Opening choices and modes are intentionally outside this facade.
+mode survival. The mode restores its preserved ordinary inventory after 120 seconds
+in the same round. On a supported restart, restoration happens at the end of the
+published recovery read-in. Opening choices use their own facade.
 
 Migration 3 appends these records to schema 2 and preserves old score rows/unknown
 start times. Stop the bot and make a verified SQLite backup before upgrading.

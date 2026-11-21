@@ -12,9 +12,12 @@ from test_discord_runtime import choice, opened, service
 
 from lets_play.cli import main
 from lets_play.config import load_settings
+from lets_play.discord_adapter import score_ui
 from lets_play.discord_adapter.discord_io import DiscordTransport, render
 from lets_play.discord_adapter.lane import LaneUnavailable
-from lets_play.discord_adapter.runtime import OPENING_CARDS
+from lets_play.discord_adapter.runtime import ORDINARY_CARDS
+from lets_play.discord_adapter.score_ui import detailed_player_entry, player_score_line
+from lets_play.new_rules.scoring import ScoreTotals
 from lets_play.presentation import PresentationError, load_presentation
 
 
@@ -22,6 +25,47 @@ def override(tmp_path, data):
     path = tmp_path / "copy.json"
     path.write_text(json.dumps(data), encoding="utf-8")
     return path
+
+
+def test_score_copy_supports_custom_layout_and_accepts_old_overrides(tmp_path, monkeypatch):
+    copy = load_presentation(
+        override(
+            tmp_path,
+            {
+                "strings": {
+                    "results.score": "{points:,} pts",
+                    "results.score_unrated": "Pending",
+                    "results.player_score": "{score} | {player}",
+                    "reports.player_score": "{player} ({score})",
+                    "results.ranking": "{percent:.1f}",
+                    "reports.score": "Scoring {percent:.1f}",
+                }
+            },
+        )
+    )
+    unrated = ScoreTotals()
+    clean = ScoreTotals(
+        human_messages=1990,
+        ordinary_posts=1990,
+        ordinary_observations=1990,
+        ordinary_quality=1990,
+    )
+    assert detailed_player_entry(copy, 123, unrated).splitlines()[:2] == [
+        "<@123>",
+        "Actual compliance: Unrated",
+    ]
+    assert player_score_line(copy, 123, unrated, template="reports.player_score") == "<@123>"
+    assert player_score_line(copy, 123, ScoreTotals(reaction_failures=20_000)) == "0 pts | <@123>"
+    assert player_score_line(copy, 123, clean) == "1,000 pts | <@123>"
+    assert (
+        player_score_line(copy, 123, clean, template="reports.player_score") == "<@123> (1,000 pts)"
+    )
+
+    monkeypatch.setattr(score_ui, "SHOW_UNRATED_SCORE_PLACEHOLDER", True)
+    assert player_score_line(copy, 123, unrated) == "Pending | <@123>"
+    assert (
+        player_score_line(copy, 123, unrated, template="reports.player_score") == "<@123> (Pending)"
+    )
 
 
 def test_marker_has_no_fallback_and_settings_hide_private_configuration(tmp_path, monkeypatch):
@@ -145,7 +189,7 @@ def test_catalog_covers_sent_keys_and_card_labels_without_inline_english():
                     k.arg in {"color", "colour"} and isinstance(k.value, ast.Constant)
                     for k in node.keywords
                 )
-    for card in OPENING_CARDS:
+    for card in ORDINARY_CARDS:
         assert copy.text(f"cards.{card}.name") and copy.text(f"cards.{card}.description")
 
 

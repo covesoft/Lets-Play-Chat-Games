@@ -96,6 +96,7 @@ class EventKind(StrEnum):
     REVIVAL_PUBLISHED = "revival_published"
     REVIVAL_JOIN = "revival_join"
     HELD_PUBLISHED = "held_published"
+    MODE_ENDED_PUBLISHED = "mode_ended_published"
     SILENT_END_PUBLISHED = "silent_end_published"
     RECOVERY_BEGIN = "recovery_begin"
     RECOVERY_RECONCILE = "recovery_reconcile"

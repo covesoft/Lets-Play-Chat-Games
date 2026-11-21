@@ -4,11 +4,12 @@ from bisect import insort
 from dataclasses import dataclass
 from datetime import datetime
 
-from lets_play.new_rules.contracts import SessionRoute
+from lets_play.new_rules.contracts import RuleInstance, SessionRoute
 from lets_play.new_rules.evaluation import EvaluationContext
 from lets_play.new_rules.scoring import ScoreTotals
+from lets_play.storage.breaking_flow import BreakingFlow, BreakingMoment
 from lets_play.storage.evolution_flow import EvolutionFlow, RevivalRecord
-from lets_play.storage.game_codec import decode_score
+from lets_play.storage.game_codec import IncompatibleState, decode_score
 from lets_play.storage.game_store import _execute, _row
 from lets_play.storage.offer_codec import utc_datetime, utc_int
 from lets_play.storage.opening_flow import AdmissionRecord, OpeningFlow
@@ -36,6 +37,23 @@ class DisplayState:
     previous_scores: bool = False
     offer_display_ready: bool = True
     recovery_resume_at: datetime | None = None
+    offer_panel_id: int | None = None
+    recovery_notice_id: int | None = None
+    phase_control_id: int | None = None
+    mode: BreakingMoment | None = None
+    mode_end_rules: tuple[RuleInstance, ...] = ()
+
+    @property
+    def recovery_control_id(self):
+        return self.offer_panel_id or self.phase_control_id
+
+    @property
+    def terminal_recovery_deadline(self):
+        if self.admission.stage == "lobby_published":
+            return self.admission.lobby_deadline
+        if self.revival and self.revival.stage == "published":
+            return self.revival.deadline
+        return None
 
 
 @dataclass(frozen=True, slots=True)
@@ -46,6 +64,14 @@ class PendingOutput:
     token: str
     round_id: str | None = None
     attempt: int = 1
+
+    @property
+    def terminal(self):
+        return (self.family, self.kind) in {("opening", "closed"), ("evolution", "closed_silent")}
+
+    @property
+    def choice(self):
+        return (self.family, self.kind) == ("ordinary", "offer")
 
     @property
     def ui_kind(self):
@@ -76,8 +102,11 @@ class DiscordStore:
         )
         panel = await _row(
             self.conn,
-            """SELECT message_id,ack_sequence FROM nr_discord_deliveries WHERE session_id=? AND message_id IS NOT NULL
-            ORDER BY ack_sequence DESC,attempted_at_utc DESC,output_id DESC LIMIT 1""",
+            """SELECT d.message_id,d.ack_sequence FROM nr_discord_deliveries d
+            WHERE d.session_id=? AND d.message_id IS NOT NULL AND NOT EXISTS(
+                SELECT 1 FROM nr_evolution_outputs o WHERE d.family='evolution'
+                AND o.output_id=d.output_id AND o.kind='mode_ended'
+            ) ORDER BY ack_sequence DESC,attempted_at_utc DESC,output_id DESC LIMIT 1""",
             (session,),
         )
         notice = await _row(
@@ -101,8 +130,23 @@ class DiscordStore:
             if context and context.position.offer_id
             else None
         )
+        offer_panel_id = (
+            await OrdinaryFlow(self.unit).known_message_id(session, offer.hand.offer_id, "offer")
+            if offer and offer.stage == "published"
+            else None
+        )
+        recovery_notice_id = notice[0] if notice and panel and panel[0] == notice[0] else None
         pacing = await RoundPacing(self.unit).record(session) if context else None
         revival = await EvolutionFlow(self.unit).revival(session) if context else None
+        phase_control_id = None
+        if admission.stage in {"lobby_published", "opening_published"}:
+            kind = "lobby" if admission.stage == "lobby_published" else "offer"
+            phase_control_id = await OpeningFlow(self.unit).known_message_id(session, kind)
+        elif revival and revival.stage == "published" and admission.stage == "active":
+            phase_control_id = await self._revival_message(session, revival)
+        if not recovery and recovery_notice_id and (control := offer_panel_id or phase_control_id):
+            # The notice never takes ownership of previously published buttons.
+            panel = (control,)
         round_row = (
             await _row(
                 self.conn,
@@ -112,7 +156,10 @@ class DiscordStore:
             if context
             else None
         )
+        mode = await BreakingFlow(self.unit).active(context.position) if context else None
         boundaries = []
+        if mode and context.position.lifecycle == "playing":
+            boundaries.append(mode.ends_at)
         if context is None and admission.next_deadline:
             boundaries.append(admission.next_deadline)
         if offer and offer.stage == "published" and offer.choice_deadline:
@@ -181,6 +228,10 @@ class DiscordStore:
             utc_datetime(recovery["resume_at_utc"])
             if recovery and recovery["stage"] == "reading" and recovery["resume_at_utc"] is not None
             else None,
+            offer_panel_id,
+            recovery_notice_id,
+            phase_control_id,
+            mode,
         )
 
     async def _ranked_scores(self, session, anchor, backwards, *, round_id=None, limit=10):
@@ -268,10 +319,29 @@ class DiscordStore:
         )
         return (row[0], utc_datetime(row[1]) if row[1] is not None else None) if row else (0, None)
 
+    async def mode_end_rules(self, session, round_id):
+        bout = await BreakingFlow(self.unit).record(session, round_id)
+        if bout is None or bout.outcome not in {"completed", "interrupted"}:
+            raise IncompatibleState("Mode restoration notice has no finished bout.")
+        offer = await OrdinaryFlow(self.unit).get_offer(session, bout.offer_id)
+        if offer is None or offer.stage != "activated":
+            raise IncompatibleState("Mode restoration notice has no saved ordinary rules.")
+        return offer.hand.active_instances
+
     async def pending(self, session):
         self.unit._check()
         if await active_recovery(self.unit, session):
             return None
+        mode_end = await _row(
+            self.conn,
+            """SELECT o.output_id,o.token FROM nr_evolution_outputs o
+               JOIN nr_sessions s USING(session_id) WHERE o.session_id=? AND o.kind='mode_ended'
+               AND s.lifecycle<>'ended' AND o.acknowledged_at_utc IS NULL AND o.retired_at_utc IS NULL
+               ORDER BY o.output_id LIMIT 1""",
+            (session,),
+        )
+        if mode_end:
+            return PendingOutput("evolution", mode_end[0], "mode_ended", mode_end[1])
         for family, flow in (
             ("opening", OpeningFlow(self.unit)),
             ("ordinary", OrdinaryFlow(self.unit)),
@@ -308,13 +378,68 @@ class DiscordStore:
         self.unit._check(write=True)
         if await self.pending(session) != output:
             return False
-        return bool(
+        claimed = await _execute(
+            self.conn,
+            "INSERT INTO nr_discord_deliveries(session_id,family,output_id,state,attempted_at_utc) VALUES (?,?,?,'sending',?) ON CONFLICT DO NOTHING",
+            (session, output.family, output.output_id, utc_int(now)),
+        )
+        if claimed and (output.choice or output.terminal):
+            state = await self.state(session)
+            target = (
+                state.panel_id
+                if (output.choice or output.kind == "closed_silent" or state.context is None)
+                else None
+            )
+            if output.choice:
+                if state.offer.published_at is None and await RoundPacing(self.unit).busy_warning(
+                    session, state.context.position.round_id
+                ):
+                    target = None
+                elif target is None:
+                    raise IncompatibleState("A choice edit needs its original panel.")
             await _execute(
                 self.conn,
-                "INSERT INTO nr_discord_deliveries(session_id,family,output_id,state,attempted_at_utc) VALUES (?,?,?,'sending',?) ON CONFLICT DO NOTHING",
-                (session, output.family, output.output_id, utc_int(now)),
+                "INSERT INTO nr_discord_publication_targets VALUES (?,?,?)",
+                (output.family, output.output_id, target),
             )
+        return bool(claimed)
+
+    async def publication_target(self, session, output):
+        return await _row(
+            self.conn,
+            """SELECT d.attempted_at_utc,t.target_message_id FROM nr_discord_deliveries d
+               JOIN nr_discord_publication_targets t USING(family,output_id)
+               WHERE d.session_id=? AND d.family=? AND d.output_id=?
+               AND d.state='sending' AND d.message_id IS NULL AND d.ack_sequence=0""",
+            (session, output.family, output.output_id),
         )
+
+    async def terminal_routes(self, *, after_session="", limit=100):
+        self.unit._check()
+        async with self.conn.execute(
+            """SELECT a.guild_id,a.channel_id,a.session_id FROM nr_admissions a
+               WHERE a.stage='ended' AND a.session_id>? AND (
+                   EXISTS (SELECT 1 FROM nr_opening_outputs o WHERE o.session_id=a.session_id
+                       AND o.kind='closed' AND o.acknowledged_at_utc IS NULL AND o.retired_at_utc IS NULL)
+                   OR EXISTS (SELECT 1 FROM nr_evolution_outputs o WHERE o.session_id=a.session_id
+                       AND o.kind='closed_silent' AND o.acknowledged_at_utc IS NULL AND o.retired_at_utc IS NULL)
+               ) ORDER BY a.session_id LIMIT ?""",
+            (after_session, limit),
+        ) as cursor:
+            return tuple(SessionRoute(*row) for row in await cursor.fetchall())
+
+    async def uncertain_choice_target(self, session):
+        row = await _row(
+            self.conn,
+            """SELECT t.target_message_id FROM nr_discord_deliveries d
+               JOIN nr_discord_publication_targets t USING(family,output_id)
+               JOIN nr_ordinary_outputs o ON o.session_id=d.session_id AND o.output_id=d.output_id
+               WHERE d.session_id=? AND d.family='ordinary' AND d.state='sending'
+               AND o.kind='offer' AND o.acknowledged_at_utc IS NULL AND o.retired_at_utc IS NULL
+               AND t.target_message_id IS NOT NULL LIMIT 1""",
+            (session,),
+        )
+        return row[0] if row else None
 
     async def delivered(self, output, message_id, sequence):
         self.unit._check(write=True)
@@ -324,16 +449,19 @@ class DiscordStore:
             (message_id, sequence, output.family, output.output_id),
         )
 
+    async def _revival_message(self, session, revival):
+        row = await _row(
+            self.conn,
+            "SELECT message_id FROM nr_pacing_outputs WHERE session_id=? AND round_id=? AND attempt=? AND kind='revival'",
+            (session, revival.round_id, revival.attempt),
+        )
+        return row[0] if row else None
+
     async def control_message(self, session, kind):
         self.unit._check()
         state = await self.state(session)
         if kind == "revive" and state.revival:
-            row = await _row(
-                self.conn,
-                "SELECT message_id FROM nr_pacing_outputs WHERE session_id=? AND round_id=? AND attempt=? AND kind='revival'",
-                (session, state.revival.round_id, state.revival.attempt),
-            )
-            return row[0] if row else None
+            return await self._revival_message(session, state.revival)
         if kind in {"choose", "target"} and state.offer:
             return await OrdinaryFlow(self.unit).known_message_id(
                 session, state.offer.hand.offer_id, "offer"
@@ -348,7 +476,9 @@ class DiscordStore:
             return ()
         # Never depend on global page position for one session's work.
         async with self.conn.execute(
-            "SELECT intent_id,source_id FROM nr_marker_intents WHERE session_id=? ORDER BY intent_id LIMIT 32",
+            """SELECT m.intent_id,m.source_id FROM nr_marker_intents m
+               JOIN nr_admissions a USING(session_id)
+               WHERE m.session_id=? AND a.stage<>'ended' ORDER BY m.intent_id LIMIT 32""",
             (session,),
         ) as cursor:
             return tuple(tuple(r) for r in await cursor.fetchall())

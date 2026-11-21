@@ -43,13 +43,29 @@ async def test_automatic_layout_keeps_rules_and_player_entries_without_report_or
         assert all(f.name == copy.text("results.player_heading") for f in automatic.fields[1:])
         assert automatic.footer.text is None
         assert view.children[0].label == copy.text("buttons.summary_current")
-        assert any(f.name == copy.text("summary.capture_heading") for f in manual.fields)
-        assert any(f.name == copy.text("summary.scope_round") for f in manual.fields)
+        assert manual.title == copy.text("summary.round_title")
+        assert manual.description == copy.text(
+            "summary.lead",
+            status=copy.text("summary.captured"),
+            as_of=copy.text("summary.as_of", timestamp=int(page.as_of.timestamp())),
+        )
+        assert manual.fields[0].name == copy.text("summary.round_traffic_heading", round=1)
+        assert manual.fields[0].value == copy.text(
+            "summary.traffic", messages=page.human_messages, whispers=page.whispers
+        )
+        assert not any(f.name == copy.text("summary.capture_heading") for f in manual.fields)
         async with runtime.store.transaction(write=False) as unit:
             live = await SummaryStore(unit).live_page(route.session_id)
         detailed, _ = requested_summary.render(live, copy)
-        assert detailed.fields[0].name == copy.text("summary.scope_round")
-        assert detailed.fields[0].value == copy.text("summary.order")
+        assert detailed.title == manual.title
+        assert detailed.description == copy.text(
+            "summary.lead",
+            status=copy.text("summary.live"),
+            as_of=copy.text("summary.as_of", timestamp=int(live.as_of.timestamp())),
+        )
+        assert detailed.fields[0].name == manual.fields[0].name
+        assert detailed.fields[0].value == manual.fields[0].value
+        assert detailed.fields[1].name == copy.text("results.player_heading")
         channel = NS(guild=NS(id=101), send=AsyncMock(return_value=NS(id=555)))
         sdk = DiscordTransport(NS(settings=NS(ding_emoji=None), get_channel=lambda _: channel))
         await sdk.publish_summary(route, snapshot, page)

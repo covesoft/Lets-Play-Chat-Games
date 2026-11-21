@@ -2,13 +2,21 @@
 
 import asyncio
 import re
+from datetime import UTC, datetime, timedelta
 
 import discord
 from discord import app_commands
 
 from lets_play.discord_adapter import requested_summary, round_report_ui
 from lets_play.discord_adapter.lane import LaneUnavailable
-from lets_play.discord_adapter.ordinary_ui import render_ordinary
+from lets_play.discord_adapter.ordinary_ui import (
+    choice_detail,
+    render_ordinary,
+    resumption_rules,
+    rule_text,
+    scheduled_mode,
+)
+from lets_play.discord_adapter.score_ui import detailed_player_entry
 from lets_play.new_rules.contracts import (
     AttachmentSnapshot,
     EmojiIdentity,
@@ -35,6 +43,13 @@ COMMAND_END = "end-game"
 CONTROL = re.compile(
     r"nr:([a-f0-9]{32}):(join|pick|target|revive|results)(?::([0-9]{1,7}))?(?::([0-9]{1,7}))?\Z"
 )
+
+PUBLICATION_CONTROL = re.compile(
+    r"nrq:([a-f0-9]{32}):(?:score:(summary|round):([1-9][0-9]{0,18})|"
+    r"recovery:([a-f0-9]{32}))\Z"
+)
+
+TERMINAL_CONTROL = re.compile(r"nrt:([a-f0-9]{32}):(opening|evolution):([1-9][0-9]{0,18})\Z")
 
 
 def capabilities(channel, member, *, marker_verified=False):
@@ -110,18 +125,62 @@ def reaction_snapshot(payload, route, received, *, source_id):
     return ReactionEvent(frame, payload.message_id, identity, payload.member.bot)
 
 
-def button(view, label, session, action, index=None, target_index=None):
+def button(
+    view,
+    label,
+    session,
+    action,
+    index=None,
+    target_index=None,
+    *,
+    style=discord.ButtonStyle.secondary,
+):
     suffix = f":{index}" if index is not None else ""
     if target_index is not None:
         suffix += f":{target_index}"
-    view.add_item(discord.ui.Button(label=label, custom_id=f"nr:{session}:{action}{suffix}"))
+    view.add_item(
+        discord.ui.Button(label=label, custom_id=f"nr:{session}:{action}{suffix}", style=style)
+    )
 
 
-def render(state, *, kind=None, page=0, presentation=None):
+def phase_recovery_link(state, route, copy):
+    if state.admission.stage == "opening_published":
+        key, deadline = "opening", state.admission.choice_deadline.expires_at
+    elif state.admission.stage == "lobby_published":
+        key, deadline = "lobby", state.admission.lobby_deadline
+    else:
+        key, deadline = "revival", state.revival.deadline
+    return copy.text(
+        f"reboot.{key}_link",
+        url=f"https://discord.com/channels/{route.guild_id}/{route.channel_id}/{state.phase_control_id}",
+        deadline=copy.text("ordinary.deadline", timestamp=int(deadline.timestamp())),
+    )
+
+
+_RECOVERY_COUNTDOWN_KEYS = frozenset({"reboot.notice_countdown", "mode.interrupted_countdown"})
+
+
+def _recovery_notice_key(state):
+    if state.mode:
+        return "mode.interrupted_countdown"
+    if state.context is None:
+        return (
+            "reboot.opening_activation" if state.admission.stage == "selected" else "reboot.preplay"
+        )
+    if state.revival and state.revival.stage == "published":
+        return "reboot.revival"
+    if scheduled_mode(state):
+        return "mode.scheduled_notice"
+    if state.offer and state.offer.stage == "selected" and state.offer_display_ready:
+        return "reboot.activation_description"
+    return "reboot.notice_countdown"
+
+
+def render(state, *, kind=None, page=0, presentation=None, now=None):
     copy = presentation or default_presentation()
     a = state.admission
     if state.context is not None and a.stage != "ended":
-        embed, view = render_ordinary(state, copy, button, kind=kind)
+        embed, view = render_ordinary(state, copy, button, kind=kind, now=now)
         if not any(
             (match := CONTROL.fullmatch(item.custom_id or "")) and match[2] in {"pick", "target"}
             for item in view.children
@@ -136,31 +195,9 @@ def render(state, *, kind=None, page=0, presentation=None):
         embed.title = copy.text("results.title")
         embed.description = copy.text("results.description")
         for actor, score in state.scores:
-            actual = (
-                copy.text("results.unrated")
-                if score.actual_percent is None
-                else copy.text("results.actual", percent=float(score.actual_percent))
-            )
-            ranking = (
-                copy.text("results.unrated")
-                if score.ranking_percent() is None
-                else copy.text("results.ranking", percent=float(score.ranking_percent()))
-            )
             embed.add_field(
                 name=copy.text("results.player_heading"),
-                value=copy.text(
-                    "results.player_entry",
-                    player=copy.text("results.player", actor=actor),
-                    detail=copy.text(
-                        "results.detail",
-                        actual=actual,
-                        ranking=ranking,
-                        faults=score.raw_faults,
-                        opportunities=score.opportunities,
-                        ordinary_posts=score.ordinary_posts,
-                        reaction_failures=score.reaction_failures,
-                    ),
-                ),
+                value=detailed_player_entry(copy, actor, score),
                 inline=False,
             )
         if not state.scores:
@@ -184,7 +221,23 @@ def render(state, *, kind=None, page=0, presentation=None):
     elif state.recovery_id or a.stage == "recovery":
         embed.colour = copy.color("paused")
         embed.title = copy.text("paused.title")
-        embed.description = copy.text("paused.description")
+        embed.description = copy.text("reboot.blocked_description")
+        if state.recovery_resume_at:
+            embed.colour = copy.color("reboot")
+            embed.title = copy.text("reboot.notice_title")
+            embed.description = copy.text(
+                "reboot.opening_activation_reading"
+                if a.stage == "selected"
+                else "reboot.preplay_reading",
+                timestamp=int(state.recovery_resume_at.timestamp()),
+            )
+            if a.stage == "selected" and state.selected_card:
+                card = state.selected_card
+                embed.add_field(
+                    name=copy.text(f"cards.{card}.name"),
+                    value=copy.text(f"cards.{card}.description"),
+                    inline=False,
+                )
     elif kind == "lobby" or a.stage.startswith("lobby"):
         embed.colour = copy.color("lobby")
         embed.description = copy.text("lobby.description")
@@ -256,14 +309,53 @@ class DiscordTransport:
                 pass
         return facts
 
-    async def publish(self, route, kind, state):
+    def _now(self):
+        runtime = getattr(self.bot, "game_runtime", None)
+        return runtime.clock.now() if runtime else datetime.now(UTC)
+
+    async def publish_identified(self, route, output, state):
+        if output.choice and state.panel_id is None:
+            return await self.publish(
+                route, output.ui_kind, state, publication_id=output.output_id, new_choice=True
+            )
+        return await self.publish(route, output.ui_kind, state, publication_id=output.output_id)
+
+    @staticmethod
+    def _publication_reference(route, family, kind, output_id):
+        return f"New Rules · {route.session_id}:{family}:{kind}:{output_id}"
+
+    async def publish(self, route, kind, state, *, publication_id=None, new_choice=False):
         channel = await self.channel(route)
-        embed, view = render(state, kind=kind, presentation=self.copy)
+        embed, view = render(state, kind=kind, presentation=self.copy, now=self._now())
+        if publication_id is not None:
+            if kind == "ordinary_offer":
+                embed.set_footer(
+                    text=self._publication_reference(route, "ordinary", "offer", publication_id)
+                )
+            elif kind == "evolution_mode_ended":
+                view.add_item(
+                    discord.ui.Button(
+                        label=self.copy.text("buttons.rules_restored"),
+                        custom_id=self._mode_end_control(route, publication_id),
+                        disabled=True,
+                    )
+                )
+            elif kind in {"closed", "evolution_closed_silent"}:
+                family = "opening" if kind == "closed" else "evolution"
+                view.add_item(
+                    discord.ui.Button(
+                        label=self.copy.text("buttons.final_results"),
+                        custom_id=self._terminal_control(route, family, publication_id),
+                    )
+                )
         # A lobby expiry edits its invitation instead of leaving active Play controls.
-        if kind in {"evolution_closed_silent", "ordinary_offer"} and state.panel_id is None:
+        if (
+            kind == "evolution_closed_silent" or kind == "ordinary_offer" and not new_choice
+        ) and state.panel_id is None:
             raise LaneUnavailable("Panel publication has no known message to edit.")
-        if kind in {"evolution_closed_silent", "ordinary_offer"} or (
-            kind == "closed" and state.context is None and state.panel_id
+        if kind == "evolution_closed_silent" or (
+            state.panel_id is not None
+            and (kind == "ordinary_offer" or (kind == "closed" and state.context is None))
         ):
             await channel.get_partial_message(state.panel_id).edit(
                 embed=embed,
@@ -272,10 +364,167 @@ class DiscordTransport:
                 allowed_mentions=discord.AllowedMentions.none(),
             )
             return state.panel_id
+        reference_kind = {
+            "pacing_warning": ("pacing", "warning"),
+            "pacing_revival": ("pacing", "revival"),
+            "activation": ("opening", "activation"),
+            "ordinary_activation": ("ordinary", "activation"),
+            "evolution_held": ("evolution", "held"),
+        }.get(kind)
+        if publication_id is not None and reference_kind is not None:
+            embed.set_footer(
+                text=self._publication_reference(route, *reference_kind, publication_id)
+            )
         message = await channel.send(
             embed=embed, view=view, allowed_mentions=discord.AllowedMentions.none()
         )
         return message.id
+
+    @staticmethod
+    def _terminal_control(route, family, output_id):
+        return f"nrt:{route.session_id}:{family}:{output_id}"
+
+    @staticmethod
+    def _mode_end_control(route, output_id):
+        return f"nrm:{route.session_id}:end:{output_id}"
+
+    async def find_choice_edit(self, route, output_id, target_id, attempted_at):
+        reference = self._publication_reference(route, "ordinary", "offer", output_id)
+        return await self._find_exact_edit(
+            route,
+            target_id,
+            attempted_at,
+            lambda message: len(message.embeds) == 1 and message.embeds[0].footer.text == reference,
+        )
+
+    async def find_choice_post(self, route, output_id, attempted_at):
+        return await self._find_referenced_post(route, "ordinary", "offer", output_id, attempted_at)
+
+    async def find_mode_end_publication(self, route, output_id, attempted_at):
+        return await self._find_control_post(
+            route,
+            self._mode_end_control(route, output_id),
+            attempted_at,
+            legacy_footer=self._publication_reference(route, "evolution", "mode_ended", output_id),
+        )
+
+    async def find_terminal_publication(self, route, output, target_id, attempted_at):
+        control = self._terminal_control(route, output.family, output.output_id)
+        if target_id is None:
+            return await self._find_control_post(route, control, attempted_at)
+        return await self._find_exact_edit(
+            route, target_id, attempted_at, lambda message: self._has_control(message, control)
+        )
+
+    async def _find_exact_edit(self, route, target_id, attempted_at, matches_output):
+        channel = await self.channel(route)
+        try:
+            message = await channel.fetch_message(target_id)
+        except discord.NotFound:
+            return None
+        if (
+            message.id == target_id
+            and message.author.id == self.bot.user.id
+            and message.webhook_id is None
+            and message.channel.id == route.channel_id
+            and message.edited_at is not None
+            and message.created_at <= attempted_at <= message.edited_at
+            and message.created_at < message.edited_at
+            and matches_output(message)
+        ):
+            return message.id, message.edited_at
+        return None
+
+    @staticmethod
+    def _has_control(message, control):
+        return any(
+            isinstance(component, discord.Button) and component.custom_id == control
+            for row in message.components
+            for component in row.children
+        )
+
+    async def find_opening_publication(self, route, kind, attempted_at):
+        # These controls identify a unique new post. An edit has no provable
+        # creation timestamp for the publication it replaced.
+        prefix = f"nr:{route.session_id}:"
+        expected = {
+            "lobby": {prefix + "join"},
+            "offer": {prefix + f"pick:{i}" for i in range(3)},
+        }[kind]
+
+        def matches_controls(message):
+            controls = [
+                component.custom_id
+                for row in message.components
+                for component in row.children
+                if isinstance(component, discord.Button)
+            ]
+            return len(controls) == len(expected) and set(controls) == expected
+
+        return await self._find_original_post(route, attempted_at, matches_controls)
+
+    async def find_pacing_publication(self, route, kind, output_id, attempted_at):
+        return await self._find_referenced_post(route, "pacing", kind, output_id, attempted_at)
+
+    async def find_activation_publication(self, route, family, output_id, attempted_at):
+        return await self._find_referenced_post(
+            route, family, "activation", output_id, attempted_at
+        )
+
+    async def find_held_publication(self, route, output_id, attempted_at):
+        return await self._find_referenced_post(route, "evolution", "held", output_id, attempted_at)
+
+    async def find_recovery_publication(self, route, recovery_id, attempted_at):
+        return await self._find_control_post(
+            route,
+            f"nrq:{route.session_id}:recovery:{recovery_id}",
+            attempted_at,
+            legacy_footer=self._publication_reference(route, "recovery", "notice", recovery_id),
+        )
+
+    async def find_score_publication(self, route, family, output_id, attempted_at):
+        return await self._find_control_post(
+            route, f"nrq:{route.session_id}:score:{family}:{output_id}", attempted_at
+        )
+
+    async def _find_control_post(self, route, control, attempted_at, *, legacy_footer=None):
+        def matches(message):
+            return self._has_control(message, control) or bool(
+                legacy_footer
+                and len(message.embeds) == 1
+                and message.embeds[0].footer.text == legacy_footer
+            )
+
+        return await self._find_original_post(route, attempted_at, matches)
+
+    async def _find_referenced_post(self, route, family, kind, output_id, attempted_at):
+        reference = self._publication_reference(route, family, kind, output_id)
+
+        def matches_reference(message):
+            return len(message.embeds) == 1 and message.embeds[0].footer.text == reference
+
+        return await self._find_original_post(route, attempted_at, matches_reference)
+
+    async def _find_original_post(self, route, attempted_at, matches_output):
+        channel = await self.channel(route)
+        match = None
+        limit = 50
+        count = 0
+        async for message in channel.history(limit=limit, after=attempted_at, oldest_first=True):
+            count += 1
+            if (
+                message.author.id != self.bot.user.id
+                or message.webhook_id is not None
+                or message.edited_at is not None
+                or message.created_at < attempted_at
+                or message.channel.id != route.channel_id
+                or not matches_output(message)
+            ):
+                continue
+            if match is not None:
+                return None
+            match = message.id, message.created_at
+        return match if count < limit else None
 
     async def recovery_capabilities(self, route, panel_id):
         channel = await self.channel(route)
@@ -287,21 +536,81 @@ class DiscordTransport:
         await panel.remove_reaction(self.marker, self.bot.user)
         return facts
 
-    async def publish_recovery(self, route, state):
-        channel = await self.channel(route)
+    def _recovery_notice(self, route, state):
         embed, view = render(state, kind="rules", presentation=self.copy)
         embed.title = self.copy.text("reboot.notice_title")
-        embed.description = self.copy.text(
-            "reboot.notice_description", seconds=RECOVERY_READ_IN_SECONDS
-        )
+        embed.clear_fields()
+        key = _recovery_notice_key(state)
+        if state.context is None:
+            if state.admission.stage == "selected" and state.selected_card:
+                card = state.selected_card
+                embed.add_field(
+                    name=self.copy.text(f"cards.{card}.name"),
+                    value=self.copy.text(f"cards.{card}.description"),
+                    inline=False,
+                )
+        else:
+            for instance in resumption_rules(state):
+                embed.add_field(
+                    name=self.copy.text(f"cards.{instance.card_id}.name"),
+                    value=rule_text(self.copy, instance),
+                    inline=False,
+                )
+        if key in _RECOVERY_COUNTDOWN_KEYS:
+            deadline = state.recovery_resume_at or self._now() + timedelta(
+                seconds=RECOVERY_READ_IN_SECONDS
+            )
+            embed.description = self.copy.text(key, timestamp=int(deadline.timestamp()))
+        else:
+            embed.description = self.copy.text(key, seconds=RECOVERY_READ_IN_SECONDS)
+        if state.offer_panel_id:
+            embed.description += "\n\n" + choice_detail(state, self.copy)
+        elif state.phase_control_id:
+            embed.description += "\n\n" + phase_recovery_link(state, route, self.copy)
         embed.colour = self.copy.color("reboot")
+        embed.set_footer(text=self.copy.text("reboot.recovery_footer"))
+        view.add_item(
+            discord.ui.Button(
+                label=self.copy.text("buttons.game_status"),
+                custom_id=f"nrq:{route.session_id}:recovery:{state.recovery_id}",
+            )
+        )
+        return embed, view
+
+    async def publish_recovery(self, route, state):
+        channel = await self.channel(route)
+        embed, view = self._recovery_notice(route, state)
         message = await channel.send(
             embed=embed, view=view, allowed_mentions=discord.AllowedMentions.none()
         )
         return message.id
 
+    async def refresh_recovery_countdown(self, route, state):
+        if (
+            not state.recovery_resume_at
+            or not state.recovery_notice_id
+            or _recovery_notice_key(state) not in _RECOVERY_COUNTDOWN_KEYS
+        ):
+            return
+        try:
+            async with asyncio.timeout(5):
+                channel = await self.channel(route)
+                embed, view = self._recovery_notice(route, state)
+                await channel.get_partial_message(state.recovery_notice_id).edit(
+                    embed=embed, view=view, allowed_mentions=discord.AllowedMentions.none()
+                )
+        except (discord.HTTPException, TimeoutError):
+            # The notice already exists. A cosmetic correction cannot restart read-in.
+            pass
+
     async def publish_summary(self, route, snapshot, page):
-        embed, view = requested_summary.render(page, self.copy, snapshot=snapshot, public=True)
+        embed, view = requested_summary.render(
+            page,
+            self.copy,
+            snapshot=snapshot,
+            public=True,
+            publication_control=f"nrq:{route.session_id}:score:summary:{snapshot.summary_id}",
+        )
         channel = await self.channel(route)
         message = await channel.send(
             embed=embed, view=view, allowed_mentions=discord.AllowedMentions.none()
@@ -310,6 +619,13 @@ class DiscordTransport:
 
     async def publish_round(self, route, report, page):
         embed, view = round_report_ui.render(route.session_id, report.round_number, page, self.copy)
+        view.add_item(
+            discord.ui.Button(
+                label=self.copy.text("buttons.round_continues"),
+                custom_id=f"nrq:{route.session_id}:score:round:{report.round_number}",
+                disabled=True,
+            )
+        )
         channel = await self.channel(route)
         message = await channel.send(
             embed=embed, view=view, allowed_mentions=discord.AllowedMentions.none()
@@ -334,19 +650,46 @@ class DiscordTransport:
             # Only the publisher may reveal an unacknowledged choice/activation.
             # Its actual edit/send ACK establishes the authoritative message ID.
             return
+        if (
+            state.pacing
+            and state.pacing.stage == "selected"
+            and not state.offer
+            and not state.recovery_id
+        ):
+            # The old countdown remains until the publisher edits it or posts
+            # the claimed choice further down the channel.
+            return
         signature = (
             state.panel_id,
+            state.recovery_notice_id,
             state.admission.stage,
             state.recovery_id,
             state.context.position if state.context else None,
             state.offer.selected_incoming if state.offer else None,
             (state.revival.stage, state.revival.joined) if state.revival else None,
+            state.pacing.selection_due_at if state.pacing else None,
         )
         if self.refreshed.get(route.session_id) == signature or state.panel_id is None:
             return
         channel = await self.channel(route)
         embed, view = render(state, presentation=self.copy)
         await channel.get_partial_message(state.panel_id).edit(embed=embed, view=view)
+        if (
+            state.recovery_notice_id
+            and state.recovery_notice_id != state.panel_id
+            and state.recovery_control_id
+            and not state.recovery_id
+        ):
+            notice, notice_view = render(state, kind="rules", presentation=self.copy)
+            if state.offer_panel_id:
+                notice.description = choice_detail(state, self.copy, resumed=True)
+            else:
+                notice.description = phase_recovery_link(state, route, self.copy)
+                # Lobby, opening and revival buttons belong to the saved panel.
+                notice_view.clear_items()
+            await channel.get_partial_message(state.recovery_notice_id).edit(
+                embed=notice, view=notice_view, allowed_mentions=discord.AllowedMentions.none()
+            )
         self.refreshed[route.session_id] = signature
 
     async def paused(self, route, state):
@@ -459,8 +802,10 @@ class DiscordGame:
             )
 
     async def rules(self, interaction: discord.Interaction):
+        await self._show_rules(interaction, self.route(interaction))
+
+    async def _show_rules(self, interaction, route):
         await interaction.response.defer(ephemeral=True, thinking=True)
-        route = self.route(interaction)
         try:
             state = await self.runtime.state(route.session_id) if route else None
         except (IncompatibleState, StoreOverloaded):
@@ -488,8 +833,17 @@ class DiscordGame:
             (interaction.data or {}).get("custom_id", "")
         )
         if post and post[1] == route.session_id and interaction.message is not None:
+            anchor = int(post[2] or 0)
+            if not 0 <= anchor < 2**63:
+                return None
             return self.runtime.submit(
-                route, "summary_request", actor=interaction.user.id, source=str(interaction.id)
+                route,
+                "summary_request",
+                actor=interaction.user.id,
+                source=str(interaction.id),
+                scope="game" if post[2] is not None else "round",
+                anchor=anchor,
+                backwards=post[3] == "p",
             ), False
         if interaction.type is discord.InteractionType.application_command:
             if (
@@ -566,6 +920,23 @@ class DiscordGame:
             await requested_summary.reply_private(
                 interaction, editing, content=self.copy.text("reboot.retired_status")
             )
+            return
+        terminal = TERMINAL_CONTROL.fullmatch((interaction.data or {}).get("custom_id", ""))
+        if terminal:
+            ranked = requested_summary.RESULTS_CONTROL.fullmatch(f"nrr:{terminal[1]}:n:0:0")
+            await self.ranked_results(interaction, ranked)
+            return
+        publication = PUBLICATION_CONTROL.fullmatch((interaction.data or {}).get("custom_id", ""))
+        if publication:
+            session, _, _, recovery_id = publication.groups()
+            if recovery_id:
+                # The status button is read-only and cannot act on a replacement game.
+                route = self.route(interaction)
+                if route and route.session_id == session and not interaction.user.bot:
+                    await self._show_rules(interaction, route)
+            else:
+                current = requested_summary.CONTROL.fullmatch(f"nrs:{session}:round:0:0:n")
+                await self.private_summary(interaction, current)
             return
         leaderboard = round_report_ui.CONTROL.fullmatch(
             (interaction.data or {}).get("custom_id", "")
@@ -719,7 +1090,12 @@ class DiscordGame:
                         interaction.guild_id,
                         interaction.channel_id,
                     ):
-                        page = await SummaryStore(unit).live_page(match[1])
+                        page = await SummaryStore(unit).live_page(
+                            match[1],
+                            scope="game" if match[2] is not None else "round",
+                            actor=int(match[2] or 0),
+                            backwards=match[3] == "p",
+                        )
             except StoreOverloaded:
                 pass
         embed = view = None

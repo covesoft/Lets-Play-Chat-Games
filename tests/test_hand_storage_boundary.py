@@ -41,7 +41,7 @@ def decision(ctx, source, text):
 @pytest.mark.asyncio
 async def test_legal_replacement_and_new_owner_score_compose_atomically(tmp_path):
     ctx = EvaluationContext(
-        POSITION, (RuleInstance("brief", "NR017"), RuleInstance("over", "NR034"))
+        POSITION, (RuleInstance("files", "NR004"), RuleInstance("over", "NR034"))
     )
     hand = build_hand(
         ctx,
@@ -49,11 +49,12 @@ async def test_legal_replacement_and_new_owner_score_compose_atomically(tmp_path
         picker_id=303,
         deadline=Deadline("choice", DeadlineKind.CHOICE, NOW + timedelta(seconds=60)),
         rng=Random(0),
-        available_templates=frozenset({"NR004", "NR006", "NR019"}),
+        available_templates=frozenset({"NR006", "NR007", "NR019"}),
     ).hand
     option = next(item for item in hand.options if item.incoming.card_id == "NR019")
     prepared = revalidate_choice(hand, ctx, option.incoming.instance_id, now=NOW, actor_id=303)
     assert prepared.status is ChoiceStatus.READY
+    assert prepared.completion.outgoing_id == "over"
     incoming = EvaluationContext(
         replace(POSITION, round_id="round-two", ruleset_version=2, revision=1),
         prepared.completion.instances,

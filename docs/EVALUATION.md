@@ -23,7 +23,7 @@ including changes that later return to the same visible state.
 | --- | --- |
 | NR004 | Every ordinary human message; no attachments passes, one or more attachments fails once. Native voice attachments count; link previews do not. |
 | NR006 | Ordinary reaction actions by their actor; message creates return not-applicable for this card. |
-| NR007, NR008, NR010, NR011, NR013, NR016, NR017, NR019, NR022, NR024, NR025, NR027, NR033, NR034 | Present ordinary text, including whitespace/punctuation-only text; absent or empty text is not-applicable. |
+| NR007–NR022, NR024–NR031, NR033–NR035, NR037–NR039 | Present ordinary text, including whitespace/punctuation-only text; absent or empty text is not-applicable. |
 | NR036 | Present ordinary text against a frozen phrase; each active instance is evaluated separately. |
 
 Unsupported cards raise `NotImplementedError`. Invalid instance configurations
@@ -35,9 +35,13 @@ the implemented subset; the complete catalog and guild-bank service remain absen
 An exact received `-# ` prefix exempts the whole message, including its media,
 before parsing. Its decision contains only human-traffic/whisper counters, with
 no enrollment, score observation, or marker. This also works during a mode.
-Non-whisper mode messages explicitly raise `NotImplementedError`; they are never
-scored using ordinary predicates. Ordinary reaction enforcement is suspended in
-a mode. `None` outside a playing position means no enforcement candidate from
+During a saved Drawing Conclusions bout, the flow supplies the `mode` choice to
+`evaluate_message`. One or more recognized Unicode or custom emoji, with optional
+whitespace, passes if the post contains only emoji and has no attachments, stickers,
+or voice memo. The outcome contributes one binary observation and a failed post
+requests one marker. Mode messages contribute no ordinary participation. A mode
+without a supported choice raises `NotImplementedError` on non-whisper posts.
+Ordinary reaction enforcement is suspended during a mode. `None` outside a playing position means no enforcement candidate from
 this API, not a complete application's lobby/pause traffic policy.
 
 Message decisions carry the supplied position, stable source key, actor ID,

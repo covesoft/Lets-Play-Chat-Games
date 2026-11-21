@@ -1,22 +1,20 @@
-# New Rules ordinary-round preview — v0.3.14 / schema 13
+# New Rules Discord preview — v0.3.38 / schema 16
 
 This development build connects the existing ordinary engine to Discord. Run one
 bot process against a database. Private/requested scores, automatic interims and
-compact round-end reports are wired. Modes, explicit evidence-based restart
-resume and richer score details remain separate work; M2 is still in progress.
+compact round-end reports and acknowledged ordinary-phase reboot recovery are
+wired. Drawing Conclusions uses the same announced cutover, and an interrupted
+bout restores ordinary play after read-in. Other Breaking Moments and remaining
+release work are still open.
 
 ## Install and enable
 
-The current schema is **13**, with WAL and foreign keys enabled. Apply both
-v0.3.14 patches in order to v0.3.13: retirement/copy/transport preparation, then
-automatic recovery. Stop the bot and make/verify a SQLite backup of its actual
-configured database before the schema-12 upgrade. Install, run offline checks,
-then `python -m lets_play --init-db` (schema 13) and start. No new command sync.
-Schema 13 appends only recovery-notice send/ACK guards and their index; released
-migrations 1–12 and existing game scores/clocks/claims remain unchanged. Failed
-migration steps roll back. To roll back an upgraded database, restore the verified
-schema-12 backup with v0.3.13 source. Never downgrade the schema-13 file in place.
-See [RECOVERY.md](RECOVERY.md) and [STORAGE.md](STORAGE.md).
+The current schema is **16**, with WAL and foreign keys enabled. For a v0.3.37
+installation on schema 16, stop the bot before applying v0.3.38. Reinstall and
+restart.
+For a fresh database, run `python -m lets_play --init-db`. See
+[RECOVERY.md](RECOVERY.md) and [STORAGE.md](STORAGE.md).
+
 
 Keep token, owner IDs and actual emoji markup in the private `.env`:
 
@@ -57,16 +55,20 @@ badge map, voice library or additional intent is needed.
    activation. The frozen post target can trigger it thereafter; fallback is at
    14:30. Only actual warning publication starts its full 30 seconds. A delayed
    send must not shorten that notice. Picker eligibility uses the saved cutoff
-   snapshot, with at least five ordinary posts; the exactly-at-cutoff body is
-   scored afterward in the old round.
-4. The warning is edited into the selected picker's complete three-card hand;
-   no duplicate choice message is sent. Those original-panel buttons remain
-   authoritative. The successful edit ACK starts its publication-owned 60-second
-   choice deadline. Missing/uncertain edits enter recovery without a fallback send.
-   Later hands use sixteen already implemented non-phrase templates. Choices can
-   add a rule or replace one legal existing occupant. When several outgoing rules are legal, choosing the incoming
-   card reveals the outgoing buttons. The original deadline does not restart;
-   timeout keeps the chosen incoming card and completes a legal outgoing choice.
+   snapshot, with at least five ordinary posts. The exactly-at-cutoff body is
+   scored afterward in the old round. The public warning shows the countdown
+   without rule fields. `/rules` still displays the game status and current rules.
+4. With fewer than eight observed channel messages after the warning, the warning
+   is edited into the complete hand. With eight or more, including whispers and
+   bot posts, the chooser gets one new message and the warning stays in chat.
+   The acknowledged panel's buttons remain authoritative and actual delivery
+   starts the 60-second choice deadline. An uncertain edit or send enters recovery.
+   Later hands use thirty-two implemented non-phrase templates. Choices can
+   add a rule or replace one legal existing occupant. When several outgoing rules
+   are legal, choosing the incoming card opens **New Rules — choose a rule to
+   remove**. The panel lists each outgoing rule's name and description in button
+   order. It uses the original deadline. Timeout keeps the chosen incoming card
+   and completes a legal outgoing choice.
 5. Confirm old rules remain enforced during the entire choice and announced
    transition. `/rules` shows those current rules, while the public transition
    shows the future set and exact effective time. At cutover the old round resolves
@@ -90,17 +92,38 @@ badge map, voice library or additional intent is needed.
    game resumes automatically. Check preserved scores/rules/round and verify that
    read-in posts received no points. The known notice becomes the current panel.
    An overdue round can proceed to its saved pacing boundary after read-in.
-9. The manager debug pane is retired. Old diagnostic controls reply privately.
-   Interrupted warnings/choices, held/revival/opening/modes and uncertain sends
-   remain paused in this first automatic path, with a brief host-contact notice.
-   Manager ending remains available. Deleted/missing ACK evidence does not allow
-   a blind resend. Actual marker/client/channel behavior still needs human checks.
+9. Also reboot during a published warning, a published choice, a partial
+   replacement-target choice, and an already-announced rule transition. Each
+   receives the same automatic read-in. Confirm original deadlines and selections
+   survive. The notice links to the saved cards; their original buttons work after
+   resume, while the notice has no duplicate card buttons. If the deadline passes
+   during the pause, timeout completes the choice automatically after read-in.
+   Announced transitions show the incoming rules during read-in, take effect at
+   resume once, and retain their saved round clock.
+10. Reboot during held play, a Continue check, a lobby, or opening cards. Check
+    that the original panel remains the place to click. If the lobby or Continue
+    deadline lands during read-in, it ends on that deadline. Held idle time
+    carries over, and an expired opening choice finishes automatically.
+11. The manager debug pane is retired. Old diagnostic controls reply privately.
+    Unpublished phases and unresolved sends remain paused, with a brief
+    host-contact notice.
+    Manager ending remains available. Deleted/missing ACK evidence does not allow
+    a blind resend. Actual marker/client/channel behavior still needs human checks.
 
-Later pool: NR004, NR006, NR007, NR008, NR010, NR011, NR013, NR016, NR017,
-NR019, NR022, NR024, NR025, NR027, NR033 and NR034. NR036 is not offered because
-its phrase-bank integration belongs to a later increment. No new validators are
-introduced here. Legal hands and replacements still require actual-validator
-compatibility witnesses; an incomplete hand is never published.
+Later pool: all implemented templates in [HANDS.md](HANDS.md) other than NR036.
+The remaining Brevity and Typography cards join this pool. See that reference
+for conflicts and replacements. NR036 awaits live phrase-bank integration. Every displayed
+choice must have a proven legal outcome, and every hand has three choices.
+
+12. When a later hand offers Drawing Conclusions, look for the *Breaking Moment
+    · 2 minutes* label and choose its blurple button. Check that `/rules`
+    shows only Drawing Conclusions during the bout. Try three distinct emoji-only
+    posts and then an emoji mixed with text. Expect one marker on the mixed post.
+    A whisper or reaction should add no compliance observation. After two minutes
+    a lime-green notice lists the restored rules in the same round. Its next
+    hand is ordinary-only. In a separate bout, restart after the third valid
+    post and check the recovery countdown, the edited rules panel when play
+    resumes, and the saved scores. Expect no separate green notice after read-in.
 
 ## Delivery and ordering
 
@@ -133,8 +156,9 @@ highest first, with unrated players last and ID breaking exact ties. They retain
 clickable non-pinging identities and no score footer on preplay closures.
 Private live scores, requested public reports, automatic interims and actual
 round-end boards are wired. Richer fault/rule/streak and badge presentation,
-Drawing Conclusions, settings, owner grants, profile commands, evidence-based
-restart resume and final-output retry/24-hour cleanup workers remain unfinished.
+Drawing Conclusions, settings, owner grants, profile commands, remaining recovery
+phases/uncertain-send reconciliation and final-output retry/24-hour cleanup workers
+remain unfinished.
 Failed terminal delivery retains durable results evidence. This is a development
 preview, not a public-play release or M2 completion.
 
@@ -182,10 +206,15 @@ See [ROUND_REPORTS.md](ROUND_REPORTS.md) for delivery guards and timing tests.
 
 ## Continuity and next bite
 
-Automatic settled-round reboot recovery is implemented; M2 remains in progress.
-Next extend it to acknowledged ordinary warnings and choices, keeping original
-publication deadlines and partial selections. Cover genuinely uncertain sends
-only after each outbound family's proof/guard contract is implemented. Held,
-revival/opening continuation and Drawing Conclusions follow. Keep recovery
-unattended; technical reconciliation is host/service work. Do not reintroduce a
+Acknowledged ordinary, held, revival and opening phases recover automatically.
+Startup can verify an interrupted lobby or opening-card send from a bounded
+match of the original controls. New warning and revival posts support the same
+bounded lookup with a reference bound to the original round attempt. M2 continues
+with proof for other output families. Activation announcements also carry a
+reference and require creation strictly before the saved cutover. Held and
+recovery notices also carry exact references. A verified recovery notice from
+a superseded restart clears the old uncertainty. The latest restart gets its
+own announcement and read-in. Recovery notices use a read-only Game status
+button. Public score posts use Check current scores and remain footer-free. Drawing Conclusions follows recovery. Keep
+recovery unattended; technical reconciliation is host/service work. Do not reintroduce a
 manager resume gate or expand retired debug UI. See [RECOVERY.md](RECOVERY.md).

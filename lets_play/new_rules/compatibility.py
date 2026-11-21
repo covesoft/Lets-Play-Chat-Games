@@ -3,7 +3,7 @@
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from enum import StrEnum
-from itertools import permutations
+from itertools import combinations, permutations
 
 from lets_play.new_rules.catalog import (
     CARD_SPECS,
@@ -24,8 +24,21 @@ from lets_play.new_rules.contracts import (
     SessionRoute,
 )
 from lets_play.new_rules.evaluation import EvaluationContext, evaluate_message
-from lets_play.new_rules.parsing import MAX_PARSER_CODEPOINTS, ParserLimitError, parse_message
-from lets_play.new_rules.text_rules import RuleConfigurationError, phrase_keys
+from lets_play.new_rules.parsing import (
+    MAX_PARSER_CODEPOINTS,
+    ParserLimitError,
+    grapheme_count,
+    parse_message,
+)
+from lets_play.new_rules.text_rules import (
+    MIN_CHARACTERS,
+    MIN_WORDS,
+    REQUIRED_ENDINGS,
+    ROYAL_WORDS,
+    RuleConfigurationError,
+    decree_case,
+    phrase_keys,
+)
 
 
 class Rejection(StrEnum):
@@ -34,6 +47,7 @@ class Rejection(StrEnum):
     DUPLICATE = "duplicate_template"
     CAP = "mechanical_cap"
     SLOT = "exclusive_slot"
+    CONFLICT = "direct_conflict"
     NO_WITNESS = "no_witness"
     SEARCH_LIMIT = "witness_search_limit"
 
@@ -72,6 +86,16 @@ class Assessment:
 _ROUTE = SessionRoute(1, 1, "witness")
 _POSITION = SessionPosition(_ROUTE, Lifecycle.PLAYING, round_id="witness")
 _TIME = datetime(2000, 1, 1, tzinfo=UTC)
+_MATCHING_MARK_CONFLICTS = frozenset({("NR010", "NR013"), ("NR012", "NR014")})
+_FILLER_WORDS = ("bright", "green", "ducks", "swim", "today", "near", "each", "pond")
+
+
+def _direct_conflict(left: str, right: str) -> bool:
+    if left == "NR019":
+        return CARD_SPECS[right].deck is Deck.CLAUSES
+    if right == "NR019":
+        return CARD_SPECS[left].deck is Deck.CLAUSES
+    return (left, right) in _MATCHING_MARK_CONFLICTS or (right, left) in _MATCHING_MARK_CONFLICTS
 
 
 def inventory_rejection(instances: tuple[RuleInstance, ...]) -> Rejection | None:
@@ -95,6 +119,8 @@ def inventory_rejection(instances: tuple[RuleInstance, ...]) -> Rejection | None
     slots = [CARD_SPECS[i.card_id].slot for i in instances if CARD_SPECS[i.card_id].slot]
     if len(set(slots)) != len(slots):
         return Rejection.SLOT
+    if any(_direct_conflict(left, right) for left, right in combinations(cards, 2)):
+        return Rejection.CONFLICT
     return None
 
 
@@ -108,6 +134,58 @@ def _extensions(left: tuple[str, ...], right: tuple[str, ...]):
     for size in range(min(len(left), len(right)), -1, -1):
         if size == 0 or left[-size:] == right[:size]:
             yield left + right[size:]
+
+
+def _required_part_orders(phrases: tuple[tuple[str, ...], ...], *, require_royal: bool):
+    needs_word = require_royal and all(ROYAL_WORDS.isdisjoint(phrase) for phrase in phrases)
+    for order in permutations(phrases):
+        if not needs_word:
+            yield order
+            continue
+        for word in sorted(ROYAL_WORDS):
+            for index in range(len(order) + 1):
+                yield (*order[:index], (word,), *order[index:])
+
+
+def _render_witness(words: tuple[str, ...], cards: set[str], punctuation: str) -> str:
+    if "NR037" in cards:
+        words = tuple(decree_case(word) for word in words)
+    if "NR038" in cards:
+        words = (words[0] + ",", *words[1:])
+    text = " ".join(words) + punctuation
+    if "NR008" in cards:
+        return text.upper()
+    if "NR007" in cards:
+        return text.lower()
+    return text
+
+
+def _witness_texts(
+    words: tuple[str, ...],
+    cards: set[str],
+    punctuation: str,
+    *,
+    has_prefix: bool,
+    has_suffix: bool,
+):
+    text = _render_witness(words, cards, punctuation)
+    missing_words = MIN_WORDS - len(words) if "NR018" in cards else 0
+    missing_characters = MIN_CHARACTERS - grapheme_count(text) if "NR020" in cards else 0
+    if missing_words <= 0 and missing_characters <= 0:
+        yield len(words), text
+        return
+    padding = []
+    for filler in _FILLER_WORDS:
+        if len(padding) >= missing_words and missing_characters <= 0:
+            break
+        if filler not in words:
+            padding.append(filler)
+            missing_characters -= len(filler) + 1
+    # Inserting next to a required phrase can preserve overlap with either end.
+    # Try the gaps and let actual validators reject any split phrase.
+    for index in range(int(has_prefix), len(words) + 1 - int(has_suffix)):
+        padded = (*words[:index], *padding, *words[index:])
+        yield len(padded), _render_witness(padded, cards, punctuation)
 
 
 def assess_state(
@@ -128,12 +206,13 @@ def assess_state(
     cards = {i.card_id for i in instances}
     prefix = ("yes",) if "NR024" in cards else ("please",) if "NR033" in cards else ()
     suffix = ("over",) if "NR034" in cards else ()
-    punctuation = "..." if "NR011" in cards else "?" if "NR010" in cards else ""
+    punctuation = next((ending for card, ending in REQUIRED_ENDINGS.items() if card in cards), "")
     candidates: set[tuple[str, ...]] = set()
     limited = False
-    # At most two phrase instances by the mechanical cap. Every stage is bounded;
-    # these budgets withhold an unproven state, never truncate a scored message.
-    for order_index, order in enumerate(permutations(phrases)):
+    # At most two phrases and one extra inclusion word. Every stage is bounded;
+    # these budgets withhold an unproven state and leave scored messages intact.
+    orders = _required_part_orders(phrases, require_royal="NR035" in cards)
+    for order_index, order in enumerate(orders):
         if order_index >= budget.max_candidates:
             limited = True
             break
@@ -152,13 +231,18 @@ def assess_state(
                 limited = True
                 break
             candidates.add(words or ("hello",))
-    for words in sorted(candidates, key=lambda item: (len(item), item)):
-        text = " ".join(words) + punctuation
-        if "NR008" in cards:
-            text = text.upper()
-        elif "NR007" in cards:
-            text = text.lower()
-        if len(text) > MAX_PARSER_CODEPOINTS:
+    texts = (
+        trial
+        for words in sorted(candidates, key=lambda item: (len(item), item))
+        for trial in _witness_texts(
+            words, cards, punctuation, has_prefix=bool(prefix), has_suffix=bool(suffix)
+        )
+    )
+    for index, (word_count, text) in enumerate(texts):
+        if index >= budget.max_candidates:
+            limited = True
+            break
+        if word_count > budget.max_words or len(text) > MAX_PARSER_CODEPOINTS:
             limited = True
             continue
         view = parse_message(text)
@@ -178,13 +262,17 @@ def assess_state(
 def replacement_targets(
     active: tuple[RuleInstance, ...], incoming: RuleInstance
 ) -> tuple[str | None, ...]:
-    """Only capped-deck/exclusive-slot removals; no unrelated retirement escape."""
+    """Find removals permitted by the caps, slots, and direct conflicts."""
     if incoming.card_id not in CARD_SPECS:
         raise NotImplementedError("This template has no implemented compatibility metadata.")
     if incoming.card_id != "NR036" and any(i.card_id == incoming.card_id for i in active):
         return ()
     spec = CARD_SPECS[incoming.card_id]
-    groups = []
+    groups = [
+        {instance.instance_id}
+        for instance in active
+        if _direct_conflict(incoming.card_id, instance.card_id)
+    ]
     if spec.slot:
         occupants = {i.instance_id for i in active if CARD_SPECS[i.card_id].slot == spec.slot}
         if occupants:

@@ -17,6 +17,7 @@ from lets_play.new_rules.contracts import (
     Phase,
     ReactionEvent,
 )
+from lets_play.storage.breaking_flow import BreakingFlow
 from lets_play.storage.game_codec import IncompatibleState
 from lets_play.storage.game_store import _execute, _row
 from lets_play.storage.game_store import _unit_mutating as _write
@@ -237,6 +238,22 @@ class RecoveryFlow:
         )
         if admission["stage"] == "ended":
             return "ended"
+        # Older builds queued a notice when recovery restored the rules. Retire
+        # only those that never had a send claim. Claimed output still needs proof.
+        await _execute(
+            self.conn,
+            """UPDATE nr_evolution_outputs AS o SET retired_at_utc=?
+               WHERE o.session_id=? AND o.kind='mode_ended' AND o.retired_at_utc IS NULL
+               AND o.acknowledged_at_utc IS NULL AND o.message_id IS NULL
+               AND EXISTS(
+                   SELECT 1 FROM nr_breaking_moments b
+                   WHERE b.session_id=o.session_id AND b.round_id=o.token AND b.outcome='interrupted'
+               ) AND NOT EXISTS(
+                   SELECT 1 FROM nr_discord_deliveries d
+                   WHERE d.session_id=o.session_id AND d.family='evolution' AND d.output_id=o.output_id
+               )""",
+            (utc_int(frame.received_at), session),
+        )
         previous = await active_recovery(self.unit, session)
         work = []
         if previous is None:
@@ -256,6 +273,18 @@ class RecoveryFlow:
                 # No absent ACK is treated as evidence that delivery failed.
                 for c in candidates:
                     o = await _row(self.conn, f"SELECT * FROM {table} WHERE output_id=?", (c[0],))
+                    if (
+                        family == "evolution"
+                        and o["kind"] == "mode_ended"
+                        and not await _row(
+                            self.conn,
+                            "SELECT 1 FROM nr_discord_deliveries WHERE family='evolution' AND output_id=?",
+                            (c[0],),
+                        )
+                    ):
+                        # The first possible send will still be owned by its
+                        # durable claim. No network attempt existed at the fence.
+                        continue
                     work.append((family, c[0], o["kind"], "unknown", None, None))
         else:
             await self._record(session, previous["recovery_id"])
@@ -339,6 +368,7 @@ class RecoveryFlow:
         if admission["playing_session_id"] is None:
             if (
                 admission["stage"] == "lobby_published"
+                and admission["lobby_deadline_utc"] is not None
                 and utc_int(frame.received_at) >= admission["lobby_deadline_utc"]
             ):
                 from lets_play.storage.opening_flow import OpeningFlow
@@ -620,7 +650,10 @@ class RecoveryFlow:
                 or context.position.round_id != row["original_round"]
             ):
                 return "stale_owner"
-            if context.position.phase is not Phase.ORDINARY:
+            if context.position.phase is Phase.MODE and (
+                row["original_lifecycle"] != "playing"
+                or not await BreakingFlow(self.unit).active(context.position)
+            ):
                 return "unsupported_mode"
             if row["original_pause"] not in (None, "revival"):
                 return "existing_pause"
@@ -867,6 +900,9 @@ class RecoveryFlow:
             from lets_play.storage.pacing_flow import RoundPacing
 
             await OrdinaryFlow(self.unit)._advance_due(frame, templates)
+            # If an announced start fell inside read-in, honour the original
+            # round cutover but never start a fresh bout for the unseen window.
+            await BreakingFlow(self.unit).advance(frame, interrupted=True)
             await RoundPacing(self.unit)._advance_due(frame)
             await EvolutionFlow(self.unit)._advance_due(frame)
 

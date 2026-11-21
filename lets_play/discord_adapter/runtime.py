@@ -40,14 +40,16 @@ PUBLISH_KINDS = {
     "pacing_warning": EventKind.WARNING_PUBLISHED,
     "pacing_revival": EventKind.REVIVAL_PUBLISHED,
     "evolution_held": EventKind.HELD_PUBLISHED,
+    "evolution_mode_ended": EventKind.MODE_ENDED_PUBLISHED,
     "evolution_closed_silent": EventKind.SILENT_END_PUBLISHED,
 }
 
 
 class OpeningRuntime:
-    def __init__(self, store, transport, *, clock=None):
+    def __init__(self, store, transport, *, clock=None, include_breaking_moment=True):
         self.store, self.transport = store, transport
         self.clock = clock or ReceiptClock()
+        self.include_breaking_moment = include_breaking_moment
         self.routes = {}  # Exact (guild,channel) -> route; live routes only.
         self.lanes = {}
         self.publishers = {}
@@ -116,6 +118,15 @@ class OpeningRuntime:
         # All barriers exist before recovery publishers or normal work can run.
         for route in tuple(self.routes.values()):
             self._kick(route)
+        cursor = ""
+        while True:
+            async with self.store.transaction(write=False) as unit:
+                terminal = await DiscordStore(unit).terminal_routes(after_session=cursor)
+            if not terminal:
+                break
+            for route in terminal:
+                self._kick(route)
+            cursor = terminal[-1].session_id
 
     async def _frame(self, unit, route, kind, received, actor=None, source=None, created=None):
         last, floor = await DiscordStore(unit).receipt_position(route.session_id)
@@ -164,6 +175,7 @@ class OpeningRuntime:
 
     async def _handle(self, route, request):
         d, action = request.data, request.action
+        restored_evolution = False
         kind = {
             "admit": EventKind.LOBBY_CREATE,
             "join": EventKind.LOBBY_JOIN,
@@ -177,8 +189,13 @@ class OpeningRuntime:
             "configure": EventKind.ADVANCEMENT_RECHECK,
             "prepare": EventKind.OFFER_PREPARE,
             "summary_request": EventKind.TIMER,
+            "channel_post": EventKind.TIMER,
             "summary_ack": EventKind.TIMER,
             "round_ack": EventKind.TIMER,
+            "recovery_reconcile_publication": EventKind.RECOVERY_RECONCILE,
+            "recovery_reconcile_notice": EventKind.RECOVERY_RECONCILE,
+            "recovery_reconcile_score": EventKind.RECOVERY_RECONCILE,
+            "recovery_reconcile_terminal": EventKind.RECOVERY_RECONCILE,
             "recovery_prepare": EventKind.RECOVERY_APPROVE,
             "recovery_claim": EventKind.RECOVERY_NOTICE_CLAIM,
             "recovery_ack": EventKind.RECOVERY_NOTICE_PUBLISHED,
@@ -201,20 +218,58 @@ class OpeningRuntime:
             flow = OpeningFlow(unit)
             recovery_row = await active_recovery(unit, route.session_id)
             recovery = recovery_row["recovery_id"] if recovery_row else None
-            if action == "publish":
+            mode_notice_ack = action == "publish" and recovery and d["output"].kind == "mode_ended"
+            if action == "publish" and not mode_notice_ack:
                 await DiscordStore(unit).delivered(d["output"], d["message_id"], frame.sequence)
-            if action == "pause":
+            if mode_notice_ack:
+                result = await RebootFlow(unit).reconcile_publication(
+                    replace(frame, kind=EventKind.RECOVERY_RECONCILE),
+                    recovery,
+                    "evolution",
+                    d["output"].output_id,
+                    d["message_id"],
+                    frame.received_at,
+                )
+            elif action == "pause":
                 result = (
                     await RecoveryFlow(unit).begin(frame, uuid4().hex)
                     if not recovery
                     else await RebootFlow(unit).block(frame, recovery)
+                )
+            elif action == "recovery_reconcile_publication":
+                result = await RebootFlow(unit).reconcile_publication(
+                    frame,
+                    d["recovery_id"],
+                    d["family"],
+                    d["output_id"],
+                    d["message_id"],
+                    d["published_at"],
+                )
+            elif action == "recovery_reconcile_notice":
+                result = await RebootFlow(unit).reconcile_superseded_notice(
+                    frame, d["recovery_id"], d["superseded"], d["message_id"], d["published_at"]
+                )
+            elif action == "recovery_reconcile_score":
+                result = await RebootFlow(unit).reconcile_score(
+                    frame,
+                    d["recovery_id"],
+                    d["family"],
+                    d["output_id"],
+                    d["message_id"],
+                    d["published_at"],
+                )
+            elif action == "recovery_reconcile_terminal":
+                result = await RebootFlow(unit).reconcile_terminal(
+                    frame, d["output"], d["message_id"], d["published_at"]
                 )
             elif action == "recovery_prepare":
                 result = await RebootFlow(unit).prepare(
                     frame,
                     d["recovery_id"],
                     capabilities=d["capabilities"],
-                    templates=ORDINARY_CARDS,
+                    templates=ORDINARY_CARDS
+                    if await unit.get_context(route.session_id)
+                    else OPENING_CARDS,
                 )
             elif action == "recovery_claim":
                 result = await RebootFlow(unit).claim(frame, d["recovery_id"])
@@ -223,9 +278,19 @@ class OpeningRuntime:
                     frame, d["recovery_id"], d["message_id"]
                 )
             elif action == "recovery_resume":
+                context = await unit.get_context(route.session_id)
+                # Existing held/revival configuration belongs to the saved round.
+                # Do not bootstrap it again with new-session defaults after resume.
+                preserve_config = context and (
+                    context.position.advancement == "held"
+                    or context.position.phase == "mode"
+                    or recovery_row
+                    and recovery_row["original_pause"] == "revival"
+                )
                 result = await RebootFlow(unit).resume(
                     frame, d["recovery_id"], capabilities=d["capabilities"]
                 )
+                restored_evolution = bool(preserve_config and result == "resumed")
             elif action == "event":
                 event = replace(
                     d["event"],
@@ -276,10 +341,16 @@ class OpeningRuntime:
                 )
             else:
                 result = await self._normal(unit, route, frame, action, d)
-            if not recovery and action not in {"pause", "end", "admit"}:
+            if action == "channel_post":
+                await RoundPacing(unit).observe_channel_message(route.session_id, frame.source_id)
+            elif action == "event" and frame.kind is EventKind.MESSAGE_CREATE:
+                await RoundPacing(unit).observe_channel_message(
+                    route.session_id, event.envelope.source_id
+                )
+            if not recovery and action not in {"pause", "end", "admit", "channel_post"}:
                 await self._maybe_auto(unit, route, frame)
         self.work_queued.discard(d.get("work_key"))
-        if action == "configure" and not recovery:
+        if restored_evolution or (action == "configure" and not recovery):
             self.configured.add(route.session_id)
         await self._followups(route)
         if action not in {"admit", "pause"}:
@@ -302,7 +373,8 @@ class OpeningRuntime:
             )
 
     async def _normal(self, unit, route, frame, action, d):
-        opening, flow, evolution = OpeningFlow(unit), OrdinaryFlow(unit), EvolutionFlow(unit)
+        opening, flow = OpeningFlow(unit), OrdinaryFlow(unit)
+        evolution = EvolutionFlow(unit, include_breaking_moment=self.include_breaking_moment)
         context = await unit.get_context(route.session_id)
 
         async def stale():
@@ -398,13 +470,20 @@ class OpeningRuntime:
                     return result.status.value
                 return await opening.tick(replace(frame, kind=EventKind.TIMER))
             return await opening.timeout(frame, rng=self.rng)
-        if action == "tick":
+        if action in {"tick", "channel_post"}:
             return await opening.tick(frame)
         if action == "summary_request":
             # Observe due phase boundaries before capturing, in the same receipt.
             await opening.tick(frame)
             key = "request:" + frame.source_id
-            return await SummaryStore(unit).request(route.session_id, key, now=frame.received_at)
+            return await SummaryStore(unit).request(
+                route.session_id,
+                key,
+                now=frame.received_at,
+                scope=d.get("scope", "round"),
+                actor=d.get("anchor", 0),
+                backwards=d.get("backwards", False),
+            )
         raise ValueError("Unknown runtime action.")
 
     async def _followups(self, route):
@@ -414,7 +493,7 @@ class OpeningRuntime:
         if not state or not state.context or state.recovery_id or state.admission.stage == "ended":
             return
         session = route.session_id
-        if session not in self.configured:
+        if session not in self.configured and state.context.position.phase == "ordinary":
             key = (session, "configure")
             if key not in self.work_queued:
                 self.work_queued.add(key)
@@ -446,10 +525,18 @@ class OpeningRuntime:
         if self.closed or not self.ready or not state or state.admission.stage == "ended":
             return
         if state.recovery_id:
-            if state.recovery_resume_at and route.session_id not in self.blocked_recoveries:
-                delay = max(0, (state.recovery_resume_at - self.clock.now()).total_seconds())
+            deadline = state.terminal_recovery_deadline
+            action = "tick"
+            if (
+                state.recovery_resume_at
+                and route.session_id not in self.blocked_recoveries
+                and (deadline is None or state.recovery_resume_at < deadline)
+            ):
+                deadline, action = state.recovery_resume_at, "recovery_resume"
+            if deadline is not None:
+                delay = max(0, (deadline - self.clock.now()).total_seconds())
                 self.timers[route.session_id] = asyncio.get_running_loop().call_later(
-                    delay, self._timer, route, "recovery_resume"
+                    delay, self._timer, route, action
                 )
             return
         deadline = state.next_deadline
@@ -505,8 +592,17 @@ class OpeningRuntime:
                     pending = await DiscordStore(unit).pending(route.session_id)
                     markers = await DiscordStore(unit).markers(route.session_id)
                 if recovery:
-                    if await self._publish_recovery(route):
-                        continue
+                    await self._schedule(route)
+                    try:
+                        if await self._publish_recovery(route):
+                            continue
+                    except Exception:
+                        # Terminal expiry can win while a recovery probe is in flight.
+                        # Its committed closure still belongs to this publisher.
+                        state = await self.state(route.session_id)
+                        if state and state.admission.stage == "ended":
+                            continue
+                        raise
                     state = await self.state(route.session_id)
                     if state and state.admission.stage == "ended":
                         continue
@@ -515,19 +611,55 @@ class OpeningRuntime:
                     if pending.kind == "recovery":
                         await self._fault(route, "flow_recovery")
                         return
-                    async with self.store.transaction() as unit:
-                        claimed = await DiscordStore(unit).claim(
-                            route.session_id, pending, self.clock.now()
-                        )
+                    async with self.network_slots, asyncio.timeout(20):
+                        # Choose and claim the delivery method when this output
+                        # reaches the network slot, including traffic queued so far.
+                        async with self.store.transaction() as unit:
+                            claimed = await DiscordStore(unit).claim(
+                                route.session_id, pending, self.clock.now()
+                            )
+                        if claimed:
+                            async with self.store.transaction(write=False) as unit:
+                                store = DiscordStore(unit)
+                                if await store.pending(route.session_id) != pending:
+                                    continue
+                                state = await store.state(route.session_id)
+                                if pending.choice or pending.terminal:
+                                    proof_target = await store.publication_target(
+                                        route.session_id, pending
+                                    )
+                                    if proof_target is None:
+                                        raise LaneUnavailable("Publication target was not claimed.")
+                                    state = replace(
+                                        state, panel_id=proof_target["target_message_id"]
+                                    )
+                                elif pending.kind == "mode_ended":
+                                    state = replace(
+                                        state,
+                                        mode_end_rules=await store.mode_end_rules(
+                                            route.session_id, pending.token
+                                        ),
+                                    )
+                            identified = getattr(self.transport, "publish_identified", None)
+                            if identified is not None and (
+                                pending.family == "pacing"
+                                or pending.kind in {"activation", "held", "mode_ended"}
+                                or pending.choice
+                                or pending.terminal
+                            ):
+                                message_id = await identified(route, pending, state)
+                            else:
+                                message_id = await self.transport.publish(
+                                    route, pending.ui_kind, state
+                                )
                     if not claimed:
                         async with self.store.transaction(write=False) as unit:
                             if await DiscordStore(unit).pending(route.session_id) != pending:
                                 continue
+                        if pending.terminal and await self._verify_terminal(route, pending):
+                            continue
                         await self._fault(route, "uncertain_delivery")
                         return
-                    state = await self.state(route.session_id)
-                    async with self.network_slots, asyncio.timeout(20):
-                        message_id = await self.transport.publish(route, pending.ui_kind, state)
                     await asyncio.shield(
                         self.submit(route, "publish", output=pending, message_id=message_id)
                     )
@@ -544,7 +676,9 @@ class OpeningRuntime:
                 if await self._publish_summary(route):
                     continue
                 state = await self.state(route.session_id)
-                if state and state.admission.stage in {"active", "ended"}:
+                if state and (
+                    state.admission.stage in {"active", "ended"} or state.recovery_notice_id
+                ):
                     async with self.network_slots, asyncio.timeout(20):
                         await self.transport.refresh(route, state)
                 if state and state.admission.stage == "recovery":
@@ -564,12 +698,168 @@ class OpeningRuntime:
         finally:
             self.publishers.pop(route.session_id, None)
 
+    async def _recovery_capabilities(self, route, state):
+        facts = await self.transport.recovery_capabilities(route, state.panel_id)
+        if state.recovery_control_id and state.recovery_control_id != state.panel_id:
+            control_facts = await self.transport.recovery_capabilities(
+                route, state.recovery_control_id
+            )
+            if not control_facts.available:
+                return control_facts
+        return facts
+
+    async def _verify_terminal(self, route, output):
+        find = getattr(self.transport, "find_terminal_publication", None)
+        if find is None:
+            return False
+        async with self.store.transaction(write=False) as unit:
+            claim = await DiscordStore(unit).publication_target(route.session_id, output)
+        if claim is None or (output.kind == "closed_silent" and claim["target_message_id"] is None):
+            return False
+        async with self.network_slots, asyncio.timeout(20):
+            proof = await find(
+                route, output, claim["target_message_id"], utc_datetime(claim["attempted_at_utc"])
+            )
+        if proof is None:
+            return False
+        return (
+            await self.submit(
+                route,
+                "recovery_reconcile_terminal",
+                output=output,
+                message_id=proof[0],
+                published_at=proof[1],
+            )
+            == "found"
+        )
+
     async def _publish_recovery(self, route):
         session = route.session_id
         if session in self.blocked_recoveries:
             return False
+        probe = notice = score = None
+        find_opening = getattr(self.transport, "find_opening_publication", None)
+        find_pacing = getattr(self.transport, "find_pacing_publication", None)
+        find_activation = getattr(self.transport, "find_activation_publication", None)
+        find_choice_edit = getattr(self.transport, "find_choice_edit", None)
+        find_choice_post = getattr(self.transport, "find_choice_post", None)
+        find_mode_end = getattr(self.transport, "find_mode_end_publication", None)
+        find_held = getattr(self.transport, "find_held_publication", None)
+        find_notice = getattr(self.transport, "find_recovery_publication", None)
+        find_score = getattr(self.transport, "find_score_publication", None)
+        family = "opening"
         async with self.store.transaction(write=False) as unit:
-            candidate = await RebootFlow(unit).candidate(session)
+            reboot = RebootFlow(unit)
+            candidate = await reboot.candidate(session)
+            if candidate is None and session in self.recovery_routes:
+                if find_opening is not None or find_activation is not None:
+                    probe = await reboot.opening_probe(session)
+                    if (
+                        probe is not None
+                        and (find_activation if probe["kind"] == "activation" else find_opening)
+                        is None
+                    ):
+                        probe = None
+                if probe is None and find_pacing is not None:
+                    family = "pacing"
+                    probe = await reboot.pacing_probe(session)
+                if probe is None and find_activation is not None:
+                    family = "ordinary"
+                    probe = await reboot.ordinary_activation_probe(session)
+                if probe is None and (find_choice_edit is not None or find_choice_post is not None):
+                    family = "ordinary"
+                    probe = await reboot.choice_probe(session)
+                    if probe is not None:
+                        choice_finder = (
+                            find_choice_post
+                            if probe["target_message_id"] is None
+                            else find_choice_edit
+                        )
+                        if choice_finder is None:
+                            probe = None
+                if probe is None and find_held is not None:
+                    family = "evolution"
+                    probe = await reboot.held_probe(session)
+                if probe is None and find_mode_end is not None:
+                    family = "evolution"
+                    probe = await reboot.mode_end_probe(session)
+                if probe is None and find_notice is not None:
+                    notice = await reboot.superseded_notice_probe(session)
+                    if notice is not None:
+                        current = await active_recovery(unit, session)
+                if probe is None and notice is None and find_score is not None:
+                    score = await reboot.score_probe(session)
+                    if score is not None:
+                        score_recovery = await active_recovery(unit, session)
+        if score is not None:
+            async with self.network_slots, asyncio.timeout(20):
+                proof = await find_score(
+                    route,
+                    score["family"],
+                    score["output_id"],
+                    utc_datetime(score["attempted_at_utc"]),
+                )
+            if proof is not None:
+                result = await self.submit(
+                    route,
+                    "recovery_reconcile_score",
+                    recovery_id=score_recovery["recovery_id"],
+                    family=score["family"],
+                    output_id=score["output_id"],
+                    message_id=proof[0],
+                    published_at=proof[1],
+                )
+                if result == "found":
+                    return True
+        if notice is not None:
+            async with self.network_slots, asyncio.timeout(20):
+                proof = await find_notice(
+                    route, notice["recovery_id"], utc_datetime(notice["notice_attempted_at_utc"])
+                )
+            if proof is not None:
+                result = await self.submit(
+                    route,
+                    "recovery_reconcile_notice",
+                    recovery_id=current["recovery_id"],
+                    superseded=notice["recovery_id"],
+                    message_id=proof[0],
+                    published_at=proof[1],
+                )
+                if result == "found":
+                    return True
+        if probe is not None:
+            attempted_at = utc_datetime(probe["attempted_at_utc"])
+            async with self.network_slots, asyncio.timeout(20):
+                if probe["kind"] == "activation":
+                    proof = await find_activation(route, family, probe["output_id"], attempted_at)
+                elif family == "ordinary":
+                    target = probe["target_message_id"]
+                    proof = (
+                        await find_choice_post(route, probe["output_id"], attempted_at)
+                        if target is None
+                        else await find_choice_edit(route, probe["output_id"], target, attempted_at)
+                    )
+                elif family == "evolution":
+                    finder = find_mode_end if probe["kind"] == "mode_ended" else find_held
+                    proof = await finder(route, probe["output_id"], attempted_at)
+                elif family == "opening":
+                    proof = await find_opening(route, probe["kind"], attempted_at)
+                else:
+                    proof = await find_pacing(
+                        route, probe["kind"], probe["output_id"], attempted_at
+                    )
+            if proof is not None:
+                result = await self.submit(
+                    route,
+                    "recovery_reconcile_publication",
+                    recovery_id=probe["recovery_id"],
+                    family=family,
+                    output_id=probe["output_id"],
+                    message_id=proof[0],
+                    published_at=proof[1],
+                )
+                if result == "found":
+                    return True
         if session not in self.recovery_routes or candidate is None:
             self.blocked_recoveries.add(session)
             await self._show_pause(route)
@@ -580,7 +870,7 @@ class OpeningRuntime:
                 return False
             state = await self.state(session)
             async with self.network_slots, asyncio.timeout(20):
-                facts = await self.transport.recovery_capabilities(route, state.panel_id)
+                facts = await self._recovery_capabilities(route, state)
             result = await self.submit(
                 route, "recovery_resume", recovery_id=recovery, capabilities=facts
             )
@@ -593,7 +883,7 @@ class OpeningRuntime:
         if candidate["stage"] == "paused":
             state = await self.state(session)
             async with self.network_slots, asyncio.timeout(20):
-                facts = await self.transport.recovery_capabilities(route, state.panel_id)
+                facts = await self._recovery_capabilities(route, state)
             if (
                 await self.submit(
                     route, "recovery_prepare", recovery_id=recovery, capabilities=facts
@@ -604,14 +894,21 @@ class OpeningRuntime:
                 await self._show_pause(route)
                 return False
             return True
-        async with self.network_slots, asyncio.timeout(20):
-            if not await self.submit(route, "recovery_claim", recovery_id=recovery):
-                return False
-            state = await self.state(session)
-            message_id = await self.transport.publish_recovery(route, state)
-            await asyncio.shield(
-                self.submit(route, "recovery_ack", recovery_id=recovery, message_id=message_id)
-            )
+        async with self.network_slots:
+            async with asyncio.timeout(20):
+                if not await self.submit(route, "recovery_claim", recovery_id=recovery):
+                    return False
+                state = await self.state(session)
+                if state.recovery_id != recovery:
+                    return False
+                message_id = await self.transport.publish_recovery(route, state)
+                await asyncio.shield(
+                    self.submit(route, "recovery_ack", recovery_id=recovery, message_id=message_id)
+                )
+            if refresh := getattr(self.transport, "refresh_recovery_countdown", None):
+                reading = await self.state(session)
+                if reading.recovery_id == recovery:
+                    await refresh(route, reading)
         return False
 
     async def _publish_summary(self, route):
@@ -698,7 +995,13 @@ class OpeningRuntime:
 
     async def _show_pause(self, route):
         try:
-            state = await self.state(route.session_id)
+            async with self.store.transaction(write=False) as unit:
+                store = DiscordStore(unit)
+                state = await store.state(route.session_id)
+                target = await store.uncertain_choice_target(route.session_id)
+            if state and target is not None and state.panel_id == target:
+                # Editing this panel could overwrite the very evidence needed at startup.
+                return
             async with self.network_slots, asyncio.timeout(20):
                 await self.transport.paused(route, state)
         except Exception as exc:
@@ -728,6 +1031,8 @@ class OpeningRuntime:
             await asyncio.shield(lane.submit("pause"))
         else:
             await self._barrier(route)
+            if state and state.terminal_recovery_deadline and (lane is None or not lane.fenced):
+                await self._schedule(route)
         await self._show_pause(route)
 
     async def pause(self, route):

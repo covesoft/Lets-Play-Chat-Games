@@ -17,6 +17,31 @@ from types import MappingProxyType
 MAX_CATALOG_BYTES = 128 * 1024
 # Only these templates accept arguments. Attribute/index lookups are prohibited.
 TEMPLATE_FIELDS = {
+    "warning.countdown": frozenset({"timestamp"}),
+    "mode.interrupted_countdown": frozenset({"timestamp"}),
+    "summary.game_description": frozenset({"messages", "whispers", "as_of", "status"}),
+    "mode.named_title": frozenset({"name"}),
+    "mode.choice_label": frozenset({"minutes"}),
+    "mode.active_description": frozenset({"ends"}),
+    "mode.scheduled_description": frozenset({"starts", "ends"}),
+    "mode.interrupted_notice": frozenset({"seconds"}),
+    "mode.interrupted_reading": frozenset({"timestamp"}),
+    "mode.scheduled_notice": frozenset({"seconds"}),
+    "mode.scheduled_reading": frozenset({"timestamp"}),
+    "reboot.preplay": frozenset({"seconds"}),
+    "reboot.preplay_reading": frozenset({"timestamp"}),
+    "reboot.opening_activation": frozenset({"seconds"}),
+    "reboot.opening_activation_reading": frozenset({"timestamp"}),
+    "reboot.revival": frozenset({"seconds"}),
+    "reboot.revival_reading": frozenset({"timestamp"}),
+    "reboot.lobby_link": frozenset({"url", "deadline"}),
+    "reboot.opening_link": frozenset({"url", "deadline"}),
+    "reboot.revival_link": frozenset({"url", "deadline"}),
+    "reboot.choice_detail": frozenset({"url", "deadline"}),
+    "reboot.choice_resumed": frozenset({"url", "deadline"}),
+    "reboot.activation_description": frozenset({"seconds"}),
+    "reboot.activation_reading_description": frozenset({"timestamp"}),
+    "reboot.notice_countdown": frozenset({"timestamp"}),
     "reboot.notice_description": frozenset({"seconds"}),
     "reboot.reading_description": frozenset({"timestamp"}),
     "recovery.description": frozenset({"generation", "stage"}),
@@ -27,12 +52,16 @@ TEMPLATE_FIELDS = {
     "reports.mid_description": frozenset({"round"}),
     "reports.round_description": frozenset({"round"}),
     "reports.score": frozenset({"percent"}),
+    "reports.player_score": frozenset({"player", "score"}),
     "summary.capture_detail": frozenset(
         {"session", "round_messages", "round_whispers", "game_messages", "game_whispers"}
     ),
     "summary.rule": frozenset({"rule"}),
     "summary.description": frozenset({"round", "messages", "whispers", "as_of", "status"}),
     "summary.as_of": frozenset({"timestamp"}),
+    "summary.lead": frozenset({"status", "as_of"}),
+    "summary.round_traffic_heading": frozenset({"round"}),
+    "summary.traffic": frozenset({"messages", "whispers"}),
     "round.description": frozenset({"round"}),
     "ordinary.offer_description": frozenset({"picker", "deadline"}),
     "ordinary.target_description": frozenset({"picker", "deadline"}),
@@ -45,10 +74,15 @@ TEMPLATE_FIELDS = {
     "cards.NR036.description": frozenset({"phrase"}),
     "results.actual": frozenset({"percent"}),
     "results.ranking": frozenset({"percent"}),
+    "results.score": frozenset({"points"}),
+    "results.player_score": frozenset({"player", "score"}),
     "results.player": frozenset({"actor"}),
     "results.player_entry": frozenset({"player", "detail"}),
     "results.detail": frozenset(
         {"actual", "ranking", "faults", "opportunities", "ordinary_posts", "reaction_failures"}
+    ),
+    "results.score_detail": frozenset(
+        {"actual", "faults", "opportunities", "ordinary_posts", "reaction_failures"}
     ),
     "results.footer": frozenset({"page"}),
     "offer.description": frozenset({"picker"}),
@@ -115,7 +149,9 @@ def _validate_strings(strings):
                             "status",
                             "actual",
                             "ranking",
+                            "score",
                             "deadline",
+                            "url",
                             "description",
                             "targets",
                             "phrase",
@@ -123,6 +159,7 @@ def _validate_strings(strings):
                             "detail",
                             "session",
                             "rule",
+                            "name",
                         }
                         else 1
                     )

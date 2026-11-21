@@ -188,14 +188,41 @@ def test_multiple_target_choice_keeps_the_original_deadline_and_requires_selecti
 
 
 def test_single_clear_replacement_can_resolve_directly_and_never_removes_unrelated_rule():
-    ctx = context("NR017", "NR034")
+    ctx = context("NR007", "NR034")
     hand = build(ctx, cards=("NR004", "NR006", "NR019")).hand
     result = resolve(hand, ctx, "NR019")
     assert result.status is ChoiceStatus.READY
-    assert result.completion.outgoing_id == "NR017"
-    assert {i.card_id for i in result.completion.instances} == {"NR019", "NR034"}
-    assert resolve(hand, ctx, "NR019", outgoing_id="NR034").status is ChoiceStatus.INVALID
-    assert resolve(hand, ctx, "NR004", outgoing_id="NR017").status is ChoiceStatus.INVALID
+    assert result.completion.outgoing_id == "NR034"
+    assert {i.card_id for i in result.completion.instances} == {"NR019", "NR007"}
+    assert resolve(hand, ctx, "NR019", outgoing_id="NR007").status is ChoiceStatus.INVALID
+    assert resolve(hand, ctx, "NR004", outgoing_id="NR034").status is ChoiceStatus.INVALID
+
+
+def test_matching_punctuation_offer_names_the_correct_ban():
+    ctx = context("NR007", "NR013", "NR014")
+    hand = build(ctx, cards=("NR004", "NR006", "NR012")).hand
+    assert option(hand, "NR012").outgoing_ids == ("NR014",)
+    assert resolve(hand, ctx, "NR012", outgoing_id="NR013").status is ChoiceStatus.INVALID
+    result = resolve(hand, ctx, "NR012")
+    assert result.status is ChoiceStatus.READY
+    assert {i.card_id for i in result.completion.instances} == {"NR007", "NR013", "NR012"}
+
+
+def test_blocked_single_word_offer_does_not_fill_a_partial_hand():
+    ctx = context("NR017", "NR034")
+    result = build(ctx, cards=("NR004", "NR006", "NR019"))
+    assert result.hand is None and result.blocked is BlockedReason.TOO_FEW
+    assert result.eligible_templates == ("NR004", "NR006")
+
+
+def test_royal_clause_can_replace_single_word_and_keep_other_rules():
+    ctx = context("NR019", "NR008")
+    hand = build(ctx, cards=("NR004", "NR006", "NR035")).hand
+    assert option(hand, "NR035").outgoing_ids == ("NR019",)
+    result = resolve(hand, ctx, "NR035")
+    assert result.status is ChoiceStatus.READY
+    assert {i.card_id for i in result.completion.instances} == {"NR008", "NR035"}
+    assert result.completion.witness.text in {"WE", "OUR", "US"}
 
 
 def test_candidate_with_no_supported_removal_is_suppressed_not_repaired_cross_deck():
@@ -357,7 +384,7 @@ def test_offer_and_phrase_representations_do_not_reveal_phrase_or_witness_text()
     [
         {"phrase_draw_limit": 4},
         {"phrase_draw_limit": True},
-        {"available_templates": frozenset({"NR037"})},
+        {"available_templates": frozenset({"NR040"})},
         {"phrase_bank": bank(16)},
         {"used_phrases": frozenset({("NOT_NORMALIZED",)})},
     ],

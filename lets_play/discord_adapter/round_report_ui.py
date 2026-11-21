@@ -4,6 +4,7 @@ import re
 
 import discord
 
+from lets_play.discord_adapter.score_ui import player_score_line
 from lets_play.presentation import PresentationError
 
 CONTROL = re.compile(r"nrl:([a-f0-9]{32}):([0-9]{1,19}):(n|p):([0-9]{1,19})\Z")
@@ -17,17 +18,16 @@ def render(session, round_number, page, copy):
         colour=copy.color("round_results"),
     )
     for actor, score in players:
-        adjusted = score.ranking_percent()
         embed.add_field(
-            name=copy.text("reports.unrated")
-            if adjusted is None
-            else copy.text("reports.score", percent=float(adjusted)),
-            value=copy.text("results.player", actor=actor),
+            name=copy.text("reports.score_heading"),
+            value=player_score_line(copy, actor, score, template="reports.player_score"),
             inline=False,
         )
     if not players:
         embed.add_field(
-            name=copy.text("summary.empty_heading"), value=copy.text("summary.empty"), inline=False
+            name=copy.text("summary.empty_heading"),
+            value=copy.text("summary.empty_round"),
+            inline=False,
         )
     view = discord.ui.View(timeout=None)
     if previous and players:

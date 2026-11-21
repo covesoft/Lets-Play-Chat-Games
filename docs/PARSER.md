@@ -19,9 +19,9 @@ result = evaluate_text_rule(view, RuleInstance("example-instance", "NR034"))
 ```
 
 `RuleEvaluation` returns an instance ID, typed pass/fail/not-applicable outcome,
-and a stable reason code on failure. Supported text IDs are NR007, NR008, NR010,
-NR011, NR013, NR016, NR017, NR019, NR022, NR024, NR025, NR027, NR033, NR034, and
-NR036. The current [ordinary subset](HANDS.md) lists their behavior and metadata.
+and a stable reason code on failure. Supported text IDs are NR007 through NR022,
+NR024 through NR031, and NR033 through NR039. See the [ordinary subset](HANDS.md) for their behavior
+and metadata.
 Other card IDs raise `NotImplementedError`; they never receive a default successful result.
 The engine must select the active instances and phase before invoking ordinary
 predicates. No ordinary predicate should run as mode enforcement.
@@ -122,9 +122,10 @@ Uncased scripts/numbers do not require an alphabetic letter to be present; a
 titlecase letter must meet the selected mapping, and lowercase `ß` fails uppercase
 while `SS` passes. Markup wrappers/object identifiers are not displayed letters.
 
-NR010 requires the quote-aware logical ending to finish with ASCII `?`; repeated
-question marks are allowed. NR013 forbids ASCII `?` anywhere in logical content,
-including code/spoilers. Fullwidth `？` is not silently mapped to ASCII.
+NR010 and NR012 require the quote-aware logical ending to finish with ASCII
+`?` and `!` respectively. Repeated marks are allowed. NR013 and NR014 forbid
+their matching ASCII mark anywhere in logical content, including code and
+spoilers. Fullwidth `？` and `！` retain their own identities.
 
 NR017 counts at most five parser words; NR019 requires exactly one. Numbers count
 as words, contractions retain internal apostrophes, hyphens split words, and opaque
@@ -134,15 +135,47 @@ word identities; canonical Unicode, case and apostrophe variants compare equally
 
 NR024/NR033 require the first logical word to be `yes`/`please`, through supported
 heading/formatting wrappers. `yesterday`/`pleased` and an earlier different word
-do not qualify. NR025/NR027 forbid whole word identities `sorry`/`maybe` without
-substring matching or contraction expansion (`sorry's` is its own word).
-Leading whitespace/quote/punctuation may precede a required first word; a leading
-visible symbol, emoji, or Discord object blocks it. Heading wrappers are already
-handled in the logical view.
+do not qualify. Leading whitespace, quotes, and punctuation may precede a
+required first word. A leading visible symbol, emoji, or Discord object blocks
+it. Heading wrappers are already handled in the logical view.
 
-The original 73 parser fixtures remain; `ordinary_rule_examples.json` adds comprehensive
-independently specified boundary/applicability/composition examples for the
-fourteen supported text predicates. This does not implement the remaining catalog.
+Word-list cards use complete normalized word identities. For example, No
+Objections allows `butter`. Selfless Conversation forbids `I`, `me`, `my`,
+`I'm`, `I've`, `I'd`, `I'll`, `I'd've`, and `I'll've`, including their
+supported apostrophe and case variants. `Time`, `myth`, `mine`, and `myself`
+pass. The expanded check applies to new messages after the v0.3.36 update,
+including resumed rounds. No Second Person forbids
+`you`, `your`, `you're`, `you've`, `you'll`, `you'd`,
+`you'd've`, and `you'll've`, including their supported apostrophe and case
+variants. `Yours` is a separate word. The Royal We requires one of
+`we`, `our`, or `us`. `We're`, `Wednesday`, `your`, and `USA` do
+not meet that requirement.
+
+No Accounting checks logical content for Unicode digit characters, including
+Arabic-Indic digits, superscripts such as `²`, and digit keycaps. Numeric
+characters such as `½` fall outside that digit class. No Accounting also
+counts 🔢, 🔟, and 💯. A literal `:100:` fails because it contains digits.
+Static and animated custom emoji fail if their names are exactly `100` or
+`1000`. Discord object IDs and hidden link destinations are excluded from
+the scan. The expanded check applies to newly received messages after the
+v0.3.34 update, including resumed rounds. Recorded scores keep their original
+outcomes. One Breath checks
+the original message for CR or LF, including breaks inside Markdown. A Small
+Pause requires an ASCII comma in logical content.
+
+Use Your Words counts at least five parser words. Room to Elaborate and Small
+Print use trimmed logical grapheme counts, including visible spaces and
+punctuation. Little Words counts Unicode letters within each parser word.
+Combining marks, digits, and internal apostrophes add no letters. Decree Mode
+checks words of three or more graphemes, including an internal apostrophe.
+It title-cases the first cased letter and lowercases later cased letters in
+that word. `Don't` and `DoN’T` illustrate a pass and a failure. Hyphen-separated
+words are checked individually, and uncased words pass the casing check.
+
+The parser fixtures and `ordinary_rule_examples.json` cover boundary,
+applicability, and composition examples for the supported predicates, including
+quoted and parenthesized endings, Markdown escapes and formatting, and
+normalized repeated words.
 
 ## Bounds and verification
 

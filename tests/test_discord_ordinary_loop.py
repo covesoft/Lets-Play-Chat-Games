@@ -20,6 +20,7 @@ from test_ordinary_flow import rows
 from lets_play.discord_adapter import runtime as runtime_module
 from lets_play.discord_adapter.discord_io import render
 from lets_play.discord_adapter.runtime import ORDINARY_CARDS
+from lets_play.presentation import default_presentation
 
 
 async def settle(runtime):
@@ -71,6 +72,7 @@ async def test_full_warning_choice_cutover_keeps_old_round_scores_and_starts_new
         original = state.context.position
         assert state.pacing.stage == "waiting"
         state = await next_offer(runtime, route)
+        assert render(state)[0].title == default_presentation().text("ordinary.offer_title")
         assert state.context.position.round_id == original.round_id
         assert len(state.offer.hand.options) == 3
         assert all(o.incoming.card_id in ORDINARY_CARDS for o in state.offer.hand.options)
@@ -331,6 +333,10 @@ async def test_partial_replacement_retains_incoming_and_original_deadline(
         index = next(
             i for i, o in enumerate(state.offer.hand.options) if o.incoming.card_id == "NR022"
         )
+        hand_embed, _ = render(state, kind="ordinary_offer")
+        assert hand_embed.title == "New Rules — choose the next card"
+        assert hand_embed.fields[index].name == "No Echoes"
+        assert "No Apologies, No Doubts" in hand_embed.fields[index].value
         picker = state.offer.hand.picker_id
         assert (
             await runtime.submit(route, "choose", actor=picker, message_id=message, index=index)
@@ -339,9 +345,14 @@ async def test_partial_replacement_retains_incoming_and_original_deadline(
         await settle(runtime)
         state = await runtime.state(route.session_id)
         embed, view = render(state, kind="ordinary_offer")
-        targets = [b for b in view.children if ":target:" in b.custom_id]
-        assert len(targets) == 2 and len(embed.fields) == 1
-        assert len(view.children) == 2
+        assert embed.title == "New Rules — choose a rule to remove"
+        assert [(field.name, field.value) for field in embed.fields] == [
+            ("No Apologies", "Do not use the word sorry."),
+            ("No Doubts", "Do not use the word maybe."),
+        ]
+        assert [b.label for b in view.children] == ["No Apologies", "No Doubts"]
+        assert all(":target:" in b.custom_id for b in view.children)
+        assert f"<t:{int(deadline.expires_at.timestamp())}:R>" in embed.description
         assert all(len(b.custom_id) <= 100 for b in view.children)
         assert (
             await runtime.submit(
@@ -371,6 +382,8 @@ async def test_partial_replacement_retains_incoming_and_original_deadline(
         state = await runtime.state(route.session_id)
         cards = {i.card_id for i in state.context.active_instances}
         assert "NR022" in cards and len(cards) == 2 and state.round_number == 3
+        if not by_timeout:
+            assert cards == {"NR022", "NR025"}
         assert rows(tmp_path / "game.sqlite3", "SELECT COUNT(*) FROM nr_round_resolutions") == [
             (2,)
         ]

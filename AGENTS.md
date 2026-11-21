@@ -8,16 +8,21 @@ contains operational and API documentation only.
 
 ## Current implementation
 
-Application v0.3.14 uses schema 13. M1 is accepted and closed at v0.2.9/schema 8;
-M2 is in progress. Preserve the existing domain/storage APIs. This is a
-development-only ordinary-round preview, not a public-release build.
+Application v0.3.38 uses schema 16. M1 closed at v0.2.9/schema 8, and M2
+closed at v0.3.30/schema 16. M3 compatibility and catalog work is underway.
+Preserve the existing domain/storage APIs. This build is a development-only
+Discord preview.
 
 Implemented: persisted three-human opening, message/raw-reaction scoring and
 markers, ordinary warning/picker/choice/replacement/timeout/cutover, held play,
 same-round revival, manager ending, private live scores, requested public reports,
 gated automatic interims, compact round-end boards and ranked final standings.
-Seventeen ordinary predicates exist; opening offers five proven templates and
-later offers sixteen non-phrase templates. NR036 is not offered by the adapter.
+Drawing Conclusions is the supported Breaking Moment. An eligible later hand
+can draw it as one template ticket. Opening and post-mode hands are ordinary-only.
+Thirty-three ordinary predicates exist. The opening pool has five templates, and
+later offers use thirty-two non-phrase templates. NR036 is not offered by the adapter.
+One Word Will Do conflicts with the Clauses deck, and each terminal mark requirement
+conflicts with its matching ban. A single permitted removal must clear all blockers.
 
 Startup/reconnect fences every saved route before publishers/timers. Settled
 ordinary rounds now recover without manager input: fresh channel/marker checks,
@@ -27,13 +32,22 @@ paused ingress cannot resume by itself. Scores, original clocks and round stay
 intact; overdue pacing runs after resume. Manager diagnostic UI has been retired;
 old controls reply privately without exposing internal state.
 
-This first path requires an active ordinary/idle round with waiting pacing,
-no partial offer/transition or prior non-recovery pause, and no unresolved engine,
-adapter, summary, round-report or older notice claim. Published warnings/choices,
-held/revival/opening/mode continuation and unknown-result reconciliation remain
-separate increments. Genuine blockers stay paused with a concise host-contact
-notice; manager ending remains available. No modes, complete output retry/TTL,
-operator erasure, full settings/premium/profile UI or release certification yet.
+This path covers ordinary idle/waiting, acknowledged warnings, published choices
+including partial replacement targets, and acknowledged announced activations.
+Original deadlines survive: overdue choices use normal timeout after read-in;
+announced activation commits once with its original clock. Published cards retain
+their original ACK-bound message; the resumption notice links there, without new
+card buttons. Verify both panels before continuation. Prior non-recovery pauses
+and unresolved engine, adapter, summary, round-report or older notice claims stay
+fenced. Published held play, revival, lobby, opening choices and announced first
+activation use the same unattended recovery. Original join and Continue buttons
+remain authoritative, and terminal lobby/revival deadlines win during read-in.
+Acknowledged Drawing Conclusions bouts interrupt on disruption. After the
+same read-in, restore ordinary rules within the saved round. If an acknowledged
+mode start passes during read-in, apply that round cutover once and interrupt the
+unobserved bout. Genuine blockers stay paused with a concise host-contact
+notice; manager ending remains available. Other modes, complete output retry/TTL,
+operator erasure, full settings/premium/profile UI and release certification remain open.
 
 See `docs/DISCORD_PREVIEW.md` for the current runbook, `docs/RECOVERY.md` for
 recovery API boundaries, `docs/REQUESTED_SUMMARY.md` for current-score access and
@@ -58,7 +72,7 @@ proposed next steps are historical; use current source and owner instructions.
   JSON in wheel/sdist builds. See `docs/PRESENTATION.md`.
 - Do not contact/invite collaborators, push the repository, deploy or run a live
   bot merely to verify an offline edit. Keep any supplied token/IDs private.
-  Routine implementation is delegated; M2 work is authorized in bounded bites.
+  Routine implementation is delegated in bounded increments.
 
 ## Development and verification
 
@@ -87,7 +101,7 @@ is not a new numerical test result or M2 sign-off.
 Every code-patch handoff includes copy-paste Windows repository-root commands:
 `git apply --check`, `git apply`, editable reinstall when needed, checks and
 startup. Back up/verify a stopped existing database before an actual schema
-upgrade. Never rewrite released migrations 1–13. An unchanged schema needs no
+upgrade. Never rewrite released migrations. An unchanged schema needs no
 migration or command sync; documentation-only patches need no reinstall/restart.
 
 ## Engine, persistence and delivery invariants
@@ -113,6 +127,12 @@ migration or command sync; documentation-only patches need no reinstall/restart.
   body; preserve exact scores/unrated eligibility. Partial selections and refresh
   retain the original choice clock. Rotation/general resolution commit only at
   actual activation. Closure evidence alone is not a resolved award.
+- Breaking Moments use the same announced cutover as ordinary choices. Keep the
+  exact suspended inventory and incoming round clock. Restore ordinary rules after
+  120 seconds without a new draw/round. Mode results add binary observations, one
+  marker per failed message, and no ordinary posts or reaction faults. Whispers
+  add only traffic. Commit each third qualifying Drawing Conclusions post, game
+  credit and Pictoglyphs in the same unit. Credit and badge ownership are independent.
 - Lobby clocks start at actual publication (180 seconds; first choice 60).
   Starter plus two distinct humans is quorum; joins alone do not credit a game.
   Preplay has no fake playing round. First acknowledged activation creates it,
@@ -124,6 +144,14 @@ migration or command sync; documentation-only patches need no reinstall/restart.
   Revival pauses scoring, needs three distinct explicit returners and retains
   the open round, scores and original publication-owned clock. Quorum itself
   neither closes the round nor grants another game credit.
+- Natural Breaking Moment expiry queues one lime-green notice in the same
+  transaction. Recovery shows restored rules on the edited recovery panel.
+  Render the natural-expiry notice from that bout's frozen
+  offer. The disabled status button carries the receipt reference. Startup can
+  verify older notices by their original footer reference. Publish an unclaimed
+  natural-expiry notice once after recovery and retire legacy interruption notices
+  that were never claimed. Claim before HTTP and require exact new-post proof for
+  uncertain claims.
 - Credit/live flag/global increment/Familiar Face commit together. Resolve real
   closures in creation order before final Very Careful evaluation and purge.
   finalize_ended neither authorizes nor ends a game. Missing evidence/version
@@ -137,8 +165,12 @@ migration or command sync; documentation-only patches need no reinstall/restart.
   ordered ACK and flow acknowledgement together. Preserve older namespaced
   claims. Read bounded pending work per session, never filter a global first page.
   Unknown/missing ACK, cancellation or timeout never permits blind resend.
-- Later ordinary offers edit the known phase panel (normally the warning).
-  Successful edit ACK binds that same message and owns the choice clock. Refresh
+- A public warning shows a relative Discord timestamp without active-rule fields.
+  The first ordinary offer edits the known phase panel unless eight distinct
+  channel messages follow that warning. Count Gateway posts from humans, bots,
+  and webhooks using only the eight highest message IDs for the warning attempt.
+  That threshold claims a new post and leaves the warning as history. Its actual
+  acknowledgement owns the choice clock. Refresh
   cannot reveal prepared offers/selected activations before publication ACK.
   Partial target changes still edit in place. Missing/uncertain edits require
   recovery, without replacement sends. Opening choice/new-rule disclosure retain
@@ -170,7 +202,9 @@ and /rules, not choice/target menus. Preplay /rules exposes no copied mutations.
 Requested public reports require BOTH 30 seconds since actual prior success AND
 new non-whisper human traffic. Pending requests coalesce; blocked requests do not
 consume traffic/time. Check current scores and legacy nrf controls open live
-private scores. After ACK discard copied scores/rules and older completed summary
+private scores. Whole-game posts capture the displayed game page and show its
+game totals. Posting refreshes that same scope/page privately. After ACK discard
+copied scores/rules and older completed summary
 receipts; retain the latest receipt plus unresolved sends. Compact delivered
 legacy archives on startup. Request IDs provide a bounded replay watermark, not
 a growing request cache or historical score browser.
@@ -217,9 +251,42 @@ notice (including one from a superseded generation). Known success may ACK after
 ending/supersession without restoring play. Preserve old presentation keys for
 private override compatibility, but do not restore the removed manager debug UI.
 
-Next bite: extend automatic continuation to acknowledged ordinary warnings and
-choices while retaining original deadlines and partial selections. Resolve all
-publication and per-family proof contracts before accepting uncertain sends.
-Then cover held/revival/opening paths, the approved mode, richer details and
-human M2 exit. Keep changes reviewable; owner prefers patches around 50–100 KB.
-No automatic or manual recovery may waive an unsafe/unsupported state.
+Uncertain lobby and opening-card sends can recover on startup from a bounded
+positive Discord creation check. Match the exact route, bot author and original
+session controls, and require an unedited message with its original creation
+time. Commit proof, original clock and adapter ACK in the receipt lane. Empty,
+ambiguous and capped lookups preserve the unresolved claim. Never inspect or
+retain chat bodies in this path.
+
+New warning and revival posts carry a reference bound to their durable output.
+A startup lookup matches the original bot-authored post and current round/attempt.
+Record the proof, clock and ACK together. An overdue warning advances after read-in,
+and an expired revival closes via the normal silent edit. An older post without
+the exact reference cannot authorize recovery.
+
+Opening and ordinary rule activation announcements use the same bounded
+lookup and an exact publication reference. Require the saved selection and
+pending activation to match. Accept actual creation only strictly before the
+original cutover. Equal, late and unverified times keep the claim unresolved.
+
+Held notices and recovery announcements carry exact publication references.
+A verified held post leaves the idle clock in place. Proof of a superseded
+recovery notice clears that generation’s uncertain send. The current generation
+still requires its own access verification, announcement, and read-in.
+
+Public summary posts use the current-scores button for proof. Completed-round
+leaderboards use the disabled The game goes on button. Both are footer-free.
+Recovery notices use a read-only Game status button and editable footer copy.
+Score reconciliation keeps the original snapshot, cutover and traffic watermark.
+
+A schema-14 claim records the exact choice or closing edit target before HTTP.
+An edit must prove target, author, output identity and edit timestamp. Do not
+overwrite an uncertain choice panel with pause copy. Terminal output discovery
+runs separately from live routes. It can publish an unclaimed close, or verify
+a claimed close, without reopening a game or occupying capacity.
+
+Inconclusive evidence keeps the claim unresolved. A live route stays paused
+and can be explicitly ended by a manager. An ended route remains ended without
+replaying an uncertain result. The existing authorized ending is the operator
+disposition for stalled games. Next M3 work expands the ordinary catalog and phrase-bank integration.
+The owner’s soft patch-size limit is 200 KB.

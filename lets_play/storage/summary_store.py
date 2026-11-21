@@ -9,12 +9,14 @@ import re
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 
+from lets_play.new_rules.breaking_moments import ModeChoice
 from lets_play.new_rules.contracts import RuleInstance
 from lets_play.new_rules.scoring import ScoreTotals
+from lets_play.storage.breaking_flow import BreakingFlow
 from lets_play.storage.game_codec import SCORE_COLUMNS, IncompatibleState, decode_score
 from lets_play.storage.game_store import _execute, _row
 from lets_play.storage.game_store import _unit_mutating as _write
-from lets_play.storage.offer_codec import utc_datetime, utc_int
+from lets_play.storage.offer_codec import decode_choice, utc_datetime, utc_int
 from lets_play.storage.pacing_flow import RoundPacing
 from lets_play.storage.recovery_flow import active_recovery, require_dispatchable
 
@@ -22,6 +24,7 @@ AUTO_SECONDS = 120
 AUTO_MESSAGES = 25
 AUTO_WARNING_BUFFER_SECONDS = 60
 REQUEST_COALESCE_SECONDS = 30
+SUMMARY_PAGE_SIZE = 5
 _COLUMNS = ",".join(SCORE_COLUMNS)
 
 
@@ -44,9 +47,10 @@ class SummarySnapshot:
     whispers: int
     round_messages: int
     round_whispers: int
-    rules: tuple[RuleInstance, ...]
+    rules: tuple[RuleInstance | ModeChoice, ...]
     message_id: int | None
     ordinary_posts: int = 0
+    display_scope: str = "round"
 
 
 @dataclass(frozen=True, slots=True)
@@ -62,6 +66,8 @@ class LiveSummaryPage:
     players: tuple[tuple[int, ScoreTotals], ...]
     previous: bool
     following: bool
+    anchor: int = 0
+    backwards: bool = False
 
 
 class SummaryStore:
@@ -78,7 +84,7 @@ class SummaryStore:
         return await self.snapshot(session, row[0]) if row else None
 
     @_write
-    async def request(self, session, output_key, *, now):
+    async def request(self, session, output_key, *, now, scope="round", actor=0, backwards=False):
         """Coalesce explicit public requests without advancing the delivery baseline."""
         _key(output_key)
         context = await self.unit.get_context(session)
@@ -112,7 +118,15 @@ class SummaryStore:
             traffic = await self.unit.get_traffic(session)
             if traffic.human_messages - traffic.whispers <= baseline["ack_nonwhispers"]:
                 return "no_new_posts"
-        snapshot = await self.prepare(session, output_key, now=now, kind="requested")
+        snapshot = await self.prepare(
+            session,
+            output_key,
+            now=now,
+            kind="requested",
+            scope=scope,
+            actor=actor,
+            backwards=backwards,
+        )
         return "queued" if snapshot else "unavailable"
 
     async def _compact_session(self, session):
@@ -157,14 +171,21 @@ class SummaryStore:
         """One consistent public preview while sending; no historical page service."""
         return LiveSummaryPage(
             snapshot.session_id,
-            "round",
+            snapshot.display_scope,
             snapshot.round_number,
             "captured",
             False,
             snapshot.captured_at,
-            snapshot.round_messages,
-            snapshot.round_whispers,
-            await self.scores(snapshot.session_id, snapshot.output_key, scope="round", limit=5),
+            snapshot.human_messages
+            if snapshot.display_scope == "game"
+            else snapshot.round_messages,
+            snapshot.whispers if snapshot.display_scope == "game" else snapshot.round_whispers,
+            await self.scores(
+                snapshot.session_id,
+                snapshot.output_key,
+                scope=snapshot.display_scope,
+                limit=SUMMARY_PAGE_SIZE,
+            ),
             False,
             False,
         )
@@ -200,10 +221,7 @@ class SummaryStore:
         )
         if row is None:
             return None
-        rules = tuple(
-            RuleInstance(i, card, tuple(tuple(p) for p in parameters))
-            for i, card, parameters in json.loads(row["rules_json"])
-        )
+        rules = tuple(decode_choice(item) for item in json.loads(row["rules_json"]))
         return SummarySnapshot(
             row["summary_id"],
             session,
@@ -220,6 +238,7 @@ class SummaryStore:
             rules,
             row["message_id"],
             row["ordinary_posts"],
+            row["display_scope"],
         )
 
     async def next_deadline(self, session, *, now=None):
@@ -259,14 +278,20 @@ class SummaryStore:
         return due
 
     @_write
-    async def prepare(self, session, output_key, *, now, kind="automatic"):
+    async def prepare(
+        self, session, output_key, *, now, kind="automatic", scope="round", actor=0, backwards=False
+    ):
         _key(output_key)
-        if kind not in {"automatic", "requested"}:
-            raise ValueError("Unsupported summary capture kind.")
+        if (
+            kind not in {"automatic", "requested"}
+            or scope not in {"round", "game"}
+            or (kind == "automatic" and scope != "round")
+        ):
+            raise ValueError("Unsupported summary capture kind or scope.")
         captured = utc_int(now)
         previous = await self.snapshot(session, output_key)
         if previous is not None:
-            if previous.kind != kind:
+            if previous.kind != kind or previous.display_scope != scope:
                 raise ValueError("A summary key cannot change its meaning.")
             return previous
         context = await self.unit.get_context(session)
@@ -302,6 +327,13 @@ class SummaryStore:
                 seconds=AUTO_WARNING_BUFFER_SECONDS
             ):
                 return None
+        game_page = None
+        if scope == "game":
+            game_page = await self.live_page(
+                session, scope=scope, actor=actor, backwards=backwards, limit=SUMMARY_PAGE_SIZE
+            )
+            if game_page is None:
+                return None
         p = context.position
         traffic = await self.unit.get_traffic(session)
         rnd = await _row(
@@ -309,12 +341,12 @@ class SummaryStore:
             "SELECT round_number,human_messages,whispers,ordinary_posts FROM nr_rounds WHERE session_id=? AND round_id=?",
             (session, p.round_id),
         )
-        rules = json.dumps(
-            [(r.instance_id, r.card_id, r.parameters) for r in context.active_instances]
-        )
+        mode = await BreakingFlow(self.unit).active(p)
+        effective = (mode.choice,) if mode else context.active_instances
+        rules = json.dumps([(r.instance_id, r.card_id, r.parameters) for r in effective])
         cursor = await self.conn.execute(
-            """INSERT INTO nr_summary_outputs(session_id,output_key,kind,state,round_id,round_number,captured_at_utc,human_messages,whispers,round_messages,round_whispers,rules_json)
-            VALUES (?,?,?,'prepared',?,?,?,?,?,?,?,?)""",
+            """INSERT INTO nr_summary_outputs(session_id,output_key,kind,state,round_id,round_number,captured_at_utc,human_messages,whispers,round_messages,round_whispers,rules_json,display_scope)
+            VALUES (?,?,?,'prepared',?,?,?,?,?,?,?,?,?)""",
             (
                 session,
                 output_key,
@@ -327,6 +359,7 @@ class SummaryStore:
                 rnd[1],
                 rnd[2],
                 rules,
+                scope,
             ),
         )
         summary = cursor.lastrowid
@@ -336,14 +369,25 @@ class SummaryStore:
             "UPDATE nr_summary_outputs SET ordinary_posts=? WHERE summary_id=?",
             (rnd[3], summary),
         )
-        for scope, table in (("game", "nr_participants"), ("round", "nr_round_scores")):
-            condition = "session_id=?" + (" AND round_id=?" if scope == "round" else "")
-            values = (session, p.round_id) if scope == "round" else (session,)
-            await _execute(
-                self.conn,
-                f"INSERT INTO nr_summary_scores SELECT ?,?,actor_id,{_COLUMNS} FROM {table} WHERE {condition}",
-                (summary, scope, *values),
-            )
+        if game_page is not None:
+            actors = tuple(player[0] for player in game_page.players)
+            if actors:
+                placeholders = ",".join("?" for _ in actors)
+                await _execute(
+                    self.conn,
+                    f"""INSERT INTO nr_summary_scores SELECT ?,'game',actor_id,{_COLUMNS}
+                    FROM nr_participants WHERE session_id=? AND actor_id IN ({placeholders})""",
+                    (summary, session, *actors),
+                )
+        else:
+            for projection, table in (("game", "nr_participants"), ("round", "nr_round_scores")):
+                condition = "session_id=?" + (" AND round_id=?" if projection == "round" else "")
+                values = (session, p.round_id) if projection == "round" else (session,)
+                await _execute(
+                    self.conn,
+                    f"INSERT INTO nr_summary_scores SELECT ?,?,actor_id,{_COLUMNS} FROM {table} WHERE {condition}",
+                    (summary, projection, *values),
+                )
         return await self.snapshot(session, output_key)
 
     @_write
@@ -398,7 +442,7 @@ class SummaryStore:
         )
 
     @_write
-    async def acknowledge(self, session, output_key, *, message_id, now):
+    async def acknowledge(self, session, output_key, *, message_id, now, reconciled=False):
         if type(message_id) is not int or not 0 < message_id < 2**63:
             raise ValueError("A summary ACK needs a positive SQLite-range message ID.")
         delivered = utc_int(now)
@@ -414,7 +458,11 @@ class SummaryStore:
             "SELECT attempted_at_utc FROM nr_summary_outputs WHERE summary_id=?",
             (row.summary_id,),
         )
-        if row.state != "sending" or attempt[0] is None or delivered < attempt[0]:
+        if (
+            row.state not in ({"sending", "uncertain"} if reconciled else {"sending"})
+            or attempt[0] is None
+            or delivered < attempt[0]
+        ):
             raise ValueError("A summary ACK needs its actual ordered send attempt.")
         # Actual public success remains a fact during disruption/ending. This
         # updates no enforcement owner and never resumes scoring.
@@ -475,7 +523,14 @@ class SummaryStore:
             return tuple((r["actor_id"], decode_score(r)) for r in await cursor.fetchall())
 
     async def live_page(
-        self, session, *, scope="round", round_number=0, actor=0, backwards=False, limit=5
+        self,
+        session,
+        *,
+        scope="round",
+        round_number=0,
+        actor=0,
+        backwards=False,
+        limit=SUMMARY_PAGE_SIZE,
     ):
         """Read-only current totals; round pages stay bound to their round number.
 
@@ -537,4 +592,6 @@ class SummaryStore:
             tuple((r["actor_id"], decode_score(r)) for r in selected),
             more if backwards else bool(actor),
             bool(actor) if backwards else more,
+            actor,
+            backwards,
         )

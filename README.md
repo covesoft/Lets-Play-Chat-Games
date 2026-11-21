@@ -3,11 +3,11 @@
 Let’s Play is a Discord chat-game bot. Its first game, **New Rules**, is a party
 conversation game where unusual rules accumulate as people chat.
 
-**Current status: v0.3.14 — development-only ordinary-round preview (M2 in progress).**
+**Current status: v0.3.38 — development-only Discord preview (M3 underway).**
 M1 is accepted and closed at v0.2.9/schema 8. The Discord adapter connects a
 persisted three-human opening, message/raw-reaction scoring, markers, timed
 warnings, picker succession, three-card choices, replacements, and announced
-round changes. Opening hands use five proven templates; later hands use sixteen
+round changes. Opening hands use five proven templates; later hands use thirty-two
 existing ordinary validators without a private phrase dependency. Held play and
 three-person revival preserve the open round. Manager ending posts final results
 ordered by exact adjusted score, highest first, with unrated players last;
@@ -15,14 +15,29 @@ inactivity ending only edits an existing panel.
 
 A private Summary button on the rules disclosure panel and `/rules` shows paged
 round/game scores, with scope/page buttons updating the same private menu.
-Post summary to channel publishes a brief report; Check current scores opens
-the live private menu. Repeat reports require 30 seconds and new non-whisper
+Post summary to channel publishes a brief report with the selected scope.
+Check current scores opens the live private menu. Repeat reports require 30 seconds and new non-whisper
 chat. Delivered score copies are discarded; Discord history keeps the report.
 Busy-round progress reports and compact round-end leaderboards are now wired.
-Settled ordinary rounds recover automatically after reboot: a channel notice,
+Ordinary rounds recover automatically after reboot: a channel notice,
 30-second read-in and scheduled continuation preserve the game and scores.
-Interrupted warnings/choices, unknown-send reconciliation, modes, settings,
-complete retry/retention cleanup and public-release checks remain unfinished.
+Acknowledged warnings, published choices and announced activations keep their
+original clocks. Original card buttons and partial replacement selections survive;
+expired choices complete automatically after read-in. Published held, revival and
+opening phases also continue, with the original deadlines and controls. An interrupted lobby or opening-card
+send, warning, revival notice, held notice, or timely activation announcement
+can be recovered if its original published post is verified. A verified
+recovery notice from an earlier restart also clears its uncertain send. Public
+score posts can reconcile against their original current-scores control. Published
+choice edits use the claimed message and edit time. After eight posts following
+a warning, the choice goes in a new message. Final results can finish or
+reconcile delivery after the game closes. Drawing Conclusions can appear in
+eligible later hands and temporarily suspends ordinary rules for 120 seconds.
+After a reboot interrupts the bout, the read-in restores ordinary rules in the
+same round and preserves earned scores, game credit and Pictoglyphs. A lime-green
+notice lists the restored ordinary rules. Other
+Breaking Moments, settings, complete retry/retention cleanup and public-release
+checks remain unfinished.
 Restart and uncertain publication enter a durable pause; a manager can close the
 saved game. See [the preview runbook](docs/DISCORD_PREVIEW.md) for setup and live checks.
 Offline checks do not certify a human Discord session or Windows execution.
@@ -140,9 +155,10 @@ update commands.
 | `tests/` | Configuration, offline startup, SDK boundary, and real SQLite checks |
 | `docs/` | Public configuration, dependency, and storage documentation |
 
-Schema **12** adds round-report delivery receipts and round-local reporting watermarks.
-Existing clocks, scores and delivery claims are preserved. The Discord preview
-continues to use the v0.3.3 ordinary loop, with v0.3.9 live private score
+Schema **13** adds recovery-notice send/ACK guards; schema 12 added round-report
+delivery receipts and round-local reporting watermarks. Schema **14** adds exact edit-target claims for choices and final results.
+Back up the stopped database before upgrading. Existing clocks and scores are preserved.
+The Discord preview continues to use the v0.3.3 ordinary loop, with v0.3.9 live private score
 pages, quiet requested reports, gated interim updates and compact round leaderboards.
 See [round reporting](docs/ROUND_REPORTS.md) for policy and upgrade checks.
 See [the summary API](docs/SUMMARY_FOUNDATION.md).
