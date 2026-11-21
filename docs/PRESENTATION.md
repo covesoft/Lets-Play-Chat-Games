@@ -168,8 +168,11 @@ still accepted in existing override files.
 ### Whole-point score display (v0.3.37)
 
 `results.score` formats ten times the exact adjusted score rounded to whole
-points. `results.score_unrated` formats the no-opportunity value. Actual
-compliance uses `results.actual` and `results.unrated` independently.
+points. Since v0.3.38, unrated players show only their mention in the score
+line by default. Set `SHOW_UNRATED_SCORE_PLACEHOLDER = True` in
+`lets_play/discord_adapter/score_ui.py` to include the separator and the
+`results.score_unrated` placeholder. Actual compliance uses `results.actual`
+and `results.unrated` independently.
 
 Customize the detailed player line with `results.player_score`, the score
 details with `results.score_detail`, and their placement with

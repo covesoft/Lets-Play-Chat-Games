@@ -41,7 +41,8 @@ inactivity ending continues to edit only its known panel.
 The completed-round embed uses the dark-blue `round_results` color. Each field
 has an editable Score heading and one line such as `@player — 823`. The
 integer is ten times the exact adjusted score rounded to the nearest whole
-point, with half points rounded to even. Unrated scores display `---`.
+point, with half points rounded to even. Unrated rows show the player mention
+by itself by default. See [PRESENTATION.md](PRESENTATION.md) for the placeholder toggle.
 Order by the round's exact adjusted score descending, unrated last, actor ID for
 exact ties. No raw faults, opportunities, ordinary-post detail or footer is
 added. Up to 20 players appear on a page. Additional page buttons open a private

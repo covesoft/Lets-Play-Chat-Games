@@ -12,6 +12,7 @@ from test_discord_runtime import choice, opened, service
 
 from lets_play.cli import main
 from lets_play.config import load_settings
+from lets_play.discord_adapter import score_ui
 from lets_play.discord_adapter.discord_io import DiscordTransport, render
 from lets_play.discord_adapter.lane import LaneUnavailable
 from lets_play.discord_adapter.runtime import ORDINARY_CARDS
@@ -26,7 +27,7 @@ def override(tmp_path, data):
     return path
 
 
-def test_score_copy_supports_custom_layout_and_accepts_old_overrides(tmp_path):
+def test_score_copy_supports_custom_layout_and_accepts_old_overrides(tmp_path, monkeypatch):
     copy = load_presentation(
         override(
             tmp_path,
@@ -50,12 +51,20 @@ def test_score_copy_supports_custom_layout_and_accepts_old_overrides(tmp_path):
         ordinary_quality=1990,
     )
     assert detailed_player_entry(copy, 123, unrated).splitlines()[:2] == [
-        "Pending | <@123>",
+        "<@123>",
         "Actual compliance: Unrated",
     ]
+    assert player_score_line(copy, 123, unrated, template="reports.player_score") == "<@123>"
+    assert player_score_line(copy, 123, ScoreTotals(reaction_failures=20_000)) == "0 pts | <@123>"
     assert player_score_line(copy, 123, clean) == "1,000 pts | <@123>"
     assert (
         player_score_line(copy, 123, clean, template="reports.player_score") == "<@123> (1,000 pts)"
+    )
+
+    monkeypatch.setattr(score_ui, "SHOW_UNRATED_SCORE_PLACEHOLDER", True)
+    assert player_score_line(copy, 123, unrated) == "Pending | <@123>"
+    assert (
+        player_score_line(copy, 123, unrated, template="reports.player_score") == "<@123> (Pending)"
     )
 
 

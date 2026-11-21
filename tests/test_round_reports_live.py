@@ -203,7 +203,7 @@ async def test_100_players_round_scores_include_selection_posts_and_rank_all_pag
         assert [(field.name, field.value) for field in embed.fields] == [
             (
                 "Score",
-                f"<@{actor}> — **{round(10 * rank) if rank is not None else '---'}**",
+                f"<@{actor}> — **{round(10 * rank)}**" if rank is not None else f"<@{actor}>",
             )
             for actor, totals in first[0]
             for rank in (totals.ranking_percent(),)

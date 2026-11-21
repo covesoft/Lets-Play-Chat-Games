@@ -120,7 +120,7 @@ async def test_real_manager_results_rank_highest_adjusted_score_first(tmp_path, 
             "Actual compliance: 100.00%",
         ]
         assert embed.fields[1].value.startswith("<@606> — **818**\n")
-        assert embed.fields[2].value.startswith("<@303> — **---**\nActual compliance: Unrated\n")
+        assert embed.fields[2].value.startswith("<@303>\nActual compliance: Unrated\n")
         assert embed.footer.text == "Results page 1 · highest score first"
 
 
@@ -172,7 +172,7 @@ async def test_ranked_pages_cover_all_players_with_exact_ties_and_unrated_last(
         assert [field.value.splitlines()[0] for field in embed.fields[:3]] == [
             "<@730> — **909**",
             "<@599> — **909**",
-            "<@303> — **---**",
+            "<@303>",
         ]
         second = await runtime.state(route.session_id, result_anchor=first.scores[-1][0])
         previous = await runtime.state(

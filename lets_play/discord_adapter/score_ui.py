@@ -3,17 +3,22 @@
 from lets_play.new_rules.scoring import ScoreTotals
 from lets_play.presentation import Presentation
 
+SHOW_UNRATED_SCORE_PLACEHOLDER = False
+
 
 def player_score_line(
     copy: Presentation, actor: int, totals: ScoreTotals, *, template: str = "results.player_score"
 ) -> str:
+    player = copy.text("results.player", actor=actor)
     adjusted = totals.ranking_percent()
+    if adjusted is None and not SHOW_UNRATED_SCORE_PLACEHOLDER:
+        return player
     score = (
         copy.text("results.score_unrated")
         if adjusted is None
         else copy.text("results.score", points=round(10 * adjusted))
     )
-    return copy.text(template, player=copy.text("results.player", actor=actor), score=score)
+    return copy.text(template, player=player, score=score)
 
 
 def detailed_player_entry(copy: Presentation, actor: int, totals: ScoreTotals) -> str:
