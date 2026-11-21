@@ -16,7 +16,7 @@ hands. The full catalog and other Breaking Moments are still pending.
 | NR006 | Expressionless | Prohibited reaction actors; Expression |
 | NR007 | Inside Voice | Lowercase mapping; casing slot |
 | NR008 | SPEAK UP | Uppercase mapping; casing slot |
-| NR009 | No Accounting | No Unicode digits (Typography) |
+| NR009 | No Accounting | No Unicode digits or specified number emoji (Typography) |
 | NR010 | Questionable Conduct | ASCII question-mark ending; terminal slot |
 | NR011 | Are You Sure? | At least three consecutive terminal ASCII periods; terminal slot |
 | NR012 | With Gusto | ASCII exclamation-mark ending; terminal slot |

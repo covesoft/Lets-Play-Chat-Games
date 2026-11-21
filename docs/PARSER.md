@@ -149,8 +149,13 @@ not meet that requirement.
 
 No Accounting checks logical content for Unicode digit characters, including
 Arabic-Indic digits, superscripts such as `²`, and digit keycaps. Numeric
-characters such as `½` fall outside that digit class. Discord object IDs and
-hidden link destinations are excluded from logical content. One Breath checks
+characters such as `½` fall outside that digit class. No Accounting also
+counts 🔢, 🔟, and 💯. A literal `:100:` fails because it contains digits.
+Static and animated custom emoji fail if their names are exactly `100` or
+`1000`. Discord object IDs and hidden link destinations are excluded from
+the scan. The expanded check applies to newly received messages after the
+v0.3.34 update, including resumed rounds. Recorded scores keep their original
+outcomes. One Breath checks
 the original message for CR or LF, including breaks inside Markdown. A Small
 Pause requires an ASCII comma in logical content.
 

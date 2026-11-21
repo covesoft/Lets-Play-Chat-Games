@@ -41,6 +41,8 @@ MIN_WORDS = 5
 MIN_CHARACTERS = 20
 REQUIRED_ENDINGS = {"NR010": "?", "NR011": "...", "NR012": "!"}
 ROYAL_WORDS = frozenset({"we", "our", "us"})
+_NUMERIC_EMOJI = frozenset("🔢🔟💯")
+_NUMERIC_CUSTOM_EMOJI_PREFIXES = ("<:100:", "<:1000:", "<a:100:", "<a:1000:")
 _FORBIDDEN_WORDS = {
     "NR025": frozenset({"sorry"}),
     "NR026": frozenset({"lol", "lmao", "haha"}),
@@ -120,7 +122,10 @@ def evaluate_text_rule(view: MessageView, instance: RuleInstance) -> RuleEvaluat
         case "NR008":
             passed = view.logical == view.logical.upper()
         case "NR009":
-            passed = not any(char.isdigit() for char in view.logical)
+            passed = not (
+                any(char.isdigit() or char in _NUMERIC_EMOJI for char in view.logical)
+                or any(obj.startswith(_NUMERIC_CUSTOM_EMOJI_PREFIXES) for obj in view.objects)
+            )
         case "NR010" | "NR011" | "NR012":
             passed = view.ending.endswith(REQUIRED_ENDINGS[instance.card_id])
         case "NR013":

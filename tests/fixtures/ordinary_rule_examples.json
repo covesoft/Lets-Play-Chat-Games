@@ -1390,5 +1390,71 @@
     "card": "NR039",
     "content": "-# twelve123\n",
     "outcome": "not_applicable"
+  },
+  {
+    "id": "NR009-number-emoji-0",
+    "card": "NR009",
+    "content": "**🔢**",
+    "outcome": "fail"
+  },
+  {
+    "id": "NR009-number-emoji-1",
+    "card": "NR009",
+    "content": "**🔟**",
+    "outcome": "fail"
+  },
+  {
+    "id": "NR009-number-emoji-2",
+    "card": "NR009",
+    "content": "💯",
+    "outcome": "fail"
+  },
+  {
+    "id": "NR009-number-emoji-3",
+    "card": "NR009",
+    "content": ":100:",
+    "outcome": "fail"
+  },
+  {
+    "id": "NR009-number-emoji-4",
+    "card": "NR009",
+    "content": "<:100:123456789012345678>",
+    "outcome": "fail"
+  },
+  {
+    "id": "NR009-number-emoji-5",
+    "card": "NR009",
+    "content": "<:1000:123456789012345678>",
+    "outcome": "fail"
+  },
+  {
+    "id": "NR009-number-emoji-6",
+    "card": "NR009",
+    "content": "<a:100:123456789012345678>",
+    "outcome": "fail"
+  },
+  {
+    "id": "NR009-number-emoji-7",
+    "card": "NR009",
+    "content": "**<a:1000:123456789012345678>**",
+    "outcome": "fail"
+  },
+  {
+    "id": "NR009-number-emoji-8",
+    "card": "NR009",
+    "content": "<:duck:100000000000000001> <@100000000000000001>",
+    "outcome": "pass"
+  },
+  {
+    "id": "NR009-number-emoji-9",
+    "card": "NR009",
+    "content": "<:score100:123456789012345678> <a:10000:123456789012345678>",
+    "outcome": "pass"
+  },
+  {
+    "id": "NR009-number-emoji-10",
+    "card": "NR009",
+    "content": "-# 🔟 <:100:123456789012345678>",
+    "outcome": "not_applicable"
   }
 ]
