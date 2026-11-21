@@ -333,7 +333,7 @@
   "colors": {
     "mode_ended": "#32CD32",
     "mode": "#8665C7",
-    "round_results": "#1E3A5F",
+    "round_results": "#3C74BE",
     "default": "#8665C7",
     "results": "#8665C7",
     "paused": "#8665C7",
