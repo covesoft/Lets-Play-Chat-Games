@@ -8,7 +8,7 @@ contains operational and API documentation only.
 
 ## Current implementation
 
-Application v0.3.44 uses schema 16. M1 closed at v0.2.9/schema 8, and M2
+Application v0.3.45 uses schema 17. M1 closed at v0.2.9/schema 8, and M2
 closed at v0.3.30/schema 16. M3 compatibility and catalog work is underway.
 Preserve the existing domain/storage APIs. This build is a development-only
 Discord preview.
@@ -20,8 +20,9 @@ gated automatic interims, compact round-end boards and ranked final standings.
 Drawing Conclusions is the supported Breaking Moment. An eligible later hand
 can draw it as one template ticket. Opening and post-mode hands are ordinary-only.
 All forty ordinary predicates exist. The opening pool has ten templates.
-Later offers use up to thirty-nine templates, including NR032 when its private
-gameplay list is available. NR036 is not offered by the adapter.
+Later offers use up to forty templates. NR032 uses its private gameplay list.
+NR036 uses the ordered guild bank, seeded from optional operator defaults in
+schema 17. Manager controls follow in M5.
 One Word Will Do conflicts with the Clauses deck, and each terminal mark requirement
 conflicts with its matching ban. A single permitted removal must clear all blockers.
 

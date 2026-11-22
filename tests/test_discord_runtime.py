@@ -80,10 +80,18 @@ class Transport:
 
 @asynccontextmanager
 async def service(
-    tmp_path, monkeypatch, *, transport=None, include_breaking_moment=False, profanity=None
+    tmp_path,
+    monkeypatch,
+    *,
+    transport=None,
+    include_breaking_moment=False,
+    profanity=None,
+    guild_phrase_defaults=(),
 ):
     monkeypatch.setattr(runtime_module, "OPENING_CARDS", frozenset({"NR004", "NR006", "NR034"}))
-    async with open_game_store(tmp_path / "game.sqlite3", profanity=profanity) as store:
+    async with open_game_store(
+        tmp_path / "game.sqlite3", profanity=profanity, guild_phrase_defaults=guild_phrase_defaults
+    ) as store:
         runtime = OpeningRuntime(
             store,
             transport or Transport(),

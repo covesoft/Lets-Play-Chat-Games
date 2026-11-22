@@ -701,5 +701,15 @@ MIGRATIONS += (
             "CREATE INDEX nr_pending_evolution_outputs ON nr_evolution_outputs(output_id) WHERE acknowledged_at_utc IS NULL AND retired_at_utc IS NULL",
         ),
     ),
+    Migration(
+        version=17,
+        name="guild_dont_forget_phrase_bank",
+        statements=(
+            """CREATE TABLE nr_guild_phrase_banks (
+                guild_id INTEGER PRIMARY KEY CHECK(guild_id>0),
+                bank_json TEXT NOT NULL
+            ) STRICT""",
+        ),
+    ),
 )
 SCHEMA_VERSION = MIGRATIONS[-1].version

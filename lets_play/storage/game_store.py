@@ -26,6 +26,7 @@ from lets_play.new_rules.evaluation import (
     MessageDecision,
     ReactionDecision,
 )
+from lets_play.new_rules.hands import PhraseChoice
 from lets_play.new_rules.pacing import PACING_VERSION
 from lets_play.new_rules.parsing import PARSER_VERSION
 from lets_play.new_rules.profanity import ProfanityList
@@ -145,6 +146,7 @@ async def open_game_store(
     max_pending: int = 128,
     busy_timeout_ms: int = 1000,
     profanity: ProfanityList | None = None,
+    guild_phrase_defaults: tuple[PhraseChoice, ...] = (),
 ) -> AsyncIterator[GameStore]:
     if type(max_pending) is not int or not 1 <= max_pending <= 10_000:
         raise ValueError("Store capacity must be an integer in [1, 10000].")
@@ -162,7 +164,7 @@ async def open_game_store(
         row = await _row(conn, "PRAGMA journal_mode")
         if row[0] != "wal":
             raise sqlite3.DatabaseError("Gameplay requires a local WAL database.")
-        store = GameStore(conn, max_pending, profanity)
+        store = GameStore(conn, max_pending, profanity, guild_phrase_defaults)
         try:
             yield store
         finally:
@@ -174,7 +176,10 @@ async def open_game_store(
 class GameStore:
     """One connection/lock per service instance, bounded waiting, no object cache."""
 
-    def __init__(self, conn: aiosqlite.Connection, max_pending: int, profanity=None):
+    def __init__(
+        self, conn: aiosqlite.Connection, max_pending: int, profanity=None, guild_phrase_defaults=()
+    ):
+        self._guild_phrase_defaults = guild_phrase_defaults
         self._profanity = profanity
         self._conn = conn
         self._lock = asyncio.Lock()
@@ -210,7 +215,9 @@ class GameStore:
             async with self._lock:
                 if self._closed or self._failed:
                     raise RuntimeError("The game store is closed or unusable.")
-                unit = GameUnitOfWork(self._conn, write, self._profanity)
+                unit = GameUnitOfWork(
+                    self._conn, write, self._profanity, self._guild_phrase_defaults
+                )
                 self._owner_task = asyncio.current_task()
                 try:
                     # BEGIN belongs inside try: cancellation may arrive after SQL
@@ -241,7 +248,10 @@ class GameStore:
 
 
 class GameUnitOfWork:
-    def __init__(self, conn: aiosqlite.Connection, write: bool, profanity=None):
+    def __init__(
+        self, conn: aiosqlite.Connection, write: bool, profanity=None, guild_phrase_defaults=()
+    ):
+        self.guild_phrase_defaults = guild_phrase_defaults
         self.profanity = profanity
         self._conn = conn
         self._write = write

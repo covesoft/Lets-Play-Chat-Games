@@ -190,7 +190,8 @@ def test_catalog_covers_sent_keys_and_card_labels_without_inline_english():
                     for k in node.keywords
                 )
     for card in ORDINARY_CARDS:
-        assert copy.text(f"cards.{card}.name") and copy.text(f"cards.{card}.description")
+        fields = {"phrase": "red duck"} if card == "NR036" else {}
+        assert copy.text(f"cards.{card}.name") and copy.text(f"cards.{card}.description", **fields)
 
 
 def test_startup_logging_preserves_owner_intent_and_handles_ctrl_c(tmp_path, monkeypatch, caplog):

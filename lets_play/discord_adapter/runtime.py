@@ -31,7 +31,7 @@ logger = logging.getLogger(__name__)
 OPENING_CARDS = frozenset(
     {"NR006", "NR007", "NR010", "NR011", "NR012", "NR017", "NR024", "NR026", "NR033", "NR034"}
 )
-ORDINARY_CARDS = frozenset(CARD_SPECS) - {"NR036"}
+ORDINARY_CARDS = frozenset(CARD_SPECS)
 PUBLISH_KINDS = {
     "lobby": EventKind.LOBBY_PUBLISHED,
     "offer": EventKind.OFFER_PUBLISHED,

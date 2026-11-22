@@ -25,6 +25,7 @@ from lets_play.storage.breaking_flow import BreakingFlow
 from lets_play.storage.game_codec import IncompatibleState
 from lets_play.storage.game_store import _execute, _row
 from lets_play.storage.game_store import _unit_mutating as _write
+from lets_play.storage.guild_phrases import GuildPhraseBank
 from lets_play.storage.offer_codec import utc_datetime, utc_int
 from lets_play.storage.opening_codec import decode_config, encode_config
 from lets_play.storage.ordinary_flow import FlowStatus, OrdinaryFlow
@@ -148,6 +149,10 @@ class EvolutionFlow:
         if row is None:
             row = await self._configure(context)
         phrases, templates = decode_config(row["config_json"])
+        if "NR036" in templates and row["phrase_draw_limit"] is not None:
+            guild_bank = await GuildPhraseBank(self.unit).seed(frame.route.guild_id)
+            if guild_bank is not None:
+                phrases = guild_bank
         if phrases and row["phrase_draw_limit"] is None:
             raise IncompatibleState("Reconcile the session phrase allowance explicitly.")
         used = await OrdinaryFlow(self.unit).used_keys(

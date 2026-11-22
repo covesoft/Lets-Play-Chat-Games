@@ -4,7 +4,7 @@ The package can prepare legal ordinary additions/replacements, construct a
 complete three-template offer, and revalidate a frozen choice. It performs no
 I/O, publication, activation, phrase consumption, round closure, or awards.
 The live adapter enables the Drawing Conclusions ticket for eligible later
-hands. Live NR036 guild-bank integration and other Breaking Moments are pending.
+hands. Later hands can draw NR036 from the [ordered guild bank](CONFIGURATION.md#dont-forget).
 
 ## Implemented catalog
 
@@ -145,9 +145,9 @@ and freezes its revision with the incoming card. An absent or unusable list
 withholds NR032.
 
 This API does not authorize entitlements, persist usage/settings, validate a full
-manager suitability/profanity policy, or load private lists. The future service
-must query its durable usage scope for candidate keys and supply the authorized
-window; the module maintains no game-history cache.
+manager suitability policy, or load private lists. The live evolution flow reads
+the saved guild bank and durable per-game usage for candidate keys and supplies
+the authorized window. The hand module maintains no game-history cache.
 
 ## Revalidation and remaining integration
 

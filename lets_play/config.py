@@ -29,6 +29,7 @@ class Settings:
     admin_ids: frozenset[int] = frozenset()
     database_path: Path = Path("data/lets_play.sqlite3")
     profanity_list_path: Path | None = field(default=None, repr=False)
+    guild_phrases_file_path: Path | None = field(default=None, repr=False)
     phrase_suitability_list_path: Path | None = field(default=None, repr=False)
     badge_emoji_map_path: Path | None = None
     ding_emoji: str | None = field(default=None, repr=False)
@@ -149,6 +150,7 @@ def load_settings(
         admin_ids=frozenset(owners),
         database_path=_path(base, database),
         profanity_list_path=_path(base, _value(env, "CHATGAMES_PROFANITY_LIST_PATH")),
+        guild_phrases_file_path=_path(base, _value(env, "CHATGAMES_GUILD_PHRASES_FILE_PATH")),
         phrase_suitability_list_path=_path(
             base, _value(env, "CHATGAMES_PHRASE_SUITABILITY_LIST_PATH")
         ),

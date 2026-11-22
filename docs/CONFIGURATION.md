@@ -13,9 +13,8 @@ application code accepts a `Settings` instance. Only live startup calls
 
 Blank optional values mean absent. There is no bundled reaction marker: configure
 your own asset privately before starting a game. Relative paths resolve against the selected
-root; production list files are not read by configuration checks. M0 does not
-enable list-backed validators, phrase management, or badge rendering. Feature
-code must validate each dependency before offering it to players.
+root. `--check-config` validates the configured gameplay list and phrase seed
+without writing to the database.
 
 | Environment variable | Meaning / default |
 | --- | --- |
@@ -24,6 +23,7 @@ code must validate each dependency before offering it to players.
 | `CHATGAMES_ADMIN_IDS` | Comma-separated bot-owner IDs, deduplicated; empty means no configured owner. Invalid nonempty entries fail instead of being silently dropped |
 | `CHATGAMES_DATABASE_PATH` | `data/lets_play.sqlite3`; must be on disk for WAL |
 | `CHATGAMES_PROFANITY_LIST_PATH` | Optional private NR032 gameplay list |
+| `CHATGAMES_GUILD_PHRASES_FILE_PATH` | Optional ordered Don’t Forget defaults for guilds without a saved bank |
 | `CHATGAMES_PHRASE_SUITABILITY_LIST_PATH` | Separate optional private compulsory-phrase suitability input |
 | `CHATGAMES_DING_EMOJI` | Private custom marker markup; no default. Missing/blank values prevent game admission; a real reaction probe must succeed |
 | `CHATGAMES_PRESENTATION_PATH` | Optional private JSON copy/palette overrides; omitted uses packaged `lets_play/resources/en-US.json` |
@@ -81,6 +81,28 @@ restored and the bot restarts. The host can still end a paused game. Only the
 list revision is stored with cards. The configured path, entries and matched
 words stay out of diagnostics and game records. See [PARSER.md](PARSER.md#mind-your-language)
 for the matching rules.
+
+## Don't Forget
+
+Point `CHATGAMES_GUILD_PHRASES_FILE_PATH` to a private UTF-8 file with one phrase
+per line, in draw order. Paths in `.env` resolve from the configuration root.
+Use up to 15 entries, each one to five words and at most 80 characters. The file
+size limit is 16 KiB. Blank lines are ignored. The loader rejects normalized
+duplicates, markup, mentions, links and symbols outside plain punctuation.
+If you configure `CHATGAMES_PHRASE_SUITABILITY_LIST_PATH`, the phrases must pass
+that separate compulsory-phrase policy. The operator curates the defaults and
+reviews their tone. `--check-config` reports the valid count or an error without
+printing the configured path or phrase text.
+
+The app reads the defaults at startup and seeds a guild's durable bank on its
+first later-hand eligibility check. Editing the startup file and restarting
+updates the seed for guilds that still lack a saved bank. The optional local
+command `python -m lets_play --import-guild-phrases GUILD_ID` reads the same
+`.env` setting and replaces that guild's ordered bank immediately. A valid
+empty file explicitly clears the bank when imported. The import needs local
+database access and does not connect to Discord. Invalid imports leave the saved
+bank intact. Existing offers and active rules keep their exact phrases. Editing
+the bank does not reset which wording has been used in the current game.
 
 ## Presentation
 

@@ -17,6 +17,7 @@ from lets_play.discord_adapter.discord_io import (
     reaction_snapshot,
 )
 from lets_play.discord_adapter.runtime import OpeningRuntime
+from lets_play.new_rules.phrase_bank import PhraseBankError, load_guild_phrases
 from lets_play.new_rules.profanity import load_profanity_list
 from lets_play.presentation import load_presentation
 from lets_play.storage import initialize_database
@@ -60,8 +61,21 @@ class LetsPlayBot(commands.Bot):
         profanity = await asyncio.to_thread(load_profanity_list, self.settings.profanity_list_path)
         if self.settings.profanity_list_path is not None and profanity is None:
             logger.warning("Mind Your Language unavailable. Check CHATGAMES_PROFANITY_LIST_PATH.")
+        try:
+            defaults = await asyncio.to_thread(
+                load_guild_phrases,
+                self.settings.guild_phrases_file_path,
+                self.settings.phrase_suitability_list_path,
+            )
+        except PhraseBankError as exc:
+            logger.warning("Don't Forget defaults unavailable. %s", exc)
+            defaults = None
         store = await self._game_resources.enter_async_context(
-            open_game_store(self.settings.database_path, profanity=profanity)
+            open_game_store(
+                self.settings.database_path,
+                profanity=profanity,
+                guild_phrase_defaults=defaults or (),
+            )
         )
         self.game_runtime = OpeningRuntime(store, DiscordTransport(self))
         if self.settings.sync_commands and self.tree.get_commands():

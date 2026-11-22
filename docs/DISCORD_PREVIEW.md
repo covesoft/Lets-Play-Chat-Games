@@ -1,4 +1,4 @@
-# New Rules Discord preview — v0.3.44 / schema 16
+# New Rules Discord preview — v0.3.45 / schema 17
 
 This development build connects the existing ordinary engine to Discord. Run one
 bot process against a database. Private/requested scores, automatic interims and
@@ -9,10 +9,10 @@ release work are still open.
 
 ## Install and enable
 
-The current schema is **16**, with WAL and foreign keys enabled. For a v0.3.43
-installation on schema 16, stop the bot before applying v0.3.44. Reinstall and
-restart.
-For a fresh database, run `python -m lets_play --init-db`. See
+The current schema is **17**, with WAL and foreign keys enabled. Before an
+upgrade, stop the bot and verify a database backup. Run
+`python -m lets_play --init-db` to apply migration 17 or initialize a fresh
+database. Migration 17 adds the guild phrase bank. See
 [RECOVERY.md](RECOVERY.md) and [STORAGE.md](STORAGE.md).
 
 
@@ -38,8 +38,9 @@ adds/removes the configured reaction before deleting the probe. A failed reactio
 prevents admission. The write-side admission gate rechecks capacity/expiry and channel ownership after
 the probe to cover concurrent changes; existing games survive premium expiry.
 Archived/locked threads and forum/media containers are refused; start inside an
-accessible post/thread. Administrator is unnecessary. No private phrase list,
-badge map, voice library or additional intent is needed.
+accessible post/thread. Administrator is unnecessary. The optional
+[configured phrase file](CONFIGURATION.md#dont-forget) seeds Don’t Forget
+for guilds without a saved bank.
 
 ## Human development check
 
@@ -65,9 +66,12 @@ badge map, voice library or additional intent is needed.
    bot posts, the chooser gets one new message and the warning stays in chat.
    The acknowledged panel's buttons remain authoritative and actual delivery
    starts the 60-second choice deadline. An uncertain edit or send enters recovery.
-   Later hands use up to thirty-nine ordinary templates. Mind Your Language
+   Later hands use up to forty ordinary templates. Mind Your Language
    can appear once a [private gameplay list](CONFIGURATION.md#mind-your-language)
-   loads at bot startup. Choices can
+   loads at bot startup. Don’t Forget can appear when a qualifying phrase from
+   the guild's first 5 (free) or 15 (premium) entries fits the rules and has not
+   already activated in the game. The dealt card shows its exact wording and
+   preserves it through a restart or bank change. Choices can
    add a rule or replace one legal existing occupant. When several outgoing rules
    are legal, choosing the incoming card opens **New Rules — choose a rule to
    remove**. The panel lists each outgoing rule's name and description in button

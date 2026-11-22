@@ -3,13 +3,15 @@
 Let’s Play is a Discord chat-game bot. Its first game, **New Rules**, is a party
 conversation game where unusual rules accumulate as people chat.
 
-**Current status: v0.3.44 — development-only Discord preview (M3 underway).**
+**Current status: v0.3.45 — development-only Discord preview (M3 underway).**
 M1 is accepted and closed at v0.2.9/schema 8. The Discord adapter connects a
 persisted three-human opening, message/raw-reaction scoring, markers, timed
 warnings, picker succession, three-card choices, replacements, and announced
-round changes. Opening hands use ten templates. Later hands use up to thirty-nine
+round changes. Opening hands use ten templates. Later hands use up to forty
 ordinary templates. Mind Your Language requires an optional
-[private gameplay list](docs/CONFIGURATION.md#mind-your-language). Held play and
+[private gameplay list](docs/CONFIGURATION.md#mind-your-language).
+An optional [guild phrase file](docs/CONFIGURATION.md#dont-forget) seeds Don’t
+Forget for later hands. Held play and
 three-person revival preserve the open round. Manager ending posts final results
 ordered by exact adjusted score, highest first, with unrated players last;
 inactivity ending only edits an existing panel.
