@@ -65,6 +65,10 @@ class ProfanityList:
         canonical = json.dumps(sorted(entries), ensure_ascii=False, separators=(",", ":"))
         object.__setattr__(self, "revision", sha256(canonical.encode("utf-8")).hexdigest())
 
+    @property
+    def entry_count(self) -> int:
+        return sum(len(entries) for entries in self._entries.values())
+
     def instantiate(self, instance_id: str) -> RuleInstance:
         return RuleInstance(instance_id, CARD_ID, ((REVISION_KEY, self.revision),))
 

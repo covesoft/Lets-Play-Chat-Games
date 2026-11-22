@@ -64,10 +64,10 @@ def test_config_check_reports_readiness_without_exposing_path_or_list(
     monkeypatch.setenv("CHATGAMES_PROFANITY_LIST_PATH", str(path))
     assert main(["--check-config"], base_dir=tmp_path) == 0
     assert "unavailable" in capsys.readouterr().out
-    path.write_bytes(b"\xef\xbb\xbfPrivate-Canary\nPurple Carrot\n")
+    path.write_bytes(b"\xef\xbb\xbfPrivate-Canary\nPurple Carrot\n\nPURPLE-CARROT\n")
     assert main(["--check-config"], base_dir=tmp_path) == 0
     output = capsys.readouterr().out
-    assert "private gameplay list loaded" in output
+    assert "private gameplay list loaded (unique entries: 2)." in output
     assert "PRIVATE_INPUT_LOCATION" not in output and "Private-Canary" not in output
     assert (
         load_profanity_list(path).revision

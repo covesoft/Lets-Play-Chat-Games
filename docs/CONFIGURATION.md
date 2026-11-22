@@ -69,7 +69,8 @@ repository. Put one whole word or short phrase on each line. Blank lines and
 duplicate normalized entries are ignored. The file must contain at least one
 valid entry and fit within 256 KiB. Entries can contain up to 16 words and 256
 characters. Use plain text without markup or comment lines. Run
-`python -m lets_play --check-config` to see whether it loads.
+`python -m lets_play --check-config` to confirm that it loads and see the count
+of unique normalized entries.
 
 The bot reads the list once at startup. Save edits and restart to use the new
 list for future offers. The same normalized entries keep the same revision

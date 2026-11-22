@@ -12,8 +12,6 @@ attrs==26.1.0
     # via aiohttp
 audioop-lts==0.2.2
     # via discord-py
-better-profanity==0.7.0
-    # via lets-play-chat-games
 discord-py==2.7.1
     # via lets-play-chat-games
 emoji==2.16.0

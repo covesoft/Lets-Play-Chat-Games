@@ -11,7 +11,6 @@ supported minor version; the patch release can differ on the owner’s machine.
 | `python-dotenv` | 1.2.4 | Explicit `.env` parsing; import is `dotenv` |
 | `emoji` | 2.16.0 | Unicode emoji sequences, including phrase-interrupting punctuation emoji; custom Discord emoji parsing remains project code |
 | `aiosqlite` | 0.22.1 | Async access to the standard SQLite library |
-| `better-profanity` | 0.7.0 | Pinned from the scaffold; gameplay uses the shared word parser |
 | `markdown-it-py` | 4.2.0 | Token-based structure for the offline Discord-oriented parser |
 | `regex` | 2026.11.7 | Unicode word sets, quotation properties, and grapheme clusters |
 
@@ -61,9 +60,8 @@ codecs. Direct/transitive pins and environment keys remain unchanged.
 | `build` | 1.6.1 | Isolated source/wheel build checks |
 | `setuptools` | 84.2.1 | Pinned PEP 517 build backend |
 
-The old `better-profanity` release has been smoke-tested on Python 3.13 with an
-explicit harmless list. NR032 uses the private configured gameplay list and
-the shared [word parser](PARSER.md#mind-your-language).
+NR032 uses the private configured gameplay list and the shared
+[word parser](PARSER.md#mind-your-language).
 
 ## Lock and update procedure
 
@@ -99,7 +97,6 @@ Publisher references:
 * [python-dotenv](https://pypi.org/project/python-dotenv/1.2.4/)
 * [emoji](https://pypi.org/project/emoji/2.16.0/)
 * [aiosqlite](https://pypi.org/project/aiosqlite/0.22.1/)
-* [better-profanity](https://pypi.org/project/better-profanity/0.7.0/)
 * [discord.py Client API](https://discordpy.readthedocs.io/en/stable/api.html#discord.Client)
 * [Discord Create Reaction](https://docs.discord.com/developers/resources/message#create-reaction)
 * [SQLite WAL](https://www.sqlite.org/wal.html)

@@ -54,10 +54,13 @@ def main(argv: list[str] | None = None, *, base_dir: Path | None = None) -> int:
             )
             if settings.profanity_list_path is None:
                 print("Mind Your Language: disabled (no private gameplay list configured).")
-            elif load_profanity_list(settings.profanity_list_path) is None:
+            elif (gameplay_list := load_profanity_list(settings.profanity_list_path)) is None:
                 print("Mind Your Language: unavailable. Check CHATGAMES_PROFANITY_LIST_PATH.")
-            else: # TODO: add list length
-                print("Mind Your Language: private gameplay list loaded.")
+            else:
+                print(
+                    "Mind Your Language: private gameplay list loaded "
+                    f"(unique entries: {gameplay_list.entry_count:,})."
+                )
             return 0
         if args.init_db:
             from lets_play.storage import initialize_database

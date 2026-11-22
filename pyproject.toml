@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "lets-play-chat-games"
-version = "0.3.43"
+version = "0.3.44"
 description = "Let's Play — a Discord chat-game bot, starting with New Rules."
 readme = "README.md"
 requires-python = ">=3.13,<3.14"
@@ -12,7 +12,6 @@ license = "AGPL-3.0-only"
 license-files = ["LICENSE"]
 dependencies = [
     "aiosqlite==0.22.1",
-    "better-profanity==0.7.0",
     "discord.py==2.7.1",
     "emoji==2.16.0",
     "markdown-it-py==4.2.0",

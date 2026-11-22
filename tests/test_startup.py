@@ -8,7 +8,6 @@ from unittest.mock import AsyncMock
 
 import discord
 import pytest
-from better_profanity import Profanity
 
 from lets_play import __version__
 from lets_play.bot import LetsPlayBot, build_intents
@@ -18,14 +17,11 @@ from lets_play.config import load_settings
 ROOT = Path(__file__).resolve().parents[1]
 
 
-def test_pinned_text_dependencies_work_without_default_profanity_policy():
+def test_pinned_emoji_dependency_preserves_combined_sequences():
     import emoji
 
     sequence = "👩🏽‍🚀"
     assert emoji.emoji_list(sequence)[0]["emoji"] == sequence
-    checker = Profanity(words=["turnip"])
-    assert checker.contains_profanity("a turnip")
-    assert not checker.contains_profanity("a carrot")
 
 
 def test_intents_request_only_guild_message_reaction_content_capabilities():
