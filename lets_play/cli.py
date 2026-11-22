@@ -43,14 +43,14 @@ def main(argv: list[str] | None = None, *, base_dir: Path | None = None) -> int:
             load_presentation(settings.presentation_path)
             print("Configuration valid. No Discord connection or database write performed.")
             print(
-                "Live token: configured."
+                "Discord token: configured."
                 if settings.token
-                else "Live token: missing (offline checks work)."
+                else "Discord token: missing (offline checks work)."
             )
             print(
-                "Invite: available."
+                "Bot Invite: available."
                 if settings.invite_url
-                else "Invite: omitted until CHATGAMES_APP_ID is set."
+                else "Bot Invite: omitted until CHATGAMES_APP_ID is set."
             )
             if settings.profanity_list_path is None:
                 print("Mind Your Language: disabled (no private gameplay list configured).")
