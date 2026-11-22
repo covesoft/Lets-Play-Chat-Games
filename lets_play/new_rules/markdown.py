@@ -12,8 +12,10 @@ from markdown_it.rules_block import blockquote, fence, list_block
 from markdown_it.rules_block.state_block import StateBlock
 from markdown_it.rules_inline.state_inline import Delimiter, StateInline
 
+_CUSTOM_EMOJI_BODY = r"a?:[A-Za-z0-9_]{2,32}:[0-9]{1,20}"
+CUSTOM_EMOJI_MARKUP = re.compile(rf"<{_CUSTOM_EMOJI_BODY}>")
 _OBJECT = re.compile(
-    r"<(?:a?:[A-Za-z0-9_]{2,32}:[0-9]{1,20}|@!?[0-9]{1,20}|@&[0-9]{1,20}"
+    rf"<(?:{_CUSTOM_EMOJI_BODY}|@!?[0-9]{{1,20}}|@&[0-9]{{1,20}}"
     r"|#[0-9]{1,20}|t:-?[0-9]{1,20}(?::[tTdDfFR])?)>"
 )
 

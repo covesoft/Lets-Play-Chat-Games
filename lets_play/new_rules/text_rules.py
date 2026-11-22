@@ -4,6 +4,8 @@ from lets_play.new_rules.contracts import Outcome, RuleEvaluation, RuleInstance
 from lets_play.new_rules.parsing import MessageView, grapheme_count, is_word_gap, parse_message
 
 TEXT_FAILURE_REASONS = {
+    "NR001": "emoji_forbidden",
+    "NR005": "links_forbidden",
     "NR007": "lowercase_required",
     "NR008": "uppercase_required",
     "NR009": "digits_forbidden",
@@ -117,6 +119,10 @@ def evaluate_text_rule(view: MessageView, instance: RuleInstance) -> RuleEvaluat
     if view.is_whisper or not view.has_text:
         return RuleEvaluation(instance.instance_id, Outcome.NOT_APPLICABLE)
     match instance.card_id:
+        case "NR001":
+            passed = not view.has_emoji
+        case "NR005":
+            passed = not view.shared_links
         case "NR007":
             passed = view.logical == view.logical.lower()
         case "NR008":

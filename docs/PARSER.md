@@ -19,8 +19,8 @@ result = evaluate_text_rule(view, RuleInstance("example-instance", "NR034"))
 ```
 
 `RuleEvaluation` returns an instance ID, typed pass/fail/not-applicable outcome,
-and a stable reason code on failure. Supported text IDs are NR007 through NR022,
-NR024 through NR031, and NR033 through NR039. See the [ordinary subset](HANDS.md) for their behavior
+and a stable reason code on failure. Supported text IDs are NR001, NR005, NR007
+through NR022, NR024 through NR031, and NR033 through NR039. See the [ordinary subset](HANDS.md) for their behavior
 and metadata.
 Other card IDs raise `NotImplementedError`; they never receive a default successful result.
 The engine must select the active instances and phase before invoking ordinary
@@ -35,7 +35,9 @@ predicates. No ordinary predicate should run as mode enforcement.
 | `words`, `word_keys` | Word spans and normalized identities, with no substring matching |
 | `formatting` | Recognized style features, independently of content |
 | `links` | Destinations and masked/angle-link distinction; never fetched |
+| `shared_links` | Explicit destinations plus visible bare URLs used by link rules |
 | `objects` | Syntactically recognized Discord emoji/mention/timestamp references |
+| `has_emoji` | Recognized Unicode emoji or custom emoji markup in visible content |
 | `ending` | Logical content with trailing whitespace and closing quote/bracket punctuation removed |
 | `character_count` | Grapheme clusters in trimmed logical content, not bytes/code points |
 | `has_line_break` | Whether the original input includes a CR or LF |
@@ -54,8 +56,12 @@ underline, strikethrough, paired spoilers, inline/backtick-fenced code, headings
 of levels 1–3, subtext, blockquotes, lists, and masked/angle links. Leading heading
 and subtext markers require a space. Headings do not remove arbitrary hash text
 at the end of a line. The initial link subset accepts HTTP(S)/mailto destinations;
-relative destinations remain literal text. Raw URL text is not a complete URL/GIF
-detector: that capability must be implemented separately before enabling those rules.
+relative destinations remain literal text. Keep It Here uses the separate
+`shared_links` view, including bare HTTP(S), `www.` URLs, Discord invite
+links, and explicit `mailto:` links. This includes URLs in code and spoilers.
+Ordinary filenames, unadorned domains such as `example.invalid`, and plain
+email addresses stay text. An angle-wrapped email address is a link. URLs are
+never fetched. GIF classification is a separate rule.
 
 Valid formatting wrappers are excluded from logical word/end checks but remain
 in the formatting set. Inline/fenced code is treated as literal content inside
@@ -71,6 +77,10 @@ word counts and prevents concatenating neighboring words across an object.
 An object after an ending word blocks that ending. Inside code, the same syntax
 stays literal. Recognition is syntactic and does not establish emoji availability,
 mention resolution, or client rendering in a particular guild.
+Poker Face checks visible Unicode emoji, including flags, keycaps, modifiers,
+and joined sequences. It also checks custom emoji markup, including literal
+markup in code. A masked link's destination contributes no visible emoji.
+Sticker Shock uses the Discord adapter's sticker IDs independently of text.
 
 Word runs contain Unicode letters/numbers and combining marks. Apostrophes are
 retained only inside a word; supported straight/curly/modifier/fullwidth and

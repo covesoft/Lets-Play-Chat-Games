@@ -104,6 +104,36 @@ def test_attachments_fail_once_per_instance_including_native_voice(voice):
     assert decision.needs_marker
 
 
+@pytest.mark.parametrize("content", [None, "", "plain text"])
+def test_sticker_shock_fails_once_on_sticker_metadata_even_without_text(content):
+    decision = evaluate_message(message(content, sticker_ids=(601, 602)), context("NR003"))
+    assert decision.evaluations[0].reason_code == "stickers_forbidden"
+    assert decision.score.raw_faults == decision.score.ordinary_observations == 1
+    assert decision.needs_marker
+
+
+def test_expression_prohibitions_compose_and_keep_the_existing_whisper_exemption():
+    active = context("NR001", "NR003", "NR005")
+    content = "🦆 [pond](https://example.invalid)"
+    decision = evaluate_message(message(content, sticker_ids=(601,)), active)
+    assert [result.outcome for result in decision.evaluations] == [Outcome.FAIL] * 3
+    assert decision.score.raw_faults == 3
+    assert decision.score.ordinary_offending_messages == 1 and decision.needs_marker
+
+    whisper = evaluate_message(message(f"-# {content}", sticker_ids=(601,)), active)
+    assert whisper.evaluations == ()
+    assert whisper.score.whispers == 1 and not whisper.needs_marker
+
+    media = evaluate_message(
+        message(None, attachments=(AttachmentSnapshot(501, "pond.gif"),)), active
+    )
+    assert [result.outcome for result in media.evaluations] == [
+        Outcome.NOT_APPLICABLE,
+        Outcome.PASS,
+        Outcome.NOT_APPLICABLE,
+    ]
+
+
 @pytest.mark.parametrize("phase", list(Phase))
 def test_whisper_exempts_whole_message_media_and_mode_but_counts_traffic(phase):
     event = message(

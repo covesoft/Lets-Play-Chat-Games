@@ -1,5 +1,155 @@
 [
   {
+    "id": "NR001-unicode",
+    "card": "NR001",
+    "content": "a duck 🦆",
+    "outcome": "fail"
+  },
+  {
+    "id": "NR001-zwj-and-modifier",
+    "card": "NR001",
+    "content": "||👩🏽‍🚀||",
+    "outcome": "fail"
+  },
+  {
+    "id": "NR001-flag",
+    "card": "NR001",
+    "content": "🇺🇳",
+    "outcome": "fail"
+  },
+  {
+    "id": "NR001-keycap",
+    "card": "NR001",
+    "content": "1️⃣",
+    "outcome": "fail"
+  },
+  {
+    "id": "NR001-static-custom",
+    "card": "NR001",
+    "content": "look <:fixturebird:123456789012345678>",
+    "outcome": "fail"
+  },
+  {
+    "id": "NR001-animated-custom",
+    "card": "NR001",
+    "content": "look <a:fixturebird:123456789012345678>",
+    "outcome": "fail"
+  },
+  {
+    "id": "NR001-code",
+    "card": "NR001",
+    "content": "`<:fixturebird:123456789012345678>`",
+    "outcome": "fail"
+  },
+  {
+    "id": "NR001-visible-masked-label",
+    "card": "NR001",
+    "content": "[🦆](https://example.invalid)",
+    "outcome": "fail"
+  },
+  {
+    "id": "NR001-hidden-destination",
+    "card": "NR001",
+    "content": "[pond](https://example.invalid/🦆)",
+    "outcome": "pass"
+  },
+  {
+    "id": "NR001-other-discord-objects",
+    "card": "NR001",
+    "content": "<@123456> <#123456> <t:123456:R>",
+    "outcome": "pass"
+  },
+  {
+    "id": "NR001-plain-symbols",
+    "card": "NR001",
+    "content": ":) :fixturebird: 1 # &",
+    "outcome": "pass"
+  },
+  {
+    "id": "NR001-no-text",
+    "card": "NR001",
+    "content": null,
+    "outcome": "not_applicable"
+  },
+  {
+    "id": "NR005-bare",
+    "card": "NR005",
+    "content": "Check (HTTP://example.invalid/a).",
+    "outcome": "fail"
+  },
+  {
+    "id": "NR005-angle",
+    "card": "NR005",
+    "content": "<https://example.invalid/a>",
+    "outcome": "fail"
+  },
+  {
+    "id": "NR005-masked",
+    "card": "NR005",
+    "content": "[the pond](https://example.invalid/a)",
+    "outcome": "fail"
+  },
+  {
+    "id": "NR005-mailto",
+    "card": "NR005",
+    "content": "mailto:duck@example.invalid",
+    "outcome": "fail"
+  },
+  {
+    "id": "NR005-email-autolink",
+    "card": "NR005",
+    "content": "<duck@example.invalid>",
+    "outcome": "fail"
+  },
+  {
+    "id": "NR005-www",
+    "card": "NR005",
+    "content": "www.example.invalid/path",
+    "outcome": "fail"
+  },
+  {
+    "id": "NR005-invite",
+    "card": "NR005",
+    "content": "discord.gg/Example",
+    "outcome": "fail"
+  },
+  {
+    "id": "NR005-inline-code",
+    "card": "NR005",
+    "content": "`https://example.invalid`",
+    "outcome": "fail"
+  },
+  {
+    "id": "NR005-code-block",
+    "card": "NR005",
+    "content": "```\nhttps://example.invalid\n```",
+    "outcome": "fail"
+  },
+  {
+    "id": "NR005-relative-path",
+    "card": "NR005",
+    "content": "[the pond](relative/path)",
+    "outcome": "pass"
+  },
+  {
+    "id": "NR005-domain-and-email-text",
+    "card": "NR005",
+    "content": "pond.txt duck@example.invalid",
+    "outcome": "pass"
+  },
+  {
+    "id": "NR005-unrelated-scheme",
+    "card": "NR005",
+    "content": "ftp://www.example.invalid bare https://",
+    "outcome": "pass"
+  },
+  {
+    "id": "NR005-no-text",
+    "card": "NR005",
+    "content": "",
+    "outcome": "not_applicable"
+  },
+  {
     "id": "NR007-0",
     "card": "NR007",
     "content": "quiet over...",

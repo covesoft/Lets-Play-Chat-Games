@@ -1,4 +1,4 @@
-# New Rules Discord preview — v0.3.39 / schema 16
+# New Rules Discord preview — v0.3.40 / schema 16
 
 This development build connects the existing ordinary engine to Discord. Run one
 bot process against a database. Private/requested scores, automatic interims and
@@ -9,8 +9,8 @@ release work are still open.
 
 ## Install and enable
 
-The current schema is **16**, with WAL and foreign keys enabled. For a v0.3.38
-installation on schema 16, stop the bot before applying v0.3.39. Reinstall and
+The current schema is **16**, with WAL and foreign keys enabled. For a v0.3.39
+installation on schema 16, stop the bot before applying v0.3.40. Reinstall and
 restart.
 For a fresh database, run `python -m lets_play --init-db`. See
 [RECOVERY.md](RECOVERY.md) and [STORAGE.md](STORAGE.md).
@@ -65,7 +65,8 @@ badge map, voice library or additional intent is needed.
    bot posts, the chooser gets one new message and the warning stays in chat.
    The acknowledged panel's buttons remain authoritative and actual delivery
    starts the 60-second choice deadline. An uncertain edit or send enters recovery.
-   Later hands use thirty-two implemented non-phrase templates. Choices can
+   Later hands use thirty-five implemented non-phrase templates, including Poker
+   Face, Sticker Shock, and Keep It Here. Choices can
    add a rule or replace one legal existing occupant. When several outgoing rules
    are legal, choosing the incoming card opens **New Rules — choose a rule to
    remove**. The panel lists each outgoing rule's name and description in button
@@ -113,8 +114,8 @@ badge map, voice library or additional intent is needed.
     a blind resend. Actual marker/client/channel behavior still needs human checks.
 
 Later pool: all implemented templates in [HANDS.md](HANDS.md) other than NR036.
-The remaining Brevity and Typography cards join this pool. See that reference
-for conflicts and replacements. NR036 awaits live phrase-bank integration. Every displayed
+See that reference for conflicts and replacements. NR036 awaits live phrase-bank
+integration. Every displayed
 choice must have a proven legal outcome, and every hand has three choices.
 
 12. When a later hand offers Drawing Conclusions, look for the *Breaking Moment

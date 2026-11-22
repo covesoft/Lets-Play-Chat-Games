@@ -8,7 +8,7 @@ import emoji
 import regex
 from markdown_it.token import Token
 
-from lets_play.new_rules.markdown import make_markdown_parser
+from lets_play.new_rules.markdown import CUSTOM_EMOJI_MARKUP, make_markdown_parser
 
 PARSER_VERSION = "discord-text-1"
 MAX_PARSER_CODEPOINTS = 20_000
@@ -19,6 +19,13 @@ _BODY = rf"[\p{{L}}\p{{M}}\p{{N}}--[{_APOSTROPHES}]]"
 _WORDS = regex.compile(rf"{_ALNUM}{_BODY}*(?:[{_APOSTROPHES}]{_ALNUM}{_BODY}*)*", regex.V1)
 _GRAPHEME = regex.compile(r"\X")
 _QUOTATION = regex.compile(r"\p{Quotation_Mark}\Z")
+_BARE_LINK = regex.compile(
+    r"""(?ix)(?<![\w@./:\-])(?:
+        (?:https?://|www\.|(?:discord\.gg|discord(?:app)?\.com/invite)/)
+        (?:[\p{L}\p{N}]|\[[0-9a-f:]+\])[^\s<>`"|\ufffc]*
+        |mailto:[^@\s<>`"|\ufffc]+@[\p{L}\p{N}][\p{L}\p{N}.-]*
+    )"""
+)
 
 
 class ParserLimitError(ValueError):
@@ -76,6 +83,32 @@ class MessageView:
     @property
     def is_whisper(self) -> bool:
         return self.raw is not None and self.raw.startswith("-# ")
+
+    @property
+    def has_emoji(self) -> bool:
+        return (
+            bool(emoji.emoji_list(self.logical))
+            or any(CUSTOM_EMOJI_MARKUP.fullmatch(obj) for obj in self.objects)
+            or CUSTOM_EMOJI_MARKUP.search(self.logical) is not None
+        )
+
+    @property
+    def shared_links(self) -> tuple[Link, ...]:
+        """Explicit links and visible bare URLs for rules that inspect destinations."""
+        destinations = {link.destination for link in self.links}
+        bare = []
+        for match in _BARE_LINK.finditer(self.logical):
+            destination = match[0].rstrip(".,!?:;’'”")
+            # Keep balanced URL parentheses and IPv6 brackets, but drop prose wrappers.
+            for left, right in (("(", ")"), ("[", "]"), ("{", "}")):
+                excess = max(0, destination.count(right) - destination.count(left))
+                if excess:
+                    trimmed = destination.rstrip(right)
+                    destination = destination[: max(len(trimmed), len(destination) - excess)]
+            if destination not in destinations:
+                bare.append(Link(destination, masked=False))
+                destinations.add(destination)
+        return self.links + tuple(bare)
 
     @property
     def word_keys(self) -> tuple[str, ...]:

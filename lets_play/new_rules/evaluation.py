@@ -37,9 +37,10 @@ from lets_play.new_rules.text_rules import (
     phrase_keys,
 )
 
-SUPPORTED_RULES = SUPPORTED_TEXT_RULES | {"NR004", "NR006"}
+SUPPORTED_RULES = SUPPORTED_TEXT_RULES | {"NR003", "NR004", "NR006"}
 EVALUATOR_VERSION = "ordinary-subset-2"
 FAILURE_REASONS = TEXT_FAILURE_REASONS | {
+    "NR003": "stickers_forbidden",
     "NR004": "attachments_forbidden",
     "NR006": "reaction_prohibited",
 }
@@ -143,10 +144,11 @@ def evaluate_message(
             match instance.card_id:
                 case "NR006":
                     result = RuleEvaluation(instance.instance_id, Outcome.NOT_APPLICABLE)
-                case "NR004":
-                    # This prohibition is applicable to every ordinary post;
-                    # absence of a file is actual compliance, even without text.
-                    failed = bool(event.attachments)
+                case "NR003" | "NR004":
+                    # Media bans apply to every ordinary post, including posts without text.
+                    failed = bool(
+                        event.sticker_ids if instance.card_id == "NR003" else event.attachments
+                    )
                     result = RuleEvaluation(
                         instance.instance_id,
                         Outcome.FAIL if failed else Outcome.PASS,

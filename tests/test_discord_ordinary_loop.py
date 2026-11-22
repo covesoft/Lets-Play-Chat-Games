@@ -1,6 +1,7 @@
 """The production adapter and real WAL engine, with injected clock and transport."""
 
 import asyncio
+from dataclasses import replace
 from datetime import timedelta
 
 import pytest
@@ -19,7 +20,7 @@ from test_ordinary_flow import rows
 
 from lets_play.discord_adapter import runtime as runtime_module
 from lets_play.discord_adapter.discord_io import render
-from lets_play.discord_adapter.runtime import ORDINARY_CARDS
+from lets_play.discord_adapter.runtime import OPENING_CARDS, ORDINARY_CARDS
 from lets_play.presentation import default_presentation
 
 
@@ -61,12 +62,21 @@ async def next_offer(runtime, route):
 
 
 @pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("incoming", "expected_cards", "new_text", "new_faults"),
+    [
+        pytest.param("NR024", ("NR034", "NR024"), "over", 1, id="addition"),
+        pytest.param("NR019", ("NR019",), "missing", 0, id="replacement"),
+    ],
+)
 async def test_full_warning_choice_cutover_keeps_old_round_scores_and_starts_new_clock(
-    tmp_path, monkeypatch
+    tmp_path, monkeypatch, incoming, expected_cards, new_text, new_faults
 ):
     async with service(tmp_path, monkeypatch) as runtime:
         route = await opened(runtime)
-        state = await activated(runtime, route)
+        await activated(runtime, route)
+        templates = frozenset({"NR007", "NR019", "NR024"})
+        await runtime.submit(route, "configure", templates=templates)
         await posts(runtime, route)
         state = await runtime.state(route.session_id)
         original = state.context.position
@@ -74,19 +84,20 @@ async def test_full_warning_choice_cutover_keeps_old_round_scores_and_starts_new
         state = await next_offer(runtime, route)
         assert render(state)[0].title == default_presentation().text("ordinary.offer_title")
         assert state.context.position.round_id == original.round_id
-        assert len(state.offer.hand.options) == 3
-        assert all(o.incoming.card_id in ORDINARY_CARDS for o in state.offer.hand.options)
+        offered = tuple(o.incoming.card_id for o in state.offer.hand.options)
+        assert frozenset(offered) == templates
         assert rows(tmp_path / "game.sqlite3", "SELECT COUNT(*) FROM nr_round_resolutions") == [
             (0,)
         ]
         old_message = state.panel_id
+        index = offered.index(incoming)
         assert (
-            await runtime.submit(route, "choose", actor=999, message_id=old_message, index=0)
+            await runtime.submit(route, "choose", actor=999, message_id=old_message, index=index)
             == "unauthorized"
         )
         picker = state.offer.hand.picker_id
         assert (
-            await runtime.submit(route, "choose", actor=picker, message_id=old_message, index=0)
+            await runtime.submit(route, "choose", actor=picker, message_id=old_message, index=index)
             == "selected"
         )
         state = await until(
@@ -101,23 +112,23 @@ async def test_full_warning_choice_cutover_keeps_old_round_scores_and_starts_new
             await runtime.state(route.session_id)
         ).context.position.round_id == original.round_id
         runtime.clock.at = effective
-        await runtime.submit(route, "event", event=event(runtime, route, 99902, "over", 606))
+        await runtime.submit(route, "event", event=event(runtime, route, 99902, new_text, 606))
         await settle(runtime)
         state = await runtime.state(route.session_id)
         assert state.round_number == 2 and state.pacing.started_at == effective
-        assert len(state.context.active_instances) == 2
+        assert tuple(rule.card_id for rule in state.context.active_instances) == expected_cards
         async with runtime.store.transaction(write=False) as unit:
             old = await unit.get_score(route.session_id, 606, round_id=original.round_id)
             new = await unit.get_score(
                 route.session_id, 606, round_id=state.context.position.round_id
             )
         assert old.ordinary_posts == 1 and old.ordinary_faults == 1
-        assert new.ordinary_posts == 1
+        assert new.ordinary_posts == 1 and new.ordinary_faults == new_faults
         assert rows(tmp_path / "game.sqlite3", "SELECT COUNT(*) FROM nr_round_resolutions") == [
             (1,)
         ]
         assert (
-            await runtime.submit(route, "choose", actor=picker, message_id=old_message, index=0)
+            await runtime.submit(route, "choose", actor=picker, message_id=old_message, index=index)
             == "stale"
         )
         assert rows(tmp_path / "game.sqlite3", "SELECT COUNT(*) FROM nr_round_resolutions") == [
@@ -296,6 +307,46 @@ async def choose_card(runtime, route, state, card):
     await runtime.submit(route, "tick")
     await settle(runtime)
     return await runtime.state(route.session_id)
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("card", "description", "content", "stickers"),
+    [
+        ("NR001", "Use no emojis in your messages.", "🦆 over", ()),
+        ("NR003", "Send no stickers.", None, (601,)),
+        ("NR005", "Share no links.", "https://example.invalid over", ()),
+    ],
+)
+async def test_expression_cards_from_later_offer_to_marker(
+    tmp_path, monkeypatch, card, description, content, stickers
+):
+    expression = frozenset({"NR001", "NR003", "NR005"})
+    assert expression <= ORDINARY_CARDS and expression.isdisjoint(OPENING_CARDS)
+    async with service(tmp_path, monkeypatch) as runtime:
+        route = await opened(runtime)
+        await activated(runtime, route)
+        await runtime.submit(route, "configure", templates=expression)
+        await posts(runtime, route)
+        state = await next_offer(runtime, route)
+        index = next(
+            i
+            for i, option in enumerate(state.offer.hand.options)
+            if option.incoming.card_id == card
+        )
+        assert render(state)[0].fields[index].value == description
+        state = await choose_card(runtime, route, state, card)
+        assert state.round_number == 2
+        assert card in {instance.card_id for instance in state.context.active_instances}
+        failure = replace(event(runtime, route, 60101, content), sticker_ids=stickers)
+        await runtime.submit(route, "event", event=failure)
+        await settle(runtime)
+        assert runtime.transport.markers == [60101]
+        async with runtime.store.transaction(write=False) as unit:
+            score = await unit.get_score(
+                route.session_id, 606, round_id=state.context.position.round_id
+            )
+        assert score.ordinary_faults == score.ordinary_offending_messages == 1
 
 
 @pytest.mark.asyncio

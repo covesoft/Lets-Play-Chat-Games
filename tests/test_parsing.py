@@ -61,6 +61,23 @@ def test_link_destinations_and_discord_object_ids_do_not_become_words():
     assert not view.ends_with_word("over")  # The visible emoji follows the ending.
 
 
+def test_shared_links_keep_destinations_without_changing_legacy_formatting_or_word_views():
+    view = parse_message(
+        "[pond](https://example.invalid/hidden) (https://example.invalid/wiki/Duck_(bird)), "
+        "<https://example.invalid/angle> www.example.invalid/path"
+    )
+    assert [(link.destination, link.masked) for link in view.shared_links] == [
+        ("https://example.invalid/hidden", True),
+        ("https://example.invalid/angle", False),
+        ("https://example.invalid/wiki/Duck_(bird)", False),
+        ("www.example.invalid/path", False),
+    ]
+    bare = parse_message("https://example.invalid/path")
+    assert not bare.links and not bare.formatting
+    assert bare.word_keys == ("https", "example", "invalid", "path")
+    assert bare.shared_links and "example.invalid" not in repr(bare.shared_links)
+
+
 def test_parsing_preserves_raw_and_line_breaks_without_a_code_or_spoiler_escape():
     source = "```text\n**turnover...**\n```\n||over...||"
     view = parse_message(source)

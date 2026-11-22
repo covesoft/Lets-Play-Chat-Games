@@ -16,7 +16,7 @@ from lets_play.new_rules.compatibility import (
 from lets_play.new_rules.contracts import Outcome, RuleInstance
 from lets_play.new_rules.evaluation import SUPPORTED_RULES
 from lets_play.new_rules.parsing import parse_message
-from lets_play.new_rules.text_rules import evaluate_text_rule
+from lets_play.new_rules.text_rules import SUPPORTED_TEXT_RULES, evaluate_text_rule
 
 EXAMPLES = json.loads(
     (Path(__file__).parent / "fixtures/ordinary_rule_examples.json").read_text(encoding="utf-8")
@@ -46,7 +46,7 @@ def verify_witness(instances, assessment):
         assert result.outcome is (
             Outcome.NOT_APPLICABLE if instance.card_id == "NR006" else Outcome.PASS
         )
-        if instance.card_id not in {"NR004", "NR006"}:
+        if instance.card_id in SUPPORTED_TEXT_RULES:
             assert evaluate_text_rule(view, instance).outcome is Outcome.PASS
 
 
