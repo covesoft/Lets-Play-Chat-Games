@@ -17,6 +17,7 @@ from lets_play.new_rules.contracts import (
 )
 from lets_play.new_rules.evaluation import EVALUATOR_VERSION, EvaluationContext
 from lets_play.new_rules.parsing import PARSER_VERSION
+from lets_play.new_rules.profanity import ProfanityList
 from lets_play.new_rules.scoring import SCORE_VERSION, ScoreTotals
 
 MAX_SQLITE_INTEGER = (1 << 63) - 1
@@ -48,7 +49,9 @@ def encode_context(context: EvaluationContext) -> str:
     )
 
 
-def decode_context(row: sqlite3.Row) -> EvaluationContext:
+def decode_context(
+    row: sqlite3.Row, *, profanity: ProfanityList | None = None
+) -> EvaluationContext:
     if (
         row["parser_version"] != PARSER_VERSION
         or row["evaluator_version"] != EVALUATOR_VERSION
@@ -78,6 +81,7 @@ def decode_context(row: sqlite3.Row) -> EvaluationContext:
                 for instance_id, card, params in data["rules"]
             ),
             tuple(EmojiIdentity(custom, unicode) for custom, unicode in data["exclusions"]),
+            profanity=profanity,
         )
     except (ValueError, TypeError, KeyError, AttributeError, NotImplementedError):
         raise IncompatibleState("Live context is invalid; explicit recovery is required.") from None

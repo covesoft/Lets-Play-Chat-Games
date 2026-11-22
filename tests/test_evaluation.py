@@ -428,7 +428,7 @@ def test_active_instance_identity_template_and_phrase_caps_are_validated():
         EvaluationContext(POSITION, tuple(phrase(f"duck {i}", str(i)) for i in range(3)))
     with pytest.raises(RuleConfigurationError):
         EvaluationContext(POSITION, (phrase("red duck"), phrase("RED-DUCK", "other")))
-    with pytest.raises(NotImplementedError):
+    with pytest.raises(ValueError, match="valid frozen list revision"):
         context("NR032")
 
 

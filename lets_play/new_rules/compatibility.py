@@ -31,6 +31,7 @@ from lets_play.new_rules.parsing import (
     grapheme_count,
     parse_message,
 )
+from lets_play.new_rules.profanity import ProfanityList
 from lets_play.new_rules.text_rules import (
     MIN_CHARACTERS,
     MIN_WORDS,
@@ -91,6 +92,7 @@ _POSITION = SessionPosition(_ROUTE, Lifecycle.PLAYING, round_id="witness")
 _TIME = datetime(2000, 1, 1, tzinfo=UTC)
 _MATCHING_MARK_CONFLICTS = frozenset({("NR010", "NR013"), ("NR012", "NR014")})
 _FILLER_WORDS = ("bright", "green", "ducks", "swim", "today", "near", "each", "pond")
+_EXTRA_FILLER_WORDS = ("boats", "float", "under", "little", "clouds", "west", "shore", "park")
 
 
 def _direct_conflict(left: str, right: str) -> bool:
@@ -170,6 +172,7 @@ def _witness_texts(
     *,
     has_prefix: bool,
     has_suffix: bool,
+    filler_words: tuple[str, ...],
 ):
     text = _render_witness(words, cards, punctuation)
     missing_words = MIN_WORDS - len(words) if "NR018" in cards else 0
@@ -177,28 +180,37 @@ def _witness_texts(
     if missing_words <= 0 and missing_characters <= 0:
         yield len(words), text
         return
-    padding = []
-    for filler in _FILLER_WORDS:
-        if len(padding) >= missing_words and missing_characters <= 0:
-            break
-        if filler not in words:
-            padding.append(filler)
-            missing_characters -= len(filler) + 1
-    # Inserting next to a required phrase can preserve overlap with either end.
-    # Try the gaps and let actual validators reject any split phrase.
-    for index in range(int(has_prefix), len(words) + 1 - int(has_suffix)):
-        padded = (*words[:index], *padding, *words[index:])
-        yield len(padded), _render_witness(padded, cards, punctuation)
+    # Alternate padding when a configured phrase blocks the first witness.
+    # Keep ordinary witness generation unchanged for other inventories.
+    rotations = range(len(filler_words)) if "NR032" in cards else range(1)
+    for offset in rotations:
+        padding = []
+        remaining = missing_characters
+        for filler in (*filler_words[offset:], *filler_words[:offset]):
+            if len(padding) >= missing_words and remaining <= 0:
+                break
+            if filler not in words:
+                padding.append(filler)
+                remaining -= len(filler) + 1
+        # Try each gap and let the validators reject a split required phrase.
+        for index in range(int(has_prefix), len(words) + 1 - int(has_suffix)):
+            padded = (*words[:index], *padding, *words[index:])
+            yield len(padded), _render_witness(padded, cards, punctuation)
 
 
 def assess_state(
-    instances: tuple[RuleInstance, ...], *, budget: WitnessBudget = DEFAULT_WITNESS_BUDGET
+    instances: tuple[RuleInstance, ...],
+    *,
+    budget: WitnessBudget = DEFAULT_WITNESS_BUDGET,
+    profanity: ProfanityList | None = None,
 ) -> Assessment:
     rejection = inventory_rejection(instances)
     if rejection:
         return Assessment(rejection=rejection)
     try:
-        context = EvaluationContext(_POSITION, instances)
+        context = EvaluationContext(_POSITION, instances, profanity=profanity)
+        if not context.dependencies_available:
+            return Assessment(rejection=Rejection.INVALID)
         phrases = tuple(phrase_keys(i) for i in instances if i.card_id == "NR036")
     except ParserLimitError:
         return Assessment(rejection=Rejection.SEARCH_LIMIT)
@@ -213,6 +225,17 @@ def assess_state(
     prefix = ("yes",) if "NR024" in cards else ("please",) if "NR033" in cards else ()
     suffix = ("over",) if "NR034" in cards else ()
     punctuation = next((ending for card, ending in REQUIRED_ENDINGS.items() if card in cards), "")
+    filler_words = _FILLER_WORDS
+    fallback_words = ("hello",)
+    if "NR032" in cards:
+        filler_words = tuple(
+            word
+            for word in (*_FILLER_WORDS, *_EXTRA_FILLER_WORDS)
+            if not profanity.matches(parse_message(word))
+        )
+        fallback_words = tuple(
+            word for word in ("hello", *filler_words) if not profanity.matches(parse_message(word))
+        )
     candidates: set[tuple[str, ...]] = set()
     limited = False
     # At most two phrases and one extra inclusion word. Every stage is bounded;
@@ -236,12 +259,20 @@ def assess_state(
             if len(candidates) >= budget.max_candidates:
                 limited = True
                 break
-            candidates.add(words or ("hello",))
+            if words:
+                candidates.add(words)
+            else:
+                candidates.update((word,) for word in fallback_words[: budget.max_candidates])
     texts = (
         trial
         for words in sorted(candidates, key=lambda item: (len(item), item))
         for trial in _witness_texts(
-            words, cards, punctuation, has_prefix=bool(prefix), has_suffix=bool(suffix)
+            words,
+            cards,
+            punctuation,
+            has_prefix=bool(prefix),
+            has_suffix=bool(suffix),
+            filler_words=filler_words,
         )
     )
     for index, (word_count, text) in enumerate(texts):
@@ -308,7 +339,7 @@ def replacement_targets(
 class LegalCompletion:
     outgoing_id: str | None
     instances: tuple[RuleInstance, ...]
-    witness: Witness = field(repr=False)
+    witness: Witness | None = field(repr=False)
 
 
 def legal_completions(
@@ -316,6 +347,7 @@ def legal_completions(
     incoming: RuleInstance,
     *,
     budget: WitnessBudget = DEFAULT_WITNESS_BUDGET,
+    profanity: ProfanityList | None = None,
 ) -> tuple[LegalCompletion, ...]:
     if inventory_rejection(active):
         raise RuleConfigurationError("Current inventory is invalid or unsupported.")
@@ -324,7 +356,7 @@ def legal_completions(
     results = []
     for outgoing in replacement_targets(active, incoming):
         result = tuple(i for i in active if i.instance_id != outgoing) + (incoming,)
-        assessment = assess_state(result, budget=budget)
+        assessment = assess_state(result, budget=budget, profanity=profanity)
         if assessment.legal:
             results.append(LegalCompletion(outgoing, result, assessment.witness))
     return tuple(results)

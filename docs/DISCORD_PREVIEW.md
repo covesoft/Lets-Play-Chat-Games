@@ -1,4 +1,4 @@
-# New Rules Discord preview — v0.3.42 / schema 16
+# New Rules Discord preview — v0.3.43 / schema 16
 
 This development build connects the existing ordinary engine to Discord. Run one
 bot process against a database. Private/requested scores, automatic interims and
@@ -9,8 +9,8 @@ release work are still open.
 
 ## Install and enable
 
-The current schema is **16**, with WAL and foreign keys enabled. For a v0.3.41
-installation on schema 16, stop the bot before applying v0.3.42. Reinstall and
+The current schema is **16**, with WAL and foreign keys enabled. For a v0.3.42
+installation on schema 16, stop the bot before applying v0.3.43. Reinstall and
 restart.
 For a fresh database, run `python -m lets_play --init-db`. See
 [RECOVERY.md](RECOVERY.md) and [STORAGE.md](STORAGE.md).
@@ -65,8 +65,9 @@ badge map, voice library or additional intent is needed.
    bot posts, the chooser gets one new message and the warning stays in chat.
    The acknowledged panel's buttons remain authoritative and actual delivery
    starts the 60-second choice deadline. An uncertain edit or send enters recovery.
-   Later hands use thirty-eight implemented non-phrase templates, including
-   Nothing Personal and Pass It On. Choices can
+   Later hands use up to thirty-nine ordinary templates. Mind Your Language
+   can appear once a [private gameplay list](CONFIGURATION.md#mind-your-language)
+   loads at bot startup. Choices can
    add a rule or replace one legal existing occupant. When several outgoing rules
    are legal, choosing the incoming card opens **New Rules — choose a rule to
    remove**. The panel lists each outgoing rule's name and description in button
@@ -77,6 +78,12 @@ badge map, voice library or additional intent is needed.
    shows the future set and exact effective time. At cutover the old round resolves
    once, the new rules activate and the new round clock begins. Try unauthorized,
    duplicate and old-message buttons; they must not change the saved choice.
+   For Mind Your Language, try a configured whole word, a longer word
+   containing it, and a post containing it twice. Verify the single card fault
+   and marker on the first and third posts. Restart with the matching list to
+   exercise normal recovery. With the list missing or changed, an active or
+   already announced NR032 round stays paused until its matching list is
+   restored and the bot restarts. The host can still end the game.
 6. If nobody qualifies by the cutoff, scoring pauses and Continue is offered.
    Three distinct humans must click within five minutes of actual publication;
    the starter is not automatically counted. Successful initial lobby joins use

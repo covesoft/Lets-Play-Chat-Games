@@ -24,6 +24,7 @@ from lets_play.new_rules.contracts import (
 )
 from lets_play.new_rules.evaluation import EVALUATOR_VERSION, EvaluationContext
 from lets_play.new_rules.parsing import PARSER_VERSION, parse_message
+from lets_play.new_rules.profanity import list_available
 from lets_play.new_rules.text_rules import RuleConfigurationError, phrase_keys
 
 
@@ -148,14 +149,14 @@ class HandBuild:
     eligible_templates: tuple[str, ...] = ()
 
 
-def choice_completions(active, incoming, *, budget=DEFAULT_WITNESS_BUDGET):
+def choice_completions(active, incoming, *, budget=DEFAULT_WITNESS_BUDGET, profanity=None):
     """A mode preserves the legal ordinary inventory it temporarily suspends."""
     if isinstance(incoming, ModeChoice):
         if any(rule.instance_id == incoming.instance_id for rule in active):
             return ()
-        assessment = assess_state(active, budget=budget)
+        assessment = assess_state(active, budget=budget, profanity=profanity)
         return (LegalCompletion(None, active, assessment.witness),) if assessment.legal else ()
-    return legal_completions(active, incoming, budget=budget)
+    return legal_completions(active, incoming, budget=budget, profanity=profanity)
 
 
 def _available(templates: frozenset[str] | None) -> frozenset[str]:
@@ -234,21 +235,26 @@ def build_hand(
         return HandBuild(blocked=BlockedReason.WRONG_POSITION)
     if p.lifecycle is Lifecycle.OPENING_CHOICE and context.active_instances:
         return HandBuild(blocked=BlockedReason.WRONG_POSITION)
-    if not assess_state(context.active_instances, budget=budget).legal:
+    if not assess_state(context.active_instances, budget=budget, profanity=context.profanity).legal:
         return HandBuild(blocked=BlockedReason.CURRENT_STATE)
     # Slice BEFORE used/incompatible filtering: never replenish from later entries.
     phrases = tuple(p for p in phrase_bank[:phrase_draw_limit] if p.key not in used)
     pool: list[tuple[str, tuple[HandOption, ...]]] = []
     for card in sorted(available):
         instance_id = f"{offer_id}:{card}"
-        incoming = (
-            tuple(p.instantiate(instance_id) for p in phrases)
-            if card == "NR036"
-            else (RuleInstance(instance_id, card),)
-        )
+        if card == "NR032":
+            if context.profanity is None or p.lifecycle is Lifecycle.OPENING_CHOICE:
+                continue
+            incoming = (context.profanity.instantiate(instance_id),)
+        elif card == "NR036":
+            incoming = tuple(p.instantiate(instance_id) for p in phrases)
+        else:
+            incoming = (RuleInstance(instance_id, card),)
         variants = []
         for instance in incoming:
-            completions = legal_completions(context.active_instances, instance, budget=budget)
+            completions = legal_completions(
+                context.active_instances, instance, budget=budget, profanity=context.profanity
+            )
             if completions:
                 variants.append(HandOption(instance, completions))
         if variants:
@@ -260,7 +266,13 @@ def build_hand(
                 mode.card_id,
                 (
                     HandOption(
-                        mode, choice_completions(context.active_instances, mode, budget=budget)
+                        mode,
+                        choice_completions(
+                            context.active_instances,
+                            mode,
+                            budget=budget,
+                            profanity=context.profanity,
+                        ),
                     ),
                 ),
             )
@@ -330,7 +342,10 @@ def revalidate_choice(
     if option is None:
         return ChoiceResult(ChoiceStatus.INVALID)
     available = _available(available_templates)
-    if isinstance(option.incoming, RuleInstance) and option.incoming.card_id not in available:
+    if isinstance(option.incoming, RuleInstance) and (
+        option.incoming.card_id not in available
+        or not list_available((option.incoming,), context.profanity)
+    ):
         return ChoiceResult(ChoiceStatus.UNAVAILABLE)
     used = _used(used_phrases, context.active_instances)
     if option.incoming.card_id == "NR036" and phrase_keys(option.incoming) in used:
@@ -344,11 +359,13 @@ def revalidate_choice(
             return ChoiceResult(ChoiceStatus.INVALID)
     elif outgoing_id is not None:
         return ChoiceResult(ChoiceStatus.INVALID)
-    if not assess_state(context.active_instances, budget=budget).legal:
+    if not assess_state(context.active_instances, budget=budget, profanity=context.profanity).legal:
         return ChoiceResult(ChoiceStatus.UNPROVEN)
     # Recompute from the frozen incoming parameters and latest supplied inputs;
     # an old saved witness or new guild phrase bank is never activation authority.
-    completions = choice_completions(context.active_instances, option.incoming, budget=budget)
+    completions = choice_completions(
+        context.active_instances, option.incoming, budget=budget, profanity=context.profanity
+    )
     completion = next((c for c in completions if c.outgoing_id == outgoing_id), None)
     return (
         ChoiceResult(ChoiceStatus.READY, completion)

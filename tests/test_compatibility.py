@@ -16,7 +16,10 @@ from lets_play.new_rules.compatibility import (
 from lets_play.new_rules.contracts import Outcome, ReferenceKind, RuleInstance
 from lets_play.new_rules.evaluation import SUPPORTED_RULES
 from lets_play.new_rules.parsing import parse_message
+from lets_play.new_rules.profanity import ProfanityList
 from lets_play.new_rules.text_rules import SUPPORTED_TEXT_RULES, evaluate_text_rule
+
+PROFANITY = ProfanityList("turnip")
 
 EXAMPLES = json.loads(
     (Path(__file__).parent / "fixtures/ordinary_rule_examples.json").read_text(encoding="utf-8")
@@ -37,6 +40,14 @@ def test_explicit_ordinary_rule_examples(example):
     assert outcome.outcome is Outcome(example["outcome"])
 
 
+def configured_rule(card):
+    if card == "NR032":
+        return PROFANITY.instantiate(card)
+    if card == "NR036":
+        return phrase("red duck")
+    return rule(card)
+
+
 def verify_witness(instances, assessment):
     assert assessment.legal and assessment.rejection is None
     view = parse_message(assessment.witness.text)
@@ -47,22 +58,22 @@ def verify_witness(instances, assessment):
             Outcome.NOT_APPLICABLE if instance.card_id == "NR006" else Outcome.PASS
         )
         if instance.card_id in SUPPORTED_TEXT_RULES:
-            assert evaluate_text_rule(view, instance).outcome is Outcome.PASS
+            assert evaluate_text_rule(view, instance, profanity=PROFANITY).outcome is Outcome.PASS
 
 
 @pytest.mark.parametrize("card", sorted(CARD_SPECS))
 def test_every_advertised_template_has_a_nonempty_passing_witness(card):
     assert frozenset(CARD_SPECS) == SUPPORTED_RULES
-    instance = phrase("red duck") if card == "NR036" else rule(card)
-    verify_witness((instance,), assess_state((instance,)))
+    instance = configured_rule(card)
+    verify_witness((instance,), assess_state((instance,), profanity=PROFANITY))
 
 
 @pytest.mark.parametrize(
     "cards", list(combinations(sorted(CARD_SPECS), 2)), ids=lambda cards: "-".join(cards)
 )
 def test_pair_assessments_never_certify_a_failing_witness(cards):
-    instances = tuple(phrase("red duck") if card == "NR036" else rule(card) for card in cards)
-    result = assess_state(instances)
+    instances = tuple(configured_rule(card) for card in cards)
+    result = assess_state(instances, profanity=PROFANITY)
     if result.legal:
         verify_witness(instances, result)
     else:
@@ -135,7 +146,7 @@ def test_no_questions_and_literal_ellipsis_are_compatible():
         ((rule("NR010"), rule("NR012")), Rejection.SLOT),
         ((rule("NR011"), rule("NR012")), Rejection.SLOT),
         ((rule("NR011"), rule("NR011", "another")), Rejection.DUPLICATE),
-        ((rule("NR032"),), Rejection.UNSUPPORTED),
+        ((rule("NR032"),), Rejection.INVALID),
         ((phrase("a", "one"), phrase("b", "two"), phrase("c", "three")), Rejection.CAP),
     ],
 )

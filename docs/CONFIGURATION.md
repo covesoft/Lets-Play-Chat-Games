@@ -54,9 +54,6 @@ the repository, `design/`, `private/`, `private_lists/`, `wordlists/`, `data/`, 
 `.env` variants, SQLite files/sidecars, and logs are ignored. Only `.env.example`
 is tracked. Public tests use `turnip`, `rutabaga`, and other harmless fixtures;
 never put production lists in tests, docs, exception messages, or build inputs.
-The installed `better-profanity` distribution has its own default word list;
-that list is not the approved gameplay policy. M1/M3 code must explicitly supply
-the configured list rather than enable the library’s default singleton as policy.
 
 All environment settings use the `CHATGAMES_` prefix, including
 `CHATGAMES_ADMIN_IDS`. Module-level settings defaults in `lets_play/config.py`
@@ -64,6 +61,27 @@ use the same prefix. `Settings` fields remain normal lower-case Python attribute
 such as `settings.token` and `settings.admin_ids`. No old environment aliases
 are accepted. Keep private design/planning files out of Git and distributions;
 they are not public documentation.
+
+## Mind Your Language
+
+Set `CHATGAMES_PROFANITY_LIST_PATH` to a private UTF-8 text file outside the
+repository. Put one whole word or short phrase on each line. Blank lines and
+duplicate normalized entries are ignored. The file must contain at least one
+valid entry and fit within 256 KiB. Entries can contain up to 16 words and 256
+characters. Use plain text without markup or comment lines. Run
+`python -m lets_play --check-config` to see whether it loads.
+
+The bot reads the list once at startup. Save edits and restart to use the new
+list for future offers. The same normalized entries keep the same revision
+when reordered or recased. A missing, unreadable, or invalid list withholds
+the card from later hands. If a game has the card active or already announced
+for the next round, recovery pauses that game until its matching list is
+restored and the bot restarts. The host can still end a paused game. Only the
+list revision is stored with cards. The configured path, entries and matched
+words stay out of diagnostics and game records. See [PARSER.md](PARSER.md#mind-your-language)
+for the matching rules.
+
+## Presentation
 
 Player copy and colors are documented in [PRESENTATION.md](PRESENTATION.md).
 The optional override is validated by `--check-config` and at bot construction;

@@ -1,5 +1,6 @@
 """Low-cache Discord shell and development-only New Rules opening preview."""
 
+import asyncio
 import logging
 from contextlib import AsyncExitStack
 from hashlib import blake2s
@@ -16,6 +17,7 @@ from lets_play.discord_adapter.discord_io import (
     reaction_snapshot,
 )
 from lets_play.discord_adapter.runtime import OpeningRuntime
+from lets_play.new_rules.profanity import load_profanity_list
 from lets_play.presentation import load_presentation
 from lets_play.storage import initialize_database
 from lets_play.storage.game_store import open_game_store
@@ -55,8 +57,11 @@ class LetsPlayBot(commands.Bot):
     async def setup_hook(self) -> None:
         info = await initialize_database(self.settings.database_path)
         logger.info("Loading Let's Play v%s; database schema %d", __version__, info.schema_version)
+        profanity = await asyncio.to_thread(load_profanity_list, self.settings.profanity_list_path)
+        if self.settings.profanity_list_path is not None and profanity is None:
+            logger.warning("Mind Your Language unavailable. Check CHATGAMES_PROFANITY_LIST_PATH.")
         store = await self._game_resources.enter_async_context(
-            open_game_store(self.settings.database_path)
+            open_game_store(self.settings.database_path, profanity=profanity)
         )
         self.game_runtime = OpeningRuntime(store, DiscordTransport(self))
         if self.settings.sync_commands and self.tree.get_commands():

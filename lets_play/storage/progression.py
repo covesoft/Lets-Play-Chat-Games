@@ -213,7 +213,7 @@ class Progression:
         )
         if row is None:
             return False
-        hand = decode_hand(row[0])
+        hand = decode_hand(row[0], profanity=self.unit.profanity, allow_unavailable=True)
         await self._badge(hand.picker_id, "rulemaker")
         return True
 

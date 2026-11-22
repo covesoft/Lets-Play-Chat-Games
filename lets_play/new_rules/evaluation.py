@@ -5,7 +5,7 @@ future transactional store must deduplicate and apply derived scores together.
 The flow supplies the saved Breaking Moment choice when one owns enforcement.
 """
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 from lets_play.new_rules.breaking_moments import ModeChoice, drawing_conclusions
 from lets_play.new_rules.catalog import CHATGAMES_MAX_ACTIVE_DONT_FORGET
@@ -23,6 +23,7 @@ from lets_play.new_rules.contracts import (
 )
 from lets_play.new_rules.gif_media import is_gif_attachment, is_gif_link
 from lets_play.new_rules.parsing import parse_message
+from lets_play.new_rules.profanity import ProfanityList, list_available, list_revision
 from lets_play.new_rules.scoring import (
     ScoreTotals,
     mode_score,
@@ -54,6 +55,11 @@ class EvaluationContext:
     position: SessionPosition
     active_instances: tuple[RuleInstance, ...]
     reaction_exclusions: tuple[EmojiIdentity, ...] = ()
+    profanity: ProfanityList | None = field(default=None, repr=False, compare=False, kw_only=True)
+
+    @property
+    def dependencies_available(self) -> bool:
+        return list_available(self.active_instances, self.profanity)
 
     def __post_init__(self) -> None:
         if not isinstance(self.active_instances, tuple) or not all(
@@ -78,6 +84,11 @@ class EvaluationContext:
                 raise NotImplementedError("An active card lacks a representative validator.")
             if instance.card_id == "NR036":
                 phrases.append(phrase_keys(instance))
+            elif instance.card_id == "NR032":
+                if list_revision(instance) is None:
+                    raise RuleConfigurationError(
+                        "Mind Your Language needs a valid frozen list revision."
+                    )
             elif instance.parameters:
                 raise RuleConfigurationError("This representative card takes no parameters.")
         if len(set(phrases)) != len(phrases):
@@ -131,6 +142,8 @@ def evaluate_message(
         or not event.is_human
     ):
         return None
+    if not context.dependencies_available:
+        raise RuleConfigurationError("The frozen private gameplay list is unavailable.")
     # Exempt the whole received event before parsing, including mode traffic and
     # attachments. Oversize whispers need no unnecessary parser work.
     if event.content is not None and event.content.startswith("-# "):
@@ -169,6 +182,7 @@ def evaluate_message(
                     result = evaluate_text_rule(
                         view,
                         instance,
+                        profanity=context.profanity,
                         allow_single_gif=not (
                             event.attachments or event.sticker_ids or event.is_voice_message
                         ),
@@ -190,6 +204,8 @@ def evaluate_reaction(event: ReactionEvent, context: EvaluationContext) -> React
         or event.is_bot
     ):
         return None
+    if not context.dependencies_available:
+        raise RuleConfigurationError("The frozen private gameplay list is unavailable.")
     if event.emoji.key in {identity.key for identity in context.reaction_exclusions}:
         return None
     instance = next((i for i in context.active_instances if i.card_id == "NR006"), None)

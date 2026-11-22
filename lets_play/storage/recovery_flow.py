@@ -650,6 +650,8 @@ class RecoveryFlow:
                 or context.position.round_id != row["original_round"]
             ):
                 return "stale_owner"
+            if not context.dependencies_available:
+                return "private_list_unavailable"
             if context.position.phase is Phase.MODE and (
                 row["original_lifecycle"] != "playing"
                 or not await BreakingFlow(self.unit).active(context.position)

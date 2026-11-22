@@ -67,6 +67,7 @@ CARD_SPECS = MappingProxyType(
             CardSpec("NR029", "No Objections", Deck.VOCABULARY),
             CardSpec("NR030", "Selfless Conversation", Deck.VOCABULARY),
             CardSpec("NR031", "No Second Person", Deck.VOCABULARY),
+            CardSpec("NR032", "Mind Your Language", Deck.VOCABULARY),
             CardSpec("NR033", "Please Proceed", Deck.CLAUSES, Slot.PREFIX),
             CardSpec("NR034", "Roger Wilco", Deck.CLAUSES),
             CardSpec("NR035", "The Royal We", Deck.CLAUSES),

@@ -329,7 +329,7 @@ async def choose_card(runtime, route, state, card):
         ),
         (
             "NR023",
-            "Do not tag users, bots, or roles, or use @here or @everyone. Reply pings are allowed.",
+            "Do not tag any users, bots, or roles.",
             "@here over",
             (),
         ),

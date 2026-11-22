@@ -254,3 +254,19 @@ References:
 * [markdown-it-py token API](https://markdown-it-py.readthedocs.io/en/latest/using.html)
 * [markdown-it-py parser architecture](https://markdown-it-py.readthedocs.io/en/latest/architecture.html)
 * [regex project](https://pypi.org/project/regex/2026.11.7/)
+
+
+## Mind Your Language
+
+NR032 matches complete normalized words and consecutive word phrases. It uses
+the same Unicode normalization, case folding, apostrophe handling and hyphen
+boundaries as other word rules. Spaces and ordinary punctuation can separate
+words in a phrase. Discord objects and visible symbols such as emoji break a
+phrase. Formatting, spoilers and code use their parsed text. A listed `turnip`
+matches `TURNIP!` and `**turnip**`; `turnips` passes. A listed `purple carrot`
+matches `purple-carrot`; `purple 🥕 carrot` passes.
+
+An ordinary text post with one or more matches fails Mind Your Language once.
+Textless media is not applicable to this card, and whispers retain their usual
+exemption. Only games with the card active apply this predicate. The rule emits
+a generic fault code without the matched text.

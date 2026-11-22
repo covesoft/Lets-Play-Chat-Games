@@ -4,11 +4,11 @@ The package can prepare legal ordinary additions/replacements, construct a
 complete three-template offer, and revalidate a frozen choice. It performs no
 I/O, publication, activation, phrase consumption, round closure, or awards.
 The live adapter enables the Drawing Conclusions ticket for eligible later
-hands. The full catalog and other Breaking Moments are still pending.
+hands. Live NR036 guild-bank integration and other Breaking Moments are pending.
 
 ## Implemented catalog
 
-`catalog.CARD_SPECS` is immutable metadata for these 39 implemented validators:
+`catalog.CARD_SPECS` is immutable metadata for all 40 ordinary validators:
 
 | ID | Card | Check / mechanical group |
 | --- | --- | --- |
@@ -43,6 +43,7 @@ hands. The full catalog and other Breaking Moments are still pending.
 | NR029 | No Objections | No whole word `but`; Vocabulary |
 | NR030 | Selfless Conversation | No `I`, `me`, `my`, or the listed contractions (Vocabulary) |
 | NR031 | No Second Person | No `you`, `your`, or listed contractions; Vocabulary |
+| NR032 | Mind Your Language | Configured whole words or phrases; Vocabulary |
 | NR033 | Please Proceed | Distinct first word `please`; prefix slot |
 | NR034 | Roger Wilco | Ending word `over`; separate from terminal punctuation |
 | NR035 | The Royal We | Include `we`, `our`, or `us`; Clauses |
@@ -62,7 +63,7 @@ the same deck/slot. Predicate/Unicode details are in [PARSER.md](PARSER.md).
 
 ## Witnesses and completions
 
-`compatibility.assess_state(instances)` returns an `Assessment`: a `Witness` when
+`compatibility.assess_state(instances, profanity=...)` returns an `Assessment`: a `Witness` when
 feasibility is established, otherwise a stable rejection reason. It checks
 instance/template identity, caps, slots, direct conflicts, parameters, and the
 entire resulting state. NR019 conflicts with every Clauses instance, including
@@ -74,7 +75,9 @@ evaluates the witness with a native reply reference to the public game panel.
 If a required phrase already
 contains a Royal We word, the witness can use that same occurrence. Minimum-length rules can add distinct filler words while preserving the required start and ending. The actual evaluator must pass every applicable predicate; only
 NR006 is not-applicable to this synthetic message. Empty text, media-only posts,
-and whispers cannot establish feasibility.
+and whispers cannot establish feasibility. With NR032 active, a witness must
+pass against the same list revision. Required words, including the Royal We
+alternatives, and candidate filler go through the actual evaluator.
 
 Pairwise legality is insufficient: two three-word phrases each fit Briefly, but
 their six-word combined requirement does not. Conversely, `red duck` and `duck
@@ -136,7 +139,10 @@ so position six never fills a free-window hole. `used_phrases` is a frozen set o
 normalized word-identity tuples (`PhraseChoice.key`); active clauses are included
 automatically. Removed/re-added equivalent wording stays used when its identity
 is supplied. New games have an independent scope. Draw/preparation never consumes
-usage, and empty/exhausted/incompatible windows withhold NR036.
+usage, and empty/exhausted/incompatible windows withhold NR036. An ordinary
+later hand can offer NR032 using the immutable list supplied on the context
+and freezes its revision with the incoming card. An absent or unusable list
+withholds NR032.
 
 This API does not authorize entitlements, persist usage/settings, validate a full
 manager suitability/profanity policy, or load private lists. The future service

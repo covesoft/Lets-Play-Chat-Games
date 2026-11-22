@@ -23,7 +23,7 @@ from lets_play.new_rules.contracts import (
     RandomSource,
     ReactionEvent,
 )
-from lets_play.new_rules.evaluation import EvaluationContext, evaluate_message, evaluate_reaction
+from lets_play.new_rules.evaluation import evaluate_message, evaluate_reaction
 from lets_play.new_rules.hands import (
     ChoiceStatus,
     OrdinaryHand,
@@ -131,7 +131,7 @@ class OrdinaryFlow:
             return None
         return OfferRecord(
             row["stage"],
-            decode_hand(row["hand_json"]),
+            decode_hand(row["hand_json"], profanity=self.unit.profanity, allow_unavailable=True),
             utc_datetime(row["published_at_utc"]) if row["published_at_utc"] is not None else None,
             row["selected_incoming"],
             row["selected_outgoing"],
@@ -280,7 +280,7 @@ class OrdinaryFlow:
         ).record(session, p.round_id):
             return FlowResult(FlowStatus.INVALID)
         # Recheck all three saved options; persist only frozen config/target IDs.
-        decode_hand(encode_hand(hand))
+        decode_hand(encode_hand(hand), profanity=context.profanity)
         new = replace(
             p, advancement=Advancement.CHOOSING, offer_id=hand.offer_id, revision=p.revision + 1
         )
@@ -368,6 +368,7 @@ class OrdinaryFlow:
         if (
             context.position != record.hand.owner
             or context.active_instances != record.hand.active_instances
+            or not context.dependencies_available
         ):
             return ()
         option = next(
@@ -388,7 +389,9 @@ class OrdinaryFlow:
             return ()
         return tuple(
             c
-            for c in choice_completions(context.active_instances, option.incoming)
+            for c in choice_completions(
+                context.active_instances, option.incoming, profanity=context.profanity
+            )
             if c.outgoing_id in (None, *option.outgoing_ids)
         )
 
@@ -660,7 +663,7 @@ class OrdinaryFlow:
             (frame.route.session_id, old.round_id, row["offer_id"], row["effective_at_utc"]),
         )
         await self.unit.set_owner(
-            old, EvaluationContext(new, completion.instances, current.reaction_exclusions)
+            old, replace(current, position=new, active_instances=completion.instances)
         )
         await _execute(
             self.conn,

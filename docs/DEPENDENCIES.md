@@ -11,7 +11,7 @@ supported minor version; the patch release can differ on the owner’s machine.
 | `python-dotenv` | 1.2.4 | Explicit `.env` parsing; import is `dotenv` |
 | `emoji` | 2.16.0 | Unicode emoji sequences, including phrase-interrupting punctuation emoji; custom Discord emoji parsing remains project code |
 | `aiosqlite` | 0.22.1 | Async access to the standard SQLite library |
-| `better-profanity` | 0.7.0 | Configured-list matching helper; import is `better_profanity` |
+| `better-profanity` | 0.7.0 | Pinned from the scaffold; gameplay uses the shared word parser |
 | `markdown-it-py` | 4.2.0 | Token-based structure for the offline Discord-oriented parser |
 | `regex` | 2026.11.7 | Unicode word sets, quotation properties, and grapheme clusters |
 
@@ -62,11 +62,8 @@ codecs. Direct/transitive pins and environment keys remain unchanged.
 | `setuptools` | 84.2.1 | Pinned PEP 517 build backend |
 
 The old `better-profanity` release has been smoke-tested on Python 3.13 with an
-explicit harmless list. Its age and built-in matching/obfuscation behavior are
-not authority for NR032. Before enabling that rule, verify the actual private
-list, whole-word examples, and accepted parser policy. No library default is
-silently treated as the project’s production list. Unicode sequence smoke tests
-likewise do not complete every emoji validator or approve a full parser policy.
+explicit harmless list. NR032 uses the private configured gameplay list and
+the shared [word parser](PARSER.md#mind-your-language).
 
 ## Lock and update procedure
 

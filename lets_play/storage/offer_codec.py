@@ -4,6 +4,11 @@ import json
 from datetime import UTC, datetime, timedelta
 
 from lets_play.new_rules.breaking_moments import DRAWING_CONCLUSIONS, ModeChoice
+from lets_play.new_rules.compatibility import (
+    LegalCompletion,
+    inventory_rejection,
+    replacement_targets,
+)
 from lets_play.new_rules.contracts import (
     Advancement,
     Deadline,
@@ -15,9 +20,10 @@ from lets_play.new_rules.contracts import (
     SessionPosition,
     SessionRoute,
 )
-from lets_play.new_rules.evaluation import EVALUATOR_VERSION
+from lets_play.new_rules.evaluation import EVALUATOR_VERSION, EvaluationContext
 from lets_play.new_rules.hands import HandOption, OrdinaryHand, choice_completions
 from lets_play.new_rules.parsing import PARSER_VERSION
+from lets_play.new_rules.profanity import ProfanityList, list_available
 from lets_play.storage.game_codec import IncompatibleState
 
 _EPOCH = datetime(1970, 1, 1, tzinfo=UTC)
@@ -79,7 +85,9 @@ def encode_hand(hand: OrdinaryHand) -> str:
     )
 
 
-def decode_hand(value: str) -> OrdinaryHand:
+def decode_hand(
+    value: str, *, profanity: ProfanityList | None = None, allow_unavailable: bool = False
+) -> OrdinaryHand:
     try:
         data = json.loads(value)
         if (
@@ -135,12 +143,24 @@ def decode_hand(value: str) -> OrdinaryHand:
             revision,
         )
         active = tuple(_read_rule(i) for i in data["active"])
+        active_list_available = list_available(active, profanity)
+        if not allow_unavailable and not active_list_available:
+            raise ValueError
         options = []
         for raw, targets in data["options"]:
             incoming = decode_choice(raw)
-            completions = tuple(
-                c for c in choice_completions(active, incoming) if c.outgoing_id in targets
+            incoming_list_available = isinstance(incoming, ModeChoice) or list_available(
+                (incoming,), profanity
             )
+            if allow_unavailable and not (active_list_available and incoming_list_available):
+                # Read saved targets for safe recovery, never as activation proof.
+                completions = _unproven_completions(owner, active, incoming, targets)
+            else:
+                completions = tuple(
+                    c
+                    for c in choice_completions(active, incoming, profanity=profanity)
+                    if c.outgoing_id in targets
+                )
             if [c.outgoing_id for c in completions] != targets:
                 raise ValueError
             options.append(HandOption(incoming, completions))
@@ -159,6 +179,22 @@ def decode_hand(value: str) -> OrdinaryHand:
         raise IncompatibleState(
             "Stored offer needs explicit recovery; it cannot be reinterpreted."
         ) from None
+
+
+def _unproven_completions(owner, active, incoming, targets):
+    EvaluationContext(owner, active)
+    if inventory_rejection(active) or any(i.instance_id == incoming.instance_id for i in active):
+        raise ValueError
+    if isinstance(incoming, ModeChoice):
+        return (LegalCompletion(None, active, None),)
+    completions = []
+    for target in replacement_targets(active, incoming):
+        if target in targets:
+            result = tuple(i for i in active if i.instance_id != target) + (incoming,)
+            EvaluationContext(owner, result)
+            if not inventory_rejection(result):
+                completions.append(LegalCompletion(target, result, None))
+    return tuple(completions)
 
 
 def decode_choice(data):

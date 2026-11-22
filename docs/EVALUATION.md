@@ -8,8 +8,9 @@ not invoke it.
 
 ## Representative event evaluation
 
-`EvaluationContext(position, active_instances, reaction_exclusions=())` supplies
-an immutable owner position, frozen rules, and current emoji exclusions.
+`EvaluationContext(position, active_instances, reaction_exclusions=(), profanity=None)`
+supplies an immutable owner position, frozen rules, current emoji exclusions,
+and an optional in-memory private gameplay list (keyword only).
 `evaluate_message(event, context)` and `evaluate_reaction(event, context)` return
 a derived decision or `None` for an ignored event. They require the exact guild,
 channel/thread, and session route, a playing position, and a human actor. They
@@ -29,6 +30,7 @@ including changes that later return to the same visible state.
 | NR006 | Ordinary reaction actions by their actor; message creates return not-applicable for this card. |
 | NR007–NR022, NR024–NR031, NR033–NR035, NR037–NR039 | Present ordinary text, including whitespace/punctuation-only text; absent or empty text is not-applicable. |
 | NR023 | Present ordinary text. Any explicit user, bot, role, `@here` or `@everyone` mention fails once. Automatic reply pings are ignored. |
+| NR032 | Present ordinary text against the configured gameplay list. One or more matches fail the card once. The instance pins a list revision. |
 | NR036 | Present ordinary text against a frozen phrase; each active instance is evaluated separately. |
 | NR040 | Every ordinary human message. A native reply reference with a target passes. Other posts, including media-only posts without a reply, fail once. |
 
@@ -36,7 +38,8 @@ Unsupported cards raise `NotImplementedError`. Invalid instance configurations
 raise `RuleConfigurationError`. Only NR036 can have two active instances, and
 their normalized word requirements must differ. These context guards do not
 establish full feasibility. Use the separate [witness and hand API](HANDS.md) for
-the implemented subset; the complete catalog and guild-bank service remain absent.
+ordinary rules. The live guild phrase-bank service remains pending. With an
+active NR032, evaluation requires the matching list revision.
 
 An exact received `-# ` prefix exempts the whole message, including its media,
 before parsing. Its decision contains only human-traffic/whisper counters, with

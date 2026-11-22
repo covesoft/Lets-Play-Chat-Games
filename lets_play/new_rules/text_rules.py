@@ -3,6 +3,7 @@
 from lets_play.new_rules.contracts import Outcome, RuleEvaluation, RuleInstance
 from lets_play.new_rules.gif_media import is_gif_link
 from lets_play.new_rules.parsing import MessageView, grapheme_count, is_word_gap, parse_message
+from lets_play.new_rules.profanity import ProfanityList, list_available
 
 TEXT_FAILURE_REASONS = {
     "NR001": "emoji_forbidden",
@@ -32,6 +33,7 @@ TEXT_FAILURE_REASONS = {
     "NR029": "but_forbidden",
     "NR030": "first_person_word_forbidden",
     "NR031": "second_person_word_forbidden",
+    "NR032": "profanity_forbidden",
     "NR033": "required_please_prefix",
     "NR034": "required_ending_word",
     "NR035": "required_royal_word",
@@ -115,11 +117,17 @@ def _contains_phrase(view: MessageView, keys: tuple[str, ...]) -> bool:
 
 
 def evaluate_text_rule(
-    view: MessageView, instance: RuleInstance, *, allow_single_gif: bool = True
+    view: MessageView,
+    instance: RuleInstance,
+    *,
+    allow_single_gif: bool = True,
+    profanity: ProfanityList | None = None,
 ) -> RuleEvaluation:
     if instance.card_id not in SUPPORTED_TEXT_RULES:
         raise NotImplementedError("This card has no implemented text predicate.")
     keys = phrase_keys(instance) if instance.card_id == "NR036" else ()
+    if instance.card_id == "NR032" and not list_available((instance,), profanity):
+        raise RuleConfigurationError("The frozen private gameplay list is unavailable.")
     if view.is_whisper or not view.has_text:
         return RuleEvaluation(instance.instance_id, Outcome.NOT_APPLICABLE)
     match instance.card_id:
@@ -168,6 +176,8 @@ def evaluate_text_rule(
             passed = view.starts_with_word(required)
         case card if card in _FORBIDDEN_WORDS:
             passed = _FORBIDDEN_WORDS[card].isdisjoint(view.word_keys)
+        case "NR032":
+            passed = not profanity.matches(view)
         case "NR034":
             passed = view.ends_with_word("over")
         case "NR035":

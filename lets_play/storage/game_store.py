@@ -28,6 +28,7 @@ from lets_play.new_rules.evaluation import (
 )
 from lets_play.new_rules.pacing import PACING_VERSION
 from lets_play.new_rules.parsing import PARSER_VERSION
+from lets_play.new_rules.profanity import ProfanityList
 from lets_play.new_rules.scoring import (
     SCORE_VERSION,
     ScoreTotals,
@@ -39,6 +40,7 @@ from lets_play.new_rules.scoring import (
 from lets_play.storage.bootstrap import initialize_database
 from lets_play.storage.game_codec import (
     SCORE_COLUMNS,
+    IncompatibleState,
     decode_context,
     decode_score,
     encode_context,
@@ -138,7 +140,11 @@ async def _row(conn: aiosqlite.Connection, sql: str, values: tuple = ()) -> sqli
 
 @asynccontextmanager
 async def open_game_store(
-    path: Path, *, max_pending: int = 128, busy_timeout_ms: int = 1000
+    path: Path,
+    *,
+    max_pending: int = 128,
+    busy_timeout_ms: int = 1000,
+    profanity: ProfanityList | None = None,
 ) -> AsyncIterator[GameStore]:
     if type(max_pending) is not int or not 1 <= max_pending <= 10_000:
         raise ValueError("Store capacity must be an integer in [1, 10000].")
@@ -156,7 +162,7 @@ async def open_game_store(
         row = await _row(conn, "PRAGMA journal_mode")
         if row[0] != "wal":
             raise sqlite3.DatabaseError("Gameplay requires a local WAL database.")
-        store = GameStore(conn, max_pending)
+        store = GameStore(conn, max_pending, profanity)
         try:
             yield store
         finally:
@@ -168,7 +174,8 @@ async def open_game_store(
 class GameStore:
     """One connection/lock per service instance, bounded waiting, no object cache."""
 
-    def __init__(self, conn: aiosqlite.Connection, max_pending: int):
+    def __init__(self, conn: aiosqlite.Connection, max_pending: int, profanity=None):
+        self._profanity = profanity
         self._conn = conn
         self._lock = asyncio.Lock()
         self._max_pending = max_pending
@@ -203,7 +210,7 @@ class GameStore:
             async with self._lock:
                 if self._closed or self._failed:
                     raise RuntimeError("The game store is closed or unusable.")
-                unit = GameUnitOfWork(self._conn, write)
+                unit = GameUnitOfWork(self._conn, write, self._profanity)
                 self._owner_task = asyncio.current_task()
                 try:
                     # BEGIN belongs inside try: cancellation may arrive after SQL
@@ -234,7 +241,8 @@ class GameStore:
 
 
 class GameUnitOfWork:
-    def __init__(self, conn: aiosqlite.Connection, write: bool):
+    def __init__(self, conn: aiosqlite.Connection, write: bool, profanity=None):
+        self.profanity = profanity
         self._conn = conn
         self._write = write
         self._active = True
@@ -252,7 +260,7 @@ class GameUnitOfWork:
     async def get_context(self, session_id: str) -> EvaluationContext | None:
         self._check()
         row = await _row(self._conn, "SELECT * FROM nr_sessions WHERE session_id=?", (session_id,))
-        return decode_context(row) if row is not None else None
+        return decode_context(row, profanity=self.profanity) if row is not None else None
 
     @_mutating
     async def insert_session(self, context: EvaluationContext) -> None:
@@ -479,6 +487,8 @@ class GameUnitOfWork:
             return ApplyStatus.DUPLICATE_EVENT
         if current.position != p or p.lifecycle is not Lifecycle.PLAYING:
             return ApplyStatus.STALE_OWNER
+        if not current.dependencies_available:
+            raise IncompatibleState("The frozen private gameplay list is unavailable.")
         await self._validate_decision(decision, current)
         if not is_message:
             prior = await _row(
