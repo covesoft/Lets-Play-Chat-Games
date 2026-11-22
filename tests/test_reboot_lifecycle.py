@@ -11,6 +11,7 @@ from test_ordinary_flow import rows
 from test_reboot_recovery import RecoveryTransport, fire, reading
 
 from lets_play.config import load_settings
+from lets_play.discord_adapter import runtime as runtime_module
 from lets_play.discord_adapter.discord_io import DiscordTransport
 from lets_play.storage.opening_flow import OpeningStatus
 
@@ -134,6 +135,40 @@ async def test_opening_timeout_or_activation_uses_saved_clock(tmp_path, monkeypa
             assert state.pacing.started_at == original.admission.effective_at
             assert len(runtime.transport.messages) == 3
             assert rows(tmp_path / "game.sqlite3", "SELECT COUNT(*) FROM nr_rounds") == [(1,)]
+
+
+@pytest.mark.asyncio
+async def test_announced_unattached_opener_survives_pool_change_on_reboot(tmp_path, monkeypatch):
+    updated_pool = runtime_module.OPENING_CARDS
+    async with service(tmp_path, monkeypatch) as runtime:
+        route = await opened(runtime)
+        state = await choice(runtime, route)
+        index = next(
+            i
+            for i, option in enumerate(state.admission.hand.options)
+            if option.incoming.card_id == "NR004"
+        )
+        assert (
+            await runtime.submit(
+                route,
+                "choose",
+                actor=state.admission.picker_id,
+                message_id=state.panel_id,
+                index=index,
+            )
+            is OpeningStatus.SELECTED
+        )
+        await settle(runtime)
+        original = await runtime.state(route.session_id)
+
+        monkeypatch.setattr(runtime_module, "OPENING_CARDS", updated_pool)
+        await runtime.initialize()
+        saved = await reading(runtime, route)
+        await fire(runtime, route, saved.recovery_resume_at)
+        state = await runtime.state(route.session_id)
+        assert state.admission.stage == "active"
+        assert state.pacing.started_at == original.admission.effective_at
+        assert tuple(rule.card_id for rule in state.context.active_instances) == ("NR004",)
 
 
 @pytest.mark.asyncio

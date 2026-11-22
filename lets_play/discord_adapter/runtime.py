@@ -27,8 +27,10 @@ from lets_play.storage.round_reports import RoundReports
 from lets_play.storage.summary_store import SummaryStore
 
 logger = logging.getLogger(__name__)
-# Deliberately small, proven text/media/reaction slice; no phrase dependency.
-OPENING_CARDS = frozenset({"NR004", "NR006", "NR007", "NR011", "NR034"})
+# Opening hands draw three ordinary cards from this pool.
+OPENING_CARDS = frozenset(
+    {"NR006", "NR007", "NR010", "NR011", "NR012", "NR017", "NR024", "NR026", "NR033", "NR034"}
+)
 ORDINARY_CARDS = frozenset(CARD_SPECS) - {"NR036"}
 PUBLISH_KINDS = {
     "lobby": EventKind.LOBBY_PUBLISHED,
@@ -263,13 +265,12 @@ class OpeningRuntime:
                     frame, d["output"], d["message_id"], d["published_at"]
                 )
             elif action == "recovery_prepare":
+                # Opening eligibility belongs to the saved admission.
                 result = await RebootFlow(unit).prepare(
                     frame,
                     d["recovery_id"],
                     capabilities=d["capabilities"],
-                    templates=ORDINARY_CARDS
-                    if await unit.get_context(route.session_id)
-                    else OPENING_CARDS,
+                    templates=ORDINARY_CARDS if await unit.get_context(route.session_id) else None,
                 )
             elif action == "recovery_claim":
                 result = await RebootFlow(unit).claim(frame, d["recovery_id"])

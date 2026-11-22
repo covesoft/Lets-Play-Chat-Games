@@ -1,8 +1,10 @@
 """Real WAL/engine integration through the live adapter's injected transport."""
 
 import asyncio
+import json
 from contextlib import asynccontextmanager
 from datetime import timedelta
+from random import Random
 
 import pytest
 from test_ordinary_flow import NOW, rows
@@ -144,6 +146,41 @@ def event(runtime, route, source, content="over", actor=606):
     return MessageEvent(
         EventEnvelope(route, EventKind.MESSAGE_CREATE, str(source), actor, now, now, 0), content
     )
+
+
+@pytest.mark.asyncio
+async def test_new_game_deals_from_the_ten_card_opening_pool(tmp_path):
+    path = tmp_path / "game.sqlite3"
+    async with open_game_store(path) as store:
+        runtime = OpeningRuntime(store, Transport(), clock=Clock())
+        runtime.rng = Random(11)
+        await runtime.initialize()
+        try:
+            route = await opened(runtime)
+            state = await choice(runtime, route)
+            (config,) = rows(path, "SELECT config_json FROM nr_admissions")[0]
+            assert json.loads(config)["templates"] == [
+                "NR006",
+                "NR007",
+                "NR010",
+                "NR011",
+                "NR012",
+                "NR017",
+                "NR024",
+                "NR026",
+                "NR033",
+                "NR034",
+            ]
+            assert [o.incoming.card_id for o in state.admission.hand.options] == [
+                "NR026",
+                "NR017",
+                "NR033",
+            ]
+            embed, _ = render(state, kind="offer")
+            assert embed.fields[1].name == default_presentation().text("cards.NR017.name")
+            assert embed.fields[1].value == default_presentation().text("cards.NR017.description")
+        finally:
+            await runtime.close()
 
 
 @pytest.mark.asyncio

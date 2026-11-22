@@ -1,4 +1,4 @@
-# New Rules Discord preview — v0.3.38 / schema 16
+# New Rules Discord preview — v0.3.39 / schema 16
 
 This development build connects the existing ordinary engine to Discord. Run one
 bot process against a database. Private/requested scores, automatic interims and
@@ -9,8 +9,8 @@ release work are still open.
 
 ## Install and enable
 
-The current schema is **16**, with WAL and foreign keys enabled. For a v0.3.37
-installation on schema 16, stop the bot before applying v0.3.38. Reinstall and
+The current schema is **16**, with WAL and foreign keys enabled. For a v0.3.38
+installation on schema 16, stop the bot before applying v0.3.39. Reinstall and
 restart.
 For a fresh database, run `python -m lets_play --init-db`. See
 [RECOVERY.md](RECOVERY.md) and [STORAGE.md](STORAGE.md).
@@ -49,8 +49,10 @@ badge map, voice library or additional intent is needed.
    participates, including people who did not press Play. `-# ` whispers are exempt.
 2. The named opening picker chooses one of three cards or times out after the
    published 60 seconds. Confirm the announced future start and `/rules` after
-   activation. Opening hands still use Unattached, Expressionless, Inside Voice,
-   Are You Sure?, and Roger Wilco.
+   activation. New games draw three distinct cards from Expressionless, Inside
+   Voice, Questionable Conduct, Are You Sure?, With Gusto, Briefly, So Agreeable,
+   No Laughing Matter, Please Proceed, and Roger Wilco. Existing setups keep the
+   opening pool saved at admission.
 3. Chat through the ordinary round. A warning cannot occur before 4:30 after
    activation. The frozen post target can trigger it thereafter; fallback is at
    14:30. Only actual warning publication starts its full 30 seconds. A delayed
@@ -120,10 +122,11 @@ choice must have a proven legal outcome, and every hand has three choices.
     shows only Drawing Conclusions during the bout. Try three distinct emoji-only
     posts and then an emoji mixed with text. Expect one marker on the mixed post.
     A whisper or reaction should add no compliance observation. After two minutes
-    a lime-green notice lists the restored rules in the same round. Its next
-    hand is ordinary-only. In a separate bout, restart after the third valid
-    post and check the recovery countdown, the edited rules panel when play
-    resumes, and the saved scores. Expect no separate green notice after read-in.
+   a lime-green notice lists the restored rules in the same round. The choice
+   that starts the following round is ordinary-only. In a separate bout, restart
+   after the third valid post and check the recovery countdown, the edited rules
+   panel when play resumes, and the saved scores. Expect no separate green notice
+   after read-in.
 
 ## Delivery and ordering
 
