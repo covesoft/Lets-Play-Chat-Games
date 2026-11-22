@@ -37,6 +37,7 @@ CARD_SPECS = MappingProxyType(
         item.card_id: item
         for item in (
             CardSpec("NR001", "Poker Face", Deck.EXPRESSION),
+            CardSpec("NR002", "Moving Pictures Prohibited", Deck.EXPRESSION),
             CardSpec("NR003", "Sticker Shock", Deck.EXPRESSION),
             CardSpec("NR004", "Unattached", Deck.EXPRESSION),
             CardSpec("NR005", "Keep It Here", Deck.EXPRESSION),

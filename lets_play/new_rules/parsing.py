@@ -22,7 +22,8 @@ _QUOTATION = regex.compile(r"\p{Quotation_Mark}\Z")
 _BARE_LINK = regex.compile(
     r"""(?ix)(?<![\w@./:\-])(?:
         (?:https?://|www\.|(?:discord\.gg|discord(?:app)?\.com/invite)/)
-        (?:[\p{L}\p{N}]|\[[0-9a-f:]+\])[^\s<>`"|\ufffc]*
+        (?:[\p{L}\p{N}]|\[[0-9a-f:]+\])
+        (?:(?![,;](?:https?://|www\.))[^\s<>`"|\ufffc])*
         |mailto:[^@\s<>`"|\ufffc]+@[\p{L}\p{N}][\p{L}\p{N}.-]*
     )"""
 )
@@ -75,6 +76,7 @@ class MessageView:
     links: tuple[Link, ...] = field(default=(), repr=False)
     objects: tuple[str, ...] = field(default=(), repr=False)
     parser_version: str = PARSER_VERSION
+    _sole_explicit_link: Link | None = field(default=None, repr=False)
 
     @property
     def has_text(self) -> bool:
@@ -109,6 +111,20 @@ class MessageView:
                 bare.append(Link(destination, masked=False))
                 destinations.add(destination)
         return self.links + tuple(bare)
+
+    def single_link(self, shared_links: tuple[Link, ...]) -> Link | None:
+        """Match one complete source link, keeping captions and duplicate URLs distinct."""
+        explicit = self._sole_explicit_link
+        # Angle links have only one destination even if Markdown normalized its URL.
+        if explicit is not None:
+            return explicit if not explicit.masked or len(shared_links) == 1 else None
+        if len(shared_links) != 1:
+            return None
+        link = shared_links[0]
+        source = (self.raw or "").strip()
+        if not link.masked and source == link.destination and _BARE_LINK.fullmatch(source):
+            return link
+        return None
 
     @property
     def word_keys(self) -> tuple[str, ...]:
@@ -223,7 +239,8 @@ def parse_message(content: str | None) -> MessageView:
     # guard may omit an inner block; it must never erase its evaluable content.
     lines = normalized_lines.copy()
     parser = make_markdown_parser()
-    for token in parser.parse(source):
+    tokens = parser.parse(source)
+    for token in tokens:
         match token.type:
             case "inline":
                 text = _inline(token.children or [], styles, links, objects)
@@ -250,4 +267,17 @@ def parse_message(content: str | None) -> MessageView:
         Word(match[0], word_key(match[0]), match.start(), match.end())
         for match in _WORDS.finditer(logical)
     )
-    return MessageView(content, logical, words, frozenset(styles), tuple(links), tuple(objects))
+    sole_link = None
+    if len(links) == 1 and len(tokens) == 3 and tokens[0].type == "paragraph_open":
+        children = tokens[1].children or []
+        if children and children[0].type == "link_open" and children[-1].type == "link_close":
+            sole_link = links[0]
+    return MessageView(
+        content,
+        logical,
+        words,
+        frozenset(styles),
+        tuple(links),
+        tuple(objects),
+        _sole_explicit_link=sole_link,
+    )

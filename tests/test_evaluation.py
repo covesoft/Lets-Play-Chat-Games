@@ -112,6 +112,88 @@ def test_sticker_shock_fails_once_on_sticker_metadata_even_without_text(content)
     assert decision.needs_marker
 
 
+@pytest.mark.parametrize(
+    ("destination", "gif"),
+    [
+        ("https://example.invalid/duck.GIF?download=1#media", True),
+        ("https://media.discordapp.net/attachments/501/502/duck%2EGIF?format=webp", True),
+        ("https://tenor.com/view/duck-example-123", True),
+        ("https://media.tenor.com/example/tenor.mp4", True),
+        ("https://www.giphy.com/gifs/duck-example", True),
+        ("https://giphy.com/embed/duck-example", True),
+        ("https://media1.giphy.com/media/example/200.mp4", True),
+        ("https://klipy.com/gifs/duck-example", True),
+        ("https://static.klipy.com/ii/example/duck.gif", True),
+        ("https://giphy.com/clips/duck-example", False),
+        ("https://klipy.com/clips/duck-example", False),
+        ("https://klipy.com/gifs", False),
+        ("https://tenor.com/search/duck-gifs", False),
+        ("https://giphy.com.example.invalid/gifs/duck-example", False),
+        ("https://giphy.com@example.invalid/gifs/duck-example", False),
+        ("https://example.invalid/duck.mp4", False),
+        ("https://example.invalid/duck.gif.png", False),
+        ("https://example.invalid/redirect?asset=duck.gif", False),
+    ],
+)
+def test_gif_link_classification_is_shared_by_both_cards(destination, gif):
+    decision = evaluate_message(message(destination), context("NR002", "NR005"))
+    assert [result.outcome for result in decision.evaluations] == (
+        [Outcome.FAIL, Outcome.PASS] if gif else [Outcome.PASS, Outcome.FAIL]
+    )
+    assert decision.score.ordinary_faults == decision.score.ordinary_offending_messages == 1
+
+
+@pytest.mark.parametrize(
+    ("filename", "mime", "gif"),
+    [
+        ("duck.GIF", None, True),
+        ("duck.GIF", "application/octet-stream", True),
+        ("duck.png", "IMAGE/GIF; charset=binary", True),
+        ("duck.gif", "image/png", False),
+        ("duck.gif", "video/mp4", False),
+        ("duck.gif.png", None, False),
+        ("duck.webp", "image/webp", False),
+    ],
+)
+def test_gif_attachment_prefers_specific_mime_and_falls_back_to_extension(filename, mime, gif):
+    event = message(None, attachments=(AttachmentSnapshot(501, filename, mime),))
+    decision = evaluate_message(event, context("NR002", "NR004", "NR005"))
+    assert [result.outcome for result in decision.evaluations] == [
+        Outcome.FAIL if gif else Outcome.PASS,
+        Outcome.FAIL,
+        Outcome.NOT_APPLICABLE,
+    ]
+    assert decision.score.ordinary_faults == 1 + gif
+    assert decision.score.ordinary_offending_messages == 1
+
+
+@pytest.mark.parametrize(
+    "extra_media",
+    [
+        {"attachments": (AttachmentSnapshot(501, "duck.png", "image/png"),)},
+        {"sticker_ids": (601,)},
+        {"is_voice_message": True},
+    ],
+)
+def test_added_media_disqualifies_the_single_gif_link_exception(extra_media):
+    decision = evaluate_message(
+        message("https://klipy.com/gifs/duck-example", **extra_media), context("NR002", "NR005")
+    )
+    assert [result.outcome for result in decision.evaluations] == [Outcome.FAIL, Outcome.FAIL]
+    assert decision.score.ordinary_faults == 2 and decision.score.ordinary_offending_messages == 1
+
+
+def test_moving_pictures_flags_a_captioned_masked_gif_and_upload_once_and_respects_whispers():
+    active = context("NR002", "NR004", "NR005")
+    content = "caption [duck](https://klipy.com/gifs/duck-example)"
+    attachments = (AttachmentSnapshot(501, "duck.gif", "image/gif"),)
+    decision = evaluate_message(message(content, attachments=attachments), active)
+    assert [result.outcome for result in decision.evaluations] == [Outcome.FAIL] * 3
+    assert decision.score.ordinary_faults == 3 and decision.score.ordinary_offending_messages == 1
+    whisper = evaluate_message(message(f"-# {content}", attachments=attachments), active)
+    assert whisper.evaluations == () and not whisper.needs_marker
+
+
 def test_expression_prohibitions_compose_and_keep_the_existing_whisper_exemption():
     active = context("NR001", "NR003", "NR005")
     content = "🦆 [pond](https://example.invalid)"

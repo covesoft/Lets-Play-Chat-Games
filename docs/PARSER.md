@@ -61,7 +61,7 @@ relative destinations remain literal text. Keep It Here uses the separate
 links, and explicit `mailto:` links. This includes URLs in code and spoilers.
 Ordinary filenames, unadorned domains such as `example.invalid`, and plain
 email addresses stay text. An angle-wrapped email address is a link. URLs are
-never fetched. GIF classification is a separate rule.
+never fetched. See [GIF and link rules](#gif-and-link-rules) for the GIF exception.
 
 Valid formatting wrappers are excluded from logical word/end checks but remain
 in the formatting set. Inline/fenced code is treated as literal content inside
@@ -186,6 +186,28 @@ The parser fixtures and `ordinary_rule_examples.json` cover boundary,
 applicability, and composition examples for the supported predicates, including
 quoted and parenthesized endings, Markdown escapes and formatting, and
 normalized repeated words.
+
+## GIF and link rules
+
+Both rules use the same GIF link detector. It recognizes HTTP(S) paths ending
+in `.gif` after URL decoding, regardless of query strings or fragments. It also
+recognizes individual Tenor `/view/`, GIPHY `/gifs/` and `/embed/`, and KLIPY
+`/gifs/` pages, plus Tenor `tenor.mp4` and GIPHY `/media/` MP4 GIF renditions on
+their media hosts. Generic video links, unknown redirects, and other formats
+need explicit GIF evidence. The check uses the authored link at message creation
+and takes no dependency on preview rendering or later edits.
+
+Moving Pictures Prohibited applies to every ordinary post. A recognized GIF
+link anywhere or a GIF attachment produces one fault for the card. For uploaded
+files, `image/gif` takes precedence. The `.gif` filename suffix is used when MIME
+type is absent or generic. Unattached can still independently fault an upload.
+
+Keep It Here applies to present text. One recognized GIF link alone passes in
+bare, angle-wrapped, or masked form. Surrounding whitespace and the link label
+are allowed. A caption, a second link (including the same URL twice), or extra
+media removes the exception. Links in code or spoilers still count as shared
+links. An automatic preview is part of the link. A GIF upload without text is
+not applicable to Keep It Here.
 
 ## Bounds and verification
 

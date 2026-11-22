@@ -314,19 +314,30 @@ async def choose_card(runtime, route, state, card):
     ("card", "description", "content", "stickers"),
     [
         ("NR001", "Use no emojis in your messages.", "🦆 over", ()),
+        (
+            "NR002",
+            "Send no GIFs, whether uploaded or linked.",
+            "https://klipy.com/gifs/duck-example over",
+            (),
+        ),
         ("NR003", "Send no stickers.", None, (601,)),
-        ("NR005", "Share no links.", "https://example.invalid over", ()),
+        (
+            "NR005",
+            "Share no links, except a single GIF link on its own.",
+            "https://example.invalid over",
+            (),
+        ),
     ],
 )
 async def test_expression_cards_from_later_offer_to_marker(
     tmp_path, monkeypatch, card, description, content, stickers
 ):
-    expression = frozenset({"NR001", "NR003", "NR005"})
+    expression = frozenset({"NR001", "NR002", "NR003", "NR005"})
     assert expression <= ORDINARY_CARDS and expression.isdisjoint(OPENING_CARDS)
     async with service(tmp_path, monkeypatch) as runtime:
         route = await opened(runtime)
         await activated(runtime, route)
-        await runtime.submit(route, "configure", templates=expression)
+        await runtime.submit(route, "configure", templates=frozenset({card, "NR007", "NR015"}))
         await posts(runtime, route)
         state = await next_offer(runtime, route)
         index = next(

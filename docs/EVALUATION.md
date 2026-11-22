@@ -22,9 +22,10 @@ including changes that later return to the same visible state.
 | Card ID | Input and applicability |
 | --- | --- |
 | NR001 | Present ordinary text. Recognized Unicode emoji or custom emoji markup fails once. |
+| NR002 | Every ordinary human message. A GIF attachment or recognized GIF link fails once. |
 | NR003 | Every ordinary human message. One or more Discord sticker IDs fails once, even without a caption. |
 | NR004 | Every ordinary human message; no attachments passes, one or more attachments fails once. Native voice attachments count; link previews do not. |
-| NR005 | Present ordinary text. A recognized bare, angle, or masked link fails once. See [parser policy](PARSER.md). |
+| NR005 | Present ordinary text. Recognized links fail once unless the whole post is a single GIF link. See [GIF detection boundaries](PARSER.md#gif-and-link-rules). |
 | NR006 | Ordinary reaction actions by their actor; message creates return not-applicable for this card. |
 | NR007–NR022, NR024–NR031, NR033–NR035, NR037–NR039 | Present ordinary text, including whitespace/punctuation-only text; absent or empty text is not-applicable. |
 | NR036 | Present ordinary text against a frozen phrase; each active instance is evaluated separately. |

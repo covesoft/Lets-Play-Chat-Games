@@ -21,6 +21,7 @@ from lets_play.new_rules.contracts import (
     RuleInstance,
     SessionPosition,
 )
+from lets_play.new_rules.gif_media import is_gif_attachment, is_gif_link
 from lets_play.new_rules.parsing import parse_message
 from lets_play.new_rules.scoring import (
     ScoreTotals,
@@ -37,9 +38,10 @@ from lets_play.new_rules.text_rules import (
     phrase_keys,
 )
 
-SUPPORTED_RULES = SUPPORTED_TEXT_RULES | {"NR003", "NR004", "NR006"}
+SUPPORTED_RULES = SUPPORTED_TEXT_RULES | {"NR002", "NR003", "NR004", "NR006"}
 EVALUATOR_VERSION = "ordinary-subset-2"
 FAILURE_REASONS = TEXT_FAILURE_REASONS | {
+    "NR002": "gif_forbidden",
     "NR003": "stickers_forbidden",
     "NR004": "attachments_forbidden",
     "NR006": "reaction_prohibited",
@@ -144,18 +146,30 @@ def evaluate_message(
             match instance.card_id:
                 case "NR006":
                     result = RuleEvaluation(instance.instance_id, Outcome.NOT_APPLICABLE)
-                case "NR003" | "NR004":
+                case "NR002" | "NR003" | "NR004":
                     # Media bans apply to every ordinary post, including posts without text.
-                    failed = bool(
-                        event.sticker_ids if instance.card_id == "NR003" else event.attachments
-                    )
+                    match instance.card_id:
+                        case "NR002":
+                            failed = any(
+                                is_gif_attachment(item) for item in event.attachments
+                            ) or any(is_gif_link(link.destination) for link in view.shared_links)
+                        case "NR003":
+                            failed = bool(event.sticker_ids)
+                        case _:
+                            failed = bool(event.attachments)
                     result = RuleEvaluation(
                         instance.instance_id,
                         Outcome.FAIL if failed else Outcome.PASS,
                         FAILURE_REASONS[instance.card_id] if failed else None,
                     )
                 case _:
-                    result = evaluate_text_rule(view, instance)
+                    result = evaluate_text_rule(
+                        view,
+                        instance,
+                        allow_single_gif=not (
+                            event.attachments or event.sticker_ids or event.is_voice_message
+                        ),
+                    )
             results.append(result)
         evaluations = tuple(results)
         score = ordinary_score(evaluations)

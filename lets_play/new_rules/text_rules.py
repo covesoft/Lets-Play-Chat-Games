@@ -1,6 +1,7 @@
 """Representative ordinary text predicates, with no storage or Discord effects."""
 
 from lets_play.new_rules.contracts import Outcome, RuleEvaluation, RuleInstance
+from lets_play.new_rules.gif_media import is_gif_link
 from lets_play.new_rules.parsing import MessageView, grapheme_count, is_word_gap, parse_message
 
 TEXT_FAILURE_REASONS = {
@@ -112,7 +113,9 @@ def _contains_phrase(view: MessageView, keys: tuple[str, ...]) -> bool:
     return False
 
 
-def evaluate_text_rule(view: MessageView, instance: RuleInstance) -> RuleEvaluation:
+def evaluate_text_rule(
+    view: MessageView, instance: RuleInstance, *, allow_single_gif: bool = True
+) -> RuleEvaluation:
     if instance.card_id not in SUPPORTED_TEXT_RULES:
         raise NotImplementedError("This card has no implemented text predicate.")
     keys = phrase_keys(instance) if instance.card_id == "NR036" else ()
@@ -122,7 +125,12 @@ def evaluate_text_rule(view: MessageView, instance: RuleInstance) -> RuleEvaluat
         case "NR001":
             passed = not view.has_emoji
         case "NR005":
-            passed = not view.shared_links
+            links = view.shared_links
+            passed = not links or (
+                allow_single_gif
+                and (single_link := view.single_link(links)) is not None
+                and is_gif_link(single_link.destination)
+            )
         case "NR007":
             passed = view.logical == view.logical.lower()
         case "NR008":

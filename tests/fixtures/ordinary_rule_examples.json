@@ -144,6 +144,96 @@
     "outcome": "pass"
   },
   {
+    "id": "NR005-single-gif-bare",
+    "card": "NR005",
+    "content": "https://klipy.com/gifs/duck-example",
+    "outcome": "pass"
+  },
+  {
+    "id": "NR005-single-gif-angle",
+    "card": "NR005",
+    "content": "  <https://klipy.com/gifs/duck-example>  ",
+    "outcome": "pass"
+  },
+  {
+    "id": "NR005-single-gif-masked",
+    "card": "NR005",
+    "content": "[duck](https://klipy.com/gifs/duck-example)",
+    "outcome": "pass"
+  },
+  {
+    "id": "NR005-single-gif-unicode-angle",
+    "card": "NR005",
+    "content": "<https://example.invalid/café.gif>",
+    "outcome": "pass"
+  },
+  {
+    "id": "NR005-single-gif-query",
+    "card": "NR005",
+    "content": "https://example.invalid/duck.gif?download=1",
+    "outcome": "pass"
+  },
+  {
+    "id": "NR005-single-gif-with-caption",
+    "card": "NR005",
+    "content": "duck! https://klipy.com/gifs/duck-example",
+    "outcome": "fail"
+  },
+  {
+    "id": "NR005-single-gif-with-trailing-caption",
+    "card": "NR005",
+    "content": "[duck](https://klipy.com/gifs/duck-example) look)",
+    "outcome": "fail"
+  },
+  {
+    "id": "NR005-gif-plus-url",
+    "card": "NR005",
+    "content": "https://klipy.com/gifs/duck-example https://example.invalid/article",
+    "outcome": "fail"
+  },
+  {
+    "id": "NR005-comma-separated-links",
+    "card": "NR005",
+    "content": "https://example.invalid/article,https://example.invalid/duck.gif",
+    "outcome": "fail"
+  },
+  {
+    "id": "NR005-gif-link-twice",
+    "card": "NR005",
+    "content": "https://klipy.com/gifs/duck-example https://klipy.com/gifs/duck-example",
+    "outcome": "fail"
+  },
+  {
+    "id": "NR005-same-masked-link-twice",
+    "card": "NR005",
+    "content": "[duck](https://klipy.com/gifs/duck-example) [duck](https://klipy.com/gifs/duck-example)",
+    "outcome": "fail"
+  },
+  {
+    "id": "NR005-different-link-in-masked-label",
+    "card": "NR005",
+    "content": "[https://example.invalid/article](https://klipy.com/gifs/duck-example)",
+    "outcome": "fail"
+  },
+  {
+    "id": "NR005-gif-in-spoiler",
+    "card": "NR005",
+    "content": "||https://klipy.com/gifs/duck-example||",
+    "outcome": "fail"
+  },
+  {
+    "id": "NR005-gif-in-inline-code",
+    "card": "NR005",
+    "content": "`https://klipy.com/gifs/duck-example`",
+    "outcome": "fail"
+  },
+  {
+    "id": "NR005-whisper-with-gif-and-link",
+    "card": "NR005",
+    "content": "-# https://klipy.com/gifs/duck-example https://example.invalid/article",
+    "outcome": "not_applicable"
+  },
+  {
     "id": "NR005-no-text",
     "card": "NR005",
     "content": "",

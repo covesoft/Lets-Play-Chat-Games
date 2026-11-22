@@ -8,14 +8,15 @@ hands. The full catalog and other Breaking Moments are still pending.
 
 ## Implemented catalog
 
-`catalog.CARD_SPECS` is immutable metadata for these 36 implemented validators:
+`catalog.CARD_SPECS` is immutable metadata for these 37 implemented validators:
 
 | ID | Card | Check / mechanical group |
 | --- | --- | --- |
 | NR001 | Poker Face | No Unicode or custom emoji in message text (Expression) |
+| NR002 | Moving Pictures Prohibited | No GIF uploads or recognized GIF links (Expression) |
 | NR003 | Sticker Shock | No Discord stickers, including posts without captions (Expression) |
 | NR004 | Unattached | No files; Expression |
-| NR005 | Keep It Here | No shared links in message text (Expression) |
+| NR005 | Keep It Here | No shared links except a single GIF link on its own (Expression) |
 | NR006 | Expressionless | Prohibited reaction actors; Expression |
 | NR007 | Inside Voice | Lowercase mapping; casing slot |
 | NR008 | SPEAK UP | Uppercase mapping; casing slot |
