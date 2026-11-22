@@ -18,6 +18,7 @@ from lets_play.new_rules.contracts import (
     PauseReason,
     Phase,
     ReactionEvent,
+    ReferenceKind,
     RuleInstance,
     SessionPosition,
     SessionRoute,
@@ -216,6 +217,50 @@ def test_expression_prohibitions_compose_and_keep_the_existing_whisper_exemption
     ]
 
 
+@pytest.mark.parametrize(
+    ("reference_kind", "target", "expected"),
+    [
+        (ReferenceKind.REPLY, 501, Outcome.PASS),
+        (ReferenceKind.REPLY, None, Outcome.FAIL),
+        (ReferenceKind.NONE, None, Outcome.FAIL),
+        (ReferenceKind.NONE, 501, Outcome.FAIL),
+        (ReferenceKind.FORWARD, 501, Outcome.FAIL),
+        (ReferenceKind.THREAD_STARTER, 501, Outcome.FAIL),
+    ],
+)
+def test_pass_it_on_uses_native_reply_reference_even_for_media_only_posts(
+    reference_kind, target, expected
+):
+    post = message(
+        None, reference_kind=reference_kind, referenced_message_id=target, sticker_ids=(601,)
+    )
+    decision = evaluate_message(post, context("NR023", "NR040"))
+    assert [item.outcome for item in decision.evaluations] == [Outcome.NOT_APPLICABLE, expected]
+    assert decision.score.ordinary_observations == 1
+    assert decision.score.ordinary_faults == int(expected is Outcome.FAIL)
+
+
+@pytest.mark.parametrize("content", ["> quoted chat", "https://discord.com/channels/101/202/501"])
+def test_pass_it_on_does_not_accept_a_text_reference(content):
+    decision = evaluate_message(message(content), context("NR040"))
+    assert decision.evaluations[0].reason_code == "reply_required" and decision.needs_marker
+
+
+def test_mention_and_reply_rules_score_separately_on_the_same_post():
+    active = context("NR023", "NR040")
+    content = "@here and <@123456>"
+    post = message(content)
+    decision = evaluate_message(post, active)
+    assert [result.outcome for result in decision.evaluations] == [Outcome.FAIL, Outcome.FAIL]
+    assert decision.score.ordinary_faults == 2 and decision.score.ordinary_offending_messages == 1
+
+    reply = replace(post, reference_kind=ReferenceKind.REPLY, referenced_message_id=501)
+    decision = evaluate_message(reply, active)
+    assert [result.outcome for result in decision.evaluations] == [Outcome.FAIL, Outcome.PASS]
+    assert decision.score.ordinary_quality == Fraction(1, 2)
+    assert evaluate_message(replace(post, content=f"-# {content}"), active).evaluations == ()
+
+
 @pytest.mark.parametrize("phase", list(Phase))
 def test_whisper_exempts_whole_message_media_and_mode_but_counts_traffic(phase):
     event = message(
@@ -384,7 +429,7 @@ def test_active_instance_identity_template_and_phrase_caps_are_validated():
     with pytest.raises(RuleConfigurationError):
         EvaluationContext(POSITION, (phrase("red duck"), phrase("RED-DUCK", "other")))
     with pytest.raises(NotImplementedError):
-        context("NR040")
+        context("NR032")
 
 
 def test_derived_decisions_never_retain_content_attachment_names_or_frozen_phrase_text():

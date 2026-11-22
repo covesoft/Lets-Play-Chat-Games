@@ -8,7 +8,7 @@ hands. The full catalog and other Breaking Moments are still pending.
 
 ## Implemented catalog
 
-`catalog.CARD_SPECS` is immutable metadata for these 37 implemented validators:
+`catalog.CARD_SPECS` is immutable metadata for these 39 implemented validators:
 
 | ID | Card | Check / mechanical group |
 | --- | --- | --- |
@@ -34,6 +34,7 @@ hands. The full catalog and other Breaking Moments are still pending.
 | NR020 | Room to Elaborate | At least twenty graphemes (Brevity) |
 | NR021 | Small Print | At most forty graphemes (Brevity) |
 | NR022 | No Echoes | No repeated normalized word; Vocabulary |
+| NR023 | Nothing Personal | No explicit user, bot, role, `@here` or `@everyone` mentions (Expression) |
 | NR024 | So Agreeable | Distinct first word `yes`; prefix slot |
 | NR025 | No Apologies | No whole word `sorry`; Vocabulary |
 | NR026 | No Laughing Matter | No `lol`, `lmao`, or `haha`; Vocabulary |
@@ -49,6 +50,7 @@ hands. The full catalog and other Breaking Moments are still pending.
 | NR037 | Decree Mode | Title case words of at least three graphemes (casing slot) |
 | NR038 | A Small Pause | Include an ASCII comma (Typography) |
 | NR039 | Little Words | Up to six Unicode letters per word (Brevity) |
+| NR040 | Pass It On | Native Discord reply required for each post (Expression) |
 
 Mechanical settings are code constants in `catalog.py`:
 `CHATGAMES_MAX_ACTIVE_BREVITY_RULES=1`,
@@ -67,7 +69,9 @@ entire resulting state. NR019 conflicts with every Clauses instance, including
 one-word phrases. NR010 conflicts with NR013, and NR012 with NR014. The two
 bans can coexist, and either required mark can coexist with the other mark's ban.
 The witness search composes required prefixes, phrases, inclusion words, and
-endings, then applies casing and punctuation. If a required phrase already
+endings, then applies casing and punctuation. With Pass It On active, it
+evaluates the witness with a native reply reference to the public game panel.
+If a required phrase already
 contains a Royal We word, the witness can use that same occurrence. Minimum-length rules can add distinct filler words while preserving the required start and ending. The actual evaluator must pass every applicable predicate; only
 NR006 is not-applicable to this synthetic message. Empty text, media-only posts,
 and whispers cannot establish feasibility.

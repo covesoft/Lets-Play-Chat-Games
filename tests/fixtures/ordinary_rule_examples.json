@@ -594,6 +594,120 @@
     "outcome": "not_applicable"
   },
   {
+    "id": "NR023-user",
+    "card": "NR023",
+    "content": "hello <@123456789012345678>",
+    "outcome": "fail"
+  },
+  {
+    "id": "NR023-legacy-user",
+    "card": "NR023",
+    "content": "<@!123456789012345678>",
+    "outcome": "fail"
+  },
+  {
+    "id": "NR023-role",
+    "card": "NR023",
+    "content": "hello <@&123456789012345678>",
+    "outcome": "fail"
+  },
+  {
+    "id": "NR023-here",
+    "card": "NR023",
+    "content": "hi @here!",
+    "outcome": "fail"
+  },
+  {
+    "id": "NR023-everyone",
+    "card": "NR023",
+    "content": "hi, **@everyone**",
+    "outcome": "fail"
+  },
+  {
+    "id": "NR023-spoiler",
+    "card": "NR023",
+    "content": "||@here||",
+    "outcome": "fail"
+  },
+  {
+    "id": "NR023-quote",
+    "card": "NR023",
+    "content": "> hello @everyone",
+    "outcome": "fail"
+  },
+  {
+    "id": "NR023-visible-masked-label",
+    "card": "NR023",
+    "content": "[@here](https://example.invalid/path)",
+    "outcome": "fail"
+  },
+  {
+    "id": "NR023-literal-name",
+    "card": "NR023",
+    "content": "hello @duck",
+    "outcome": "pass"
+  },
+  {
+    "id": "NR023-inline-code",
+    "card": "NR023",
+    "content": "`@here <@123456789012345678>`",
+    "outcome": "pass"
+  },
+  {
+    "id": "NR023-code-fence",
+    "card": "NR023",
+    "content": "```\n@everyone <@&123456789012345678>\n```",
+    "outcome": "pass"
+  },
+  {
+    "id": "NR023-escaped",
+    "card": "NR023",
+    "content": "hello \\@here, \\<@123456789012345678>",
+    "outcome": "pass"
+  },
+  {
+    "id": "NR023-unrendered-fragment",
+    "card": "NR023",
+    "content": "@he**re** @everyonetype",
+    "outcome": "pass"
+  },
+  {
+    "id": "NR023-channel",
+    "card": "NR023",
+    "content": "<#123456789012345678>",
+    "outcome": "pass"
+  },
+  {
+    "id": "NR023-inside-url",
+    "card": "NR023",
+    "content": "https://example.invalid/@everyone",
+    "outcome": "pass"
+  },
+  {
+    "id": "NR023-hidden-destination",
+    "card": "NR023",
+    "content": "[duck pond](https://example.invalid/@here)",
+    "outcome": "pass"
+  },
+  {
+    "id": "NR023-email",
+    "card": "NR023",
+    "content": "duck@here.example",
+    "outcome": "pass"
+  },
+  {
+    "id": "NR023-whisper",
+    "card": "NR023",
+    "content": "-# @everyone",
+    "outcome": "not_applicable"
+  },
+  {
+    "id": "NR023-no-text",
+    "card": "NR023",
+    "content": null,
+    "outcome": "not_applicable"
+  },
+  {
     "id": "NR024-0",
     "card": "NR024",
     "content": "yes, over...",

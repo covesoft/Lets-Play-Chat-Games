@@ -84,7 +84,10 @@ def message_snapshot(message, route, received):
             reference = ReferenceKind.FORWARD
         elif message.type is discord.MessageType.thread_starter_message:
             reference = ReferenceKind.THREAD_STARTER
-        elif message.type is discord.MessageType.reply:
+        elif (
+            message.type is discord.MessageType.reply
+            and message.reference.type is discord.MessageReferenceType.default
+        ):
             reference = ReferenceKind.REPLY
     frame = EventEnvelope(
         route,

@@ -38,13 +38,14 @@ from lets_play.new_rules.text_rules import (
     phrase_keys,
 )
 
-SUPPORTED_RULES = SUPPORTED_TEXT_RULES | {"NR002", "NR003", "NR004", "NR006"}
+SUPPORTED_RULES = SUPPORTED_TEXT_RULES | {"NR002", "NR003", "NR004", "NR006", "NR040"}
 EVALUATOR_VERSION = "ordinary-subset-2"
 FAILURE_REASONS = TEXT_FAILURE_REASONS | {
     "NR002": "gif_forbidden",
     "NR003": "stickers_forbidden",
     "NR004": "attachments_forbidden",
     "NR006": "reaction_prohibited",
+    "NR040": "reply_required",
 }
 
 
@@ -146,8 +147,8 @@ def evaluate_message(
             match instance.card_id:
                 case "NR006":
                     result = RuleEvaluation(instance.instance_id, Outcome.NOT_APPLICABLE)
-                case "NR002" | "NR003" | "NR004":
-                    # Media bans apply to every ordinary post, including posts without text.
+                case "NR002" | "NR003" | "NR004" | "NR040":
+                    # These cards apply to every ordinary post, including posts without text.
                     match instance.card_id:
                         case "NR002":
                             failed = any(
@@ -155,8 +156,10 @@ def evaluate_message(
                             ) or any(is_gif_link(link.destination) for link in view.shared_links)
                         case "NR003":
                             failed = bool(event.sticker_ids)
-                        case _:
+                        case "NR004":
                             failed = bool(event.attachments)
+                        case _:
+                            failed = not event.is_reply
                     result = RuleEvaluation(
                         instance.instance_id,
                         Outcome.FAIL if failed else Outcome.PASS,

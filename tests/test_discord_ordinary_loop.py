@@ -323,8 +323,20 @@ async def choose_card(runtime, route, state, card):
         ("NR003", "Send no stickers.", None, (601,)),
         (
             "NR005",
-            "Share no links, except a single GIF link on its own.",
+            "Share no links (except a single GIF).",
             "https://example.invalid over",
+            (),
+        ),
+        (
+            "NR023",
+            "Do not tag users, bots, or roles, or use @here or @everyone. Reply pings are allowed.",
+            "@here over",
+            (),
+        ),
+        (
+            "NR040",
+            "Use Discord’s Reply feature for every message. Reply pings are optional.",
+            "over",
             (),
         ),
     ],
@@ -332,7 +344,7 @@ async def choose_card(runtime, route, state, card):
 async def test_expression_cards_from_later_offer_to_marker(
     tmp_path, monkeypatch, card, description, content, stickers
 ):
-    expression = frozenset({"NR001", "NR002", "NR003", "NR005"})
+    expression = frozenset({"NR001", "NR002", "NR003", "NR005", "NR023", "NR040"})
     assert expression <= ORDINARY_CARDS and expression.isdisjoint(OPENING_CARDS)
     async with service(tmp_path, monkeypatch) as runtime:
         route = await opened(runtime)

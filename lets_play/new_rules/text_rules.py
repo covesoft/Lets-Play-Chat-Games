@@ -23,6 +23,7 @@ TEXT_FAILURE_REASONS = {
     "NR020": "minimum_twenty_characters",
     "NR021": "maximum_forty_characters",
     "NR022": "repeated_word",
+    "NR023": "mentions_forbidden",
     "NR024": "required_yes_prefix",
     "NR025": "sorry_forbidden",
     "NR026": "laughter_word_forbidden",
@@ -160,6 +161,8 @@ def evaluate_text_rule(
             passed = view.character_count <= 40
         case "NR022":
             passed = len(set(view.word_keys)) == len(view.words)
+        case "NR023":
+            passed = not view.has_explicit_mention
         case "NR024" | "NR033":
             required = "yes" if instance.card_id == "NR024" else "please"
             passed = view.starts_with_word(required)

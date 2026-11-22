@@ -112,8 +112,19 @@ def _list(state: StateBlock, start: int, end: int, silent: bool) -> bool:
 def make_markdown_parser() -> MarkdownIt:
     parser = MarkdownIt("commonmark", {"html": False, "typographer": False, "maxNesting": 64})
     parser.disable(
-        ["code", "hr", "lheading", "reference", "html_block", "html_inline", "image", "entity"]
+        [
+            "code",
+            "hr",
+            "lheading",
+            "reference",
+            "html_block",
+            "html_inline",
+            "image",
+            "entity",
+            "text_join",
+        ]
     )
+    # Retain escaped text tokens so a literal \@here stays distinct from a mention.
     parser.enable("strikethrough")
     upstream_validate = parser.validateLink
     # Discord masked links use actual destinations, not CommonMark's local-file

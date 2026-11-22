@@ -13,7 +13,7 @@ from lets_play.new_rules.compatibility import (
     assess_state,
     legal_completions,
 )
-from lets_play.new_rules.contracts import Outcome, RuleInstance
+from lets_play.new_rules.contracts import Outcome, ReferenceKind, RuleInstance
 from lets_play.new_rules.evaluation import SUPPORTED_RULES
 from lets_play.new_rules.parsing import parse_message
 from lets_play.new_rules.text_rules import SUPPORTED_TEXT_RULES, evaluate_text_rule
@@ -135,7 +135,7 @@ def test_no_questions_and_literal_ellipsis_are_compatible():
         ((rule("NR010"), rule("NR012")), Rejection.SLOT),
         ((rule("NR011"), rule("NR012")), Rejection.SLOT),
         ((rule("NR011"), rule("NR011", "another")), Rejection.DUPLICATE),
-        ((rule("NR040"),), Rejection.UNSUPPORTED),
+        ((rule("NR032"),), Rejection.UNSUPPORTED),
         ((phrase("a", "one"), phrase("b", "two"), phrase("c", "three")), Rejection.CAP),
     ],
 )
@@ -261,6 +261,15 @@ def test_royal_witness_reuses_frozen_words_and_preserves_the_ending(frozen, text
 def test_newly_reachable_theme_cores_have_actual_witnesses(cards):
     active = tuple(rule(card) for card in cards)
     verify_witness(active, assess_state(active))
+
+
+def test_chain_letter_and_nothing_personal_have_a_native_reply_witness():
+    active = (rule("NR023"), rule("NR040"), phrase("duck pond"), rule("NR034"))
+    assessment = assess_state(active)
+    verify_witness(active, assessment)
+    assert assessment.witness.reference_kind is ReferenceKind.REPLY
+    assert assessment.witness.referenced_message_id is not None
+    assert assessment.witness.text == "duck pond over"
 
 
 def test_second_person_contraction_can_block_a_frozen_phrase():

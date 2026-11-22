@@ -8,6 +8,7 @@ from unittest.mock import AsyncMock
 import discord
 import pytest
 from test_discord_runtime import activated, opened, service
+from test_evaluation import context
 from test_ordinary_flow import NOW
 
 from lets_play.bot import LetsPlayBot
@@ -19,7 +20,8 @@ from lets_play.discord_adapter.discord_io import (
     reaction_snapshot,
     render,
 )
-from lets_play.new_rules.contracts import ReferenceKind, SessionRoute
+from lets_play.new_rules.contracts import Outcome, ReferenceKind, SessionRoute
+from lets_play.new_rules.evaluation import evaluate_message
 from lets_play.presentation import default_presentation
 from lets_play.storage.opening_flow import OpeningStatus
 
@@ -112,6 +114,35 @@ def test_raw_reaction_snapshot_uses_action_receipt_not_target_creation_time():
     assert first.envelope.created_at == NOW
     assert first.emoji.key == ("custom", 44)
     assert first.offense_key == second.offense_key
+
+
+@pytest.mark.parametrize("ping", [False, True])
+def test_native_reply_ignores_automatic_reply_ping_but_checks_authored_mentions(ping):
+    active = context("NR023", "NR040")
+    message = NS(
+        id=8,
+        author=NS(id=7, bot=False),
+        content="i'll go first",
+        created_at=NOW,
+        attachments=[],
+        stickers=[],
+        reference=NS(message_id=9, type=discord.MessageReferenceType.default, resolved=None),
+        type=discord.MessageType.reply,
+        mentions=[NS(id=123456789012345678, bot=True)] if ping else [],
+        flags=NS(voice=False),
+        webhook_id=None,
+        is_system=lambda: False,
+    )
+    snapshot = message_snapshot(message, active.position.route, NOW)
+    assert snapshot.is_reply
+    assert [e.outcome for e in evaluate_message(snapshot, active).evaluations] == [Outcome.PASS] * 2
+
+    message.content = "<@123456789012345678> i'll go first"
+    snapshot = message_snapshot(message, active.position.route, NOW)
+    assert [e.outcome for e in evaluate_message(snapshot, active).evaluations] == [
+        Outcome.FAIL,
+        Outcome.PASS,
+    ]
 
 
 @pytest.mark.asyncio

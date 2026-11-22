@@ -19,6 +19,7 @@ _BODY = rf"[\p{{L}}\p{{M}}\p{{N}}--[{_APOSTROPHES}]]"
 _WORDS = regex.compile(rf"{_ALNUM}{_BODY}*(?:[{_APOSTROPHES}]{_ALNUM}{_BODY}*)*", regex.V1)
 _GRAPHEME = regex.compile(r"\X")
 _QUOTATION = regex.compile(r"\p{Quotation_Mark}\Z")
+_MASS_MENTION = regex.compile(r"(?<![\w@])@(?:here|everyone)(?!\w)")
 _BARE_LINK = regex.compile(
     r"""(?ix)(?<![\w@./:\-])(?:
         (?:https?://|www\.|(?:discord\.gg|discord(?:app)?\.com/invite)/)
@@ -77,6 +78,7 @@ class MessageView:
     objects: tuple[str, ...] = field(default=(), repr=False)
     parser_version: str = PARSER_VERSION
     _sole_explicit_link: Link | None = field(default=None, repr=False)
+    has_explicit_mention: bool = False
 
     @property
     def has_text(self) -> bool:
@@ -191,11 +193,18 @@ def is_word_gap(text: str) -> bool:
 
 def _inline(
     tokens: list[Token], styles: set[Formatting], links: list[Link], objects: list[str]
-) -> str:
+) -> tuple[str, bool]:
     pieces = []
+    has_mass_mention = False
     for token in tokens:
         match token.type:
-            case "text" | "text_special":
+            case "text":
+                pieces.append(token.content)
+                if not has_mass_mention and "@" in token.content:
+                    has_mass_mention = bool(
+                        _MASS_MENTION.search(_BARE_LINK.sub(" ", token.content))
+                    )
+            case "text_special":
                 pieces.append(token.content)
             case "softbreak" | "hardbreak":
                 pieces.append("\n")
@@ -220,7 +229,7 @@ def _inline(
                     styles.add(Formatting.MASKED_LINK)
                 else:
                     styles.add(Formatting.ANGLE_LINK)
-    return "".join(pieces)
+    return "".join(pieces), has_mass_mention
 
 
 def parse_message(content: str | None) -> MessageView:
@@ -233,6 +242,7 @@ def parse_message(content: str | None) -> MessageView:
     styles: set[Formatting] = set()
     links: list[Link] = []
     objects: list[str] = []
+    has_mass_mention = False
     source = content or ""
     normalized_lines = source.replace("\r\n", "\n").replace("\r", "\n").split("\n")
     # Keep uncovered source lines literal. In particular, the upstream nesting
@@ -243,7 +253,8 @@ def parse_message(content: str | None) -> MessageView:
     for token in tokens:
         match token.type:
             case "inline":
-                text = _inline(token.children or [], styles, links, objects)
+                text, inline_mass_mention = _inline(token.children or [], styles, links, objects)
+                has_mass_mention |= inline_mass_mention
                 start, stop = token.map
                 parts = text.split("\n")
                 # Source maps preserve blank-line boundaries without adding
@@ -280,4 +291,5 @@ def parse_message(content: str | None) -> MessageView:
         tuple(links),
         tuple(objects),
         _sole_explicit_link=sole_link,
+        has_explicit_mention=has_mass_mention or any(obj.startswith("<@") for obj in objects),
     )

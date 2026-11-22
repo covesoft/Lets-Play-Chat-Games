@@ -18,6 +18,7 @@ from lets_play.new_rules.contracts import (
     Lifecycle,
     MessageEvent,
     Outcome,
+    ReferenceKind,
     RuleEvaluation,
     RuleInstance,
     SessionPosition,
@@ -71,6 +72,8 @@ DEFAULT_WITNESS_BUDGET = WitnessBudget()
 class Witness:
     text: str = field(repr=False)
     evaluations: tuple[RuleEvaluation, ...]
+    reference_kind: ReferenceKind = ReferenceKind.NONE
+    referenced_message_id: int | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -204,6 +207,9 @@ def assess_state(
     if any(len(phrase) > budget.max_words for phrase in phrases):
         return Assessment(rejection=Rejection.SEARCH_LIMIT)
     cards = {i.card_id for i in instances}
+    # A native reply to the public game panel is available when the rule starts.
+    reply_kind = ReferenceKind.REPLY if "NR040" in cards else ReferenceKind.NONE
+    reply_target = 1 if reply_kind is ReferenceKind.REPLY else None
     prefix = ("yes",) if "NR024" in cards else ("please",) if "NR033" in cards else ()
     suffix = ("over",) if "NR034" in cards else ()
     punctuation = next((ending for card, ending in REQUIRED_ENDINGS.items() if card in cards), "")
@@ -249,13 +255,16 @@ def assess_state(
         if not view.has_text or not view.words or view.is_whisper:
             continue
         envelope = EventEnvelope(_ROUTE, EventKind.MESSAGE_CREATE, "witness", 1, _TIME, _TIME, 0)
-        decision = evaluate_message(MessageEvent(envelope, text), context)
+        event = MessageEvent(
+            envelope, text, reference_kind=reply_kind, referenced_message_id=reply_target
+        )
+        decision = evaluate_message(event, context)
         if all(
             result.outcome is Outcome.PASS
             or (instance.card_id == "NR006" and result.outcome is Outcome.NOT_APPLICABLE)
             for instance, result in zip(instances, decision.evaluations, strict=True)
         ):
-            return Assessment(witness=Witness(text, decision.evaluations))
+            return Assessment(witness=Witness(text, decision.evaluations, reply_kind, reply_target))
     return Assessment(rejection=Rejection.SEARCH_LIMIT if limited else Rejection.NO_WITNESS)
 
 

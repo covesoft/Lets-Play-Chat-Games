@@ -58,6 +58,7 @@ CARD_SPECS = MappingProxyType(
             CardSpec("NR020", "Room to Elaborate", Deck.BREVITY),
             CardSpec("NR021", "Small Print", Deck.BREVITY),
             CardSpec("NR022", "No Echoes", Deck.VOCABULARY),
+            CardSpec("NR023", "Nothing Personal", Deck.EXPRESSION),
             CardSpec("NR024", "So Agreeable", Deck.CLAUSES, Slot.PREFIX),
             CardSpec("NR025", "No Apologies", Deck.VOCABULARY),
             CardSpec("NR026", "No Laughing Matter", Deck.VOCABULARY),
@@ -73,6 +74,7 @@ CARD_SPECS = MappingProxyType(
             CardSpec("NR037", "Decree Mode", Deck.TYPOGRAPHY, Slot.CASING),
             CardSpec("NR038", "A Small Pause", Deck.TYPOGRAPHY),
             CardSpec("NR039", "Little Words", Deck.BREVITY),
+            CardSpec("NR040", "Pass It On", Deck.EXPRESSION),
         )
     }
 )

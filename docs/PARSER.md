@@ -20,7 +20,7 @@ result = evaluate_text_rule(view, RuleInstance("example-instance", "NR034"))
 
 `RuleEvaluation` returns an instance ID, typed pass/fail/not-applicable outcome,
 and a stable reason code on failure. Supported text IDs are NR001, NR005, NR007
-through NR022, NR024 through NR031, and NR033 through NR039. See the [ordinary subset](HANDS.md) for their behavior
+through NR031, and NR033 through NR039. See the [ordinary subset](HANDS.md) for their behavior
 and metadata.
 Other card IDs raise `NotImplementedError`; they never receive a default successful result.
 The engine must select the active instances and phase before invoking ordinary
@@ -38,6 +38,7 @@ predicates. No ordinary predicate should run as mode enforcement.
 | `shared_links` | Explicit destinations plus visible bare URLs used by link rules |
 | `objects` | Syntactically recognized Discord emoji/mention/timestamp references |
 | `has_emoji` | Recognized Unicode emoji or custom emoji markup in visible content |
+| `has_explicit_mention` | User, role, `@here` or `@everyone` mention in authored text |
 | `ending` | Logical content with trailing whitespace and closing quote/bracket punctuation removed |
 | `character_count` | Grapheme clusters in trimmed logical content, not bytes/code points |
 | `has_line_break` | Whether the original input includes a CR or LF |
@@ -208,6 +209,21 @@ are allowed. A caption, a second link (including the same URL twice), or extra
 media removes the exception. Links in code or spoilers still count as shared
 links. An automatic preview is part of the link. A GIF upload without text is
 not applicable to Keep It Here.
+
+## Mentions and replies
+
+Nothing Personal checks authored text for Discord user (including bot) and
+role tags, plus standalone `@here` and `@everyone`. An explicit tag can fail
+even if Discord sends no notification. The rule ignores reply pings. Plain
+names, channel references, escaped samples, code, and URL destinations are
+literal content for this check. Tags in spoilers, quotes, and visible link
+labels still count.
+
+Pass It On checks the Discord message type, the standard reply reference type,
+and the presence of a reference target ID. Both settings of the reply ping
+toggle pass. A reply to the public game panel counts, including a media-only
+reply. Forwards, automatic thread-starter references, pasted message URLs, and
+quotes do not supply a reply. The target does not need to be loaded or fetched.
 
 ## Bounds and verification
 
