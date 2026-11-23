@@ -187,6 +187,7 @@ async def test_whole_game_post_freezes_the_chosen_page_and_keeps_private_scope(
         assert [p[0] for p in captured.players] == [315, 316, 317, 404, 505]
         public, _ = requested_summary.render(captured, copy, snapshot=snapshot, public=True)
         assert public.title == private.title
+        assert public.footer.text is None and public.timestamp is None
         assert public.description == copy.text(
             "summary.lead",
             as_of=copy.text("summary.as_of", timestamp=int(captured.as_of.timestamp())),

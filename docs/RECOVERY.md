@@ -122,9 +122,8 @@ Requested summaries, automatic interims and round leaderboards carry the
 durable output identity on the Check current scores button. The bounded
 lookup checks the original bot-authored post and its exact control. It
 acknowledges only the matching active claim in the ordered lane, using the
-original publication time and that claim’s saved traffic watermark. The existing
-public score rendering remains footer-free. A round leaderboard includes the
-same private current-scores entry point as a summary.
+original publication time and that claim’s saved traffic watermark. A round
+leaderboard includes the same private current-scores entry point as a summary.
 
 New recovery notices identify their generation through the read-only Game
 status button, so the visible footer can be customized. The lookup also accepts

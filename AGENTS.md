@@ -277,7 +277,9 @@ recovery notice clears that generation’s uncertain send. The current generatio
 still requires its own access verification, announcement, and read-in.
 
 Public summary posts use the current-scores button for proof. Completed-round
-leaderboards use the disabled The game goes on button. Both are footer-free.
+leaderboards use the disabled The game goes on button. Requested public round
+summaries put the score status in the footer and the capture time in the embed
+timestamp.
 Recovery notices use a read-only Game status button and editable footer copy.
 Score reconciliation keeps the original snapshot, cutover and traffic watermark.
 

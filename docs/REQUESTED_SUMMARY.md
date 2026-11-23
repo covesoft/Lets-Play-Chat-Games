@@ -13,8 +13,10 @@ whole-point scores beside player mentions, raw faults, opportunities, ordinary
 posts, and reaction faults.
 The title identifies the scope and the description shows the score status,
 `/rules` hint, and last game update. Traffic appears in a **Round N so far** or
-**Conversation** field with human post and whisper counts. Requested posts use
-the same scoped layout, with a status identifying the posted score snapshot.
+**Conversation** field with human post and whisper counts. Posted round
+summaries show the `/rules` hint in the description, **Scores when posted.**
+in the footer, and the capture time as the native embed timestamp. Posted
+whole-game summaries keep the score status, hint, and time in the description.
 Traffic/whispers are distinct from score opportunities. Players stay ID-ordered;
 final standings separately use exact adjusted-score order. Interim views have
 no footer. All text and colors use the presentation catalog. Use `/rules` for
@@ -51,8 +53,8 @@ round/session/rule/traffic/score capture is committed. An ended game cannot
 prepare a report. A round report shows five ID-ordered round scores, active
 rule names and aggregate round/game traffic. Posting from Whole game captures
 the selected five-player page and game totals. Its private acknowledgement
-keeps that scope and page open. Public mentions are suppressed and both embeds
-are footer-free. **Check current scores** opens the normal live private menu, giving
+keeps that scope and page open. Public mentions are suppressed.
+**Check current scores** opens the normal live private menu, giving
 access to all current players and both scopes. Older `nrf` saved-score controls
 also redirect to current scores; no historical browsing service remains.
 

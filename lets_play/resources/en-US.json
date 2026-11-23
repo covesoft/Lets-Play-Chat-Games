@@ -195,6 +195,8 @@
     "summary.description": "Round {round} · human posts: {messages}, including {whispers} whispers.\n{as_of}\n{status}\nUse /rules for the current requirements.",
     "summary.round_title": "New Rules — Round summary",
     "summary.game_title": "New Rules — Game summary",
+    "summary.posted_round_description": "Use `/rules` anytime to check the current game rules.",
+    "summary.posted_round_footer": "Scores when posted.",
     "summary.lead": "{status}\nUse /rules for the current requirements.\n{as_of}",
     "summary.round_traffic_heading": "Round {round} so far",
     "summary.game_traffic_heading": "Conversation",

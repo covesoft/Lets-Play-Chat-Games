@@ -273,7 +273,7 @@ async def test_legacy_saved_buttons_open_current_private_scores_on_exact_surface
 
 
 @pytest.mark.asyncio
-async def test_public_transport_uses_saved_rules_no_footer_and_suppresses_mentions(
+async def test_public_round_transport_uses_posted_copy_timestamp_and_suppresses_mentions(
     tmp_path, monkeypatch
 ):
     transport = PublicTransport()
@@ -289,8 +289,12 @@ async def test_public_transport_uses_saved_rules_no_footer_and_suppresses_mentio
         assert await sdk.publish_summary(route, snapshot, page) == 9876
         kwargs = channel.send.call_args.kwargs
         assert kwargs["allowed_mentions"].to_dict() == discord.AllowedMentions.none().to_dict()
-        assert kwargs["embed"].footer.text is None
-        assert "Roger Wilco" in str(kwargs["embed"].to_dict())
+        embed = kwargs["embed"]
+        assert embed.description == "Use `/rules` anytime to check the current game rules."
+        assert embed.footer.text == "Scores when posted."
+        assert embed.timestamp == page.as_of == snapshot.captured_at
+        assert [field.name for field in embed.fields[:2]] == ["Round 1 so far", "Rules in effect"]
+        assert "Roger Wilco" in embed.fields[1].value
         assert len(kwargs["view"].children) == 1
         assert kwargs["view"].children[0].custom_id == (
             f"nrq:{route.session_id}:score:summary:{snapshot.summary_id}"
@@ -299,9 +303,10 @@ async def test_public_transport_uses_saved_rules_no_footer_and_suppresses_mentio
             "buttons.summary_current"
         )
         copy = default_presentation()
-        bad = replace(copy, strings={**copy.strings, "summary.traffic": "x" * 1100})
-        with pytest.raises(PresentationError):
-            requested_summary.render(page, bad, snapshot=snapshot, public=True)
+        for key, length in (("summary.traffic", 1100), ("summary.posted_round_footer", 2049)):
+            bad = replace(copy, strings={**copy.strings, key: "x" * length})
+            with pytest.raises(PresentationError):
+                requested_summary.render(page, bad, snapshot=snapshot, public=True)
 
 
 @pytest.mark.asyncio

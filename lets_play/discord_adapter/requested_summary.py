@@ -28,23 +28,28 @@ def render(page, copy, *, snapshot=None, public=False, publication_control=None)
         embed.description = copy.text("reports.mid_description", round=page.round_number)
     else:
         embed.title = copy.text("summary.game_title" if game_scope else "summary.round_title")
-        as_of = (
-            copy.text("summary.as_of", timestamp=int(page.as_of.timestamp()))
-            if page.as_of
-            else copy.text("summary.as_of_unknown")
-        )
-        status = copy.text(
-            "summary.captured"
-            if snapshot
-            else "summary.ended"
-            if page.lifecycle == "ended"
-            else "summary.round_closed"
-            if page.round_closed
-            else "summary.paused"
-            if page.lifecycle == "paused"
-            else "summary.live"
-        )
-        embed.description = copy.text("summary.lead", status=status, as_of=as_of)
+        if public and not game_scope and snapshot and snapshot.kind == "requested":
+            embed.description = copy.text("summary.posted_round_description")
+            embed.set_footer(text=copy.text("summary.posted_round_footer"))
+            embed.timestamp = page.as_of
+        else:
+            as_of = (
+                copy.text("summary.as_of", timestamp=int(page.as_of.timestamp()))
+                if page.as_of
+                else copy.text("summary.as_of_unknown")
+            )
+            status = copy.text(
+                "summary.captured"
+                if snapshot
+                else "summary.ended"
+                if page.lifecycle == "ended"
+                else "summary.round_closed"
+                if page.round_closed
+                else "summary.paused"
+                if page.lifecycle == "paused"
+                else "summary.live"
+            )
+            embed.description = copy.text("summary.lead", status=status, as_of=as_of)
         embed.add_field(
             name=(
                 copy.text("summary.game_traffic_heading")
@@ -117,6 +122,7 @@ def render(page, copy, *, snapshot=None, public=False, publication_control=None)
         or len(embed.fields) > 25
         or len(embed.title) > 256
         or len(embed.description) > 4096
+        or len(embed.footer.text or "") > 2048
         or any(len(f.name) > 256 or len(f.value) > 1024 for f in embed.fields)
     ):
         raise PresentationError("Requested summary presentation exceeds Discord limits.")

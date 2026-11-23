@@ -41,14 +41,12 @@ async def test_automatic_layout_keeps_rules_and_player_entries_without_report_or
             f.value for f in manual.fields[-len(page.players) :]
         ]
         assert all(f.name == copy.text("results.player_heading") for f in automatic.fields[1:])
-        assert automatic.footer.text is None
+        assert automatic.footer.text is None and automatic.timestamp is None
         assert view.children[0].label == copy.text("buttons.summary_current")
         assert manual.title == copy.text("summary.round_title")
-        assert manual.description == copy.text(
-            "summary.lead",
-            status=copy.text("summary.captured"),
-            as_of=copy.text("summary.as_of", timestamp=int(page.as_of.timestamp())),
-        )
+        assert manual.description == copy.text("summary.posted_round_description")
+        assert manual.footer.text == copy.text("summary.posted_round_footer")
+        assert manual.timestamp == page.as_of
         assert manual.fields[0].name == copy.text("summary.round_traffic_heading", round=1)
         assert manual.fields[0].value == copy.text(
             "summary.traffic", messages=page.human_messages, whispers=page.whispers
@@ -58,6 +56,7 @@ async def test_automatic_layout_keeps_rules_and_player_entries_without_report_or
             live = await SummaryStore(unit).live_page(route.session_id)
         detailed, _ = requested_summary.render(live, copy)
         assert detailed.title == manual.title
+        assert detailed.footer.text is None and detailed.timestamp is None
         assert detailed.description == copy.text(
             "summary.lead",
             status=copy.text("summary.live"),

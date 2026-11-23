@@ -241,6 +241,6 @@ reference and require creation strictly before the saved cutover. Held and
 recovery notices also carry exact references. A verified recovery notice from
 a superseded restart clears the old uncertainty. The latest restart gets its
 own announcement and read-in. Recovery notices use a read-only Game status
-button. Public score posts use Check current scores and remain footer-free. Drawing Conclusions follows recovery. Keep
+button. Public score posts use Check current scores. Drawing Conclusions follows recovery. Keep
 recovery unattended; technical reconciliation is host/service work. Do not reintroduce a
 manager resume gate or expand retired debug UI. See [RECOVERY.md](RECOVERY.md).

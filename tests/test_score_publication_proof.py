@@ -109,7 +109,12 @@ async def test_score_recovery_uses_original_publication_and_watermark(
         publish = sdk.publish_round if family == "round" else sdk.publish_summary
         await publish(route, output, page)
         payload = send.call_args.kwargs
-        assert not payload["embed"].footer.text
+        embed = payload["embed"]
+        if kind == "requested":
+            assert embed.footer.text == sdk.copy.text("summary.posted_round_footer")
+            assert embed.timestamp == output.captured_at
+        else:
+            assert embed.footer.text is None and embed.timestamp is None
         receipt = payload["view"].children[-1]
         if family == "round":
             assert payload["embed"].colour == discord.Colour(sdk.copy.color("round_results"))
