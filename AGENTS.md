@@ -9,7 +9,7 @@ contains operational and API documentation only.
 ## Current implementation
 
 Application v0.3.45 uses schema 17. M1 closed at v0.2.9/schema 8, and M2
-closed at v0.3.30/schema 16. M3 compatibility and catalog work is underway.
+closed at v0.3.30/schema 16. M3 closes on the v0.3.45/schema 17 baseline.
 Preserve the existing domain/storage APIs. This build is a development-only
 Discord preview.
 
@@ -22,7 +22,8 @@ can draw it as one template ticket. Opening and post-mode hands are ordinary-onl
 All forty ordinary predicates exist. The opening pool has ten templates.
 Later offers use up to forty templates. NR032 uses its private gameplay list.
 NR036 uses the ordered guild bank, seeded from optional operator defaults in
-schema 17. Manager controls follow in M5.
+schema 17. Manager controls follow in M5. `tests/test_m3_acceptance.py` covers
+all 40 ordinary cards in legal hands and all 15 theme-core witnesses.
 One Word Will Do conflicts with the Clauses deck, and each terminal mark requirement
 conflicts with its matching ban. A single permitted removal must clear all blockers.
 
@@ -292,5 +293,6 @@ a claimed close, without reopening a game or occupying capacity.
 Inconclusive evidence keeps the claim unresolved. A live route stays paused
 and can be explicitly ended by a manager. An ended route remains ended without
 replaying an uncertain result. The existing authorized ending is the operator
-disposition for stalled games. Next M3 work expands the ordinary catalog and phrase-bank integration.
+disposition for stalled games. The next M4 increment is Getting Graphic. Start
+with the existing Breaking Moment and GIF validation paths.
 The owner’s soft patch-size limit is 200 KB.
