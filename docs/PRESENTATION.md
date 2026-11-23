@@ -74,6 +74,7 @@ Private and requested summary templates add:
 | --- | --- |
 | `summary.lead` | `{status}`, `{as_of}` |
 | `summary.round_traffic_heading` | `{round}` |
+| `summary.round_traffic_heading_ended` | `{round}` |
 | `summary.traffic` | `{messages}`, `{whispers}` (integer formatting such as `{messages:,}` is supported) |
 | `summary.as_of` | `{timestamp}` |
 | `summary.capture_detail` | `{session}`, `{round_messages}`, `{round_whispers}`, `{game_messages}`, `{game_whispers}` |

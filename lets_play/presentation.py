@@ -63,6 +63,7 @@ TEMPLATE_FIELDS = {
     "summary.as_of": frozenset({"timestamp"}),
     "summary.lead": frozenset({"status", "as_of"}),
     "summary.round_traffic_heading": frozenset({"round"}),
+    "summary.round_traffic_heading_ended": frozenset({"round"}),
     "summary.traffic": frozenset({"messages", "whispers"}),
     "round.description": frozenset({"round"}),
     "ordinary.offer_description": frozenset({"picker", "deadline"}),

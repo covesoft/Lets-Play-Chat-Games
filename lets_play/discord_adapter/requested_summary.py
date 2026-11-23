@@ -50,11 +50,16 @@ def render(page, copy, *, snapshot=None, public=False, publication_control=None)
                 else "summary.live"
             )
             embed.description = copy.text("summary.lead", status=status, as_of=as_of)
+        round_heading = (
+            "summary.round_traffic_heading_ended"
+            if page.lifecycle == "ended" or page.round_closed
+            else "summary.round_traffic_heading"
+        )
         embed.add_field(
             name=(
                 copy.text("summary.game_traffic_heading")
                 if game_scope
-                else copy.text("summary.round_traffic_heading", round=page.round_number)
+                else copy.text(round_heading, round=page.round_number)
             ),
             value=copy.text(
                 "summary.traffic", messages=page.human_messages, whispers=page.whispers

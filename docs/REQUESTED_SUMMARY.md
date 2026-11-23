@@ -12,8 +12,9 @@ Live pages show clickable, non-pinging identities, actual compliance/unrated,
 whole-point scores beside player mentions, raw faults, opportunities, ordinary
 posts, and reaction faults.
 The title identifies the scope and the description shows the score status,
-`/rules` hint, and last game update. Traffic appears in a **Round N so far** or
-**Conversation** field with human post and whisper counts. Posted round
+`/rules` hint, and last game update. Round traffic uses **Round N so far** during
+the round and **Round N:** once the round or game ends. Whole-game traffic uses
+**Conversation**. Both show human post and whisper counts. Posted round
 summaries show the `/rules` hint in the description, **Scores when posted.**
 in the footer, and the capture time as the native embed timestamp. Posted
 whole-game summaries keep the score status, hint, and time in the description.

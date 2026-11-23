@@ -93,6 +93,13 @@ async def test_pinned_round_scores_and_current_game_totals_are_distinct(tmp_path
         assert current.round_number == 2 and current.human_messages == 1
         assert game.human_messages == 16
         assert dict(game.players)[303].ordinary_posts == 6
+        copy = default_presentation()
+        assert requested_summary.render(pinned, copy)[0].fields[0].name == copy.text(
+            "summary.round_traffic_heading_ended", round=pinned.round_number
+        )
+        assert requested_summary.render(current, copy)[0].fields[0].name == copy.text(
+            "summary.round_traffic_heading", round=current.round_number
+        )
 
 
 @pytest.mark.asyncio
@@ -166,8 +173,24 @@ async def test_recovery_and_ended_views_do_not_resume_or_allocate_retired_lanes(
         assert not runtime.lanes
         ended = await read(runtime, route, scope="game")
         assert ended.lifecycle == "ended" and not runtime.lanes
-        embed, _ = requested_summary.render(ended, default_presentation())
+        copy = default_presentation()
+        embed, _ = requested_summary.render(ended, copy)
         assert "footer" not in embed.to_dict()
+        assert embed.fields[0].name == copy.text("summary.game_traffic_heading")
+
+        bot = LetsPlayBot(load_settings(base_dir=tmp_path, environ={}))
+        async with bot:
+            bot.game_runtime = runtime
+            click = interaction()
+            click.data = {"custom_id": f"nrs:{route.session_id}:round:0:0:n"}
+            await bot.game_adapter.component(click)
+            reply = click.followup.send.call_args.kwargs
+            assert reply["ephemeral"] is True
+            assert reply["embed"].fields[0].name == bot.presentation.text(
+                "summary.round_traffic_heading_ended", round=ended.round_number
+            )
+            assert not runtime.lanes
+            bot.game_runtime = None
 
 
 @pytest.mark.asyncio

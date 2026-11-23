@@ -290,19 +290,20 @@ async def test_public_round_transport_uses_posted_copy_timestamp_and_suppresses_
         kwargs = channel.send.call_args.kwargs
         assert kwargs["allowed_mentions"].to_dict() == discord.AllowedMentions.none().to_dict()
         embed = kwargs["embed"]
-        assert embed.description == "Use `/rules` anytime to check the current game rules."
-        assert embed.footer.text == "Scores when posted."
+        copy = default_presentation()
+        assert embed.description == copy.text("summary.posted_round_description")
+        assert embed.footer.text == copy.text("summary.posted_round_footer")
         assert embed.timestamp == page.as_of == snapshot.captured_at
-        assert [field.name for field in embed.fields[:2]] == ["Round 1 so far", "Rules in effect"]
-        assert "Roger Wilco" in embed.fields[1].value
+        assert [field.name for field in embed.fields[:2]] == [
+            copy.text("summary.round_traffic_heading", round=page.round_number),
+            copy.text("summary.rules_heading"),
+        ]
+        assert copy.text("cards.NR034.name") in embed.fields[1].value
         assert len(kwargs["view"].children) == 1
         assert kwargs["view"].children[0].custom_id == (
             f"nrq:{route.session_id}:score:summary:{snapshot.summary_id}"
         )
-        assert kwargs["view"].children[0].label == default_presentation().text(
-            "buttons.summary_current"
-        )
-        copy = default_presentation()
+        assert kwargs["view"].children[0].label == copy.text("buttons.summary_current")
         for key, length in (("summary.traffic", 1100), ("summary.posted_round_footer", 2049)):
             bad = replace(copy, strings={**copy.strings, key: "x" * length})
             with pytest.raises(PresentationError):
