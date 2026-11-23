@@ -33,6 +33,7 @@ from lets_play.presentation import default_presentation
 from lets_play.storage import bootstrap
 from lets_play.storage.migrations import MIGRATIONS, SCHEMA_VERSION
 from lets_play.storage.progression import Progression
+from lets_play.storage.recovery_flow import RECOVERY_READ_IN_SECONDS
 
 GIF = "https://example.invalid/pond.gif"
 UPLOAD = AttachmentSnapshot(101, "pond.GIF")
@@ -115,7 +116,9 @@ async def test_credit_on_two_and_badge_only_after_a_clean_full_bout(tmp_path, mo
         active = await runtime.state(route.session_id)
         assert active.mode.choice.card_id == GETTING_GRAPHIC
         assert active.mode.ends_at == runtime.clock.at + timedelta(seconds=120)
-        assert render(active, kind="rules")[0].title.endswith("Getting Graphic")
+        copy = default_presentation()
+        name = copy.text(f"cards.{GETTING_GRAPHIC}.name")
+        assert render(active, kind="rules")[0].title == copy.text("mode.named_title", name=name)
 
         await gif_post(runtime, route, 81000)  # duplicate Gateway source
         await gif_post(runtime, route, 81001, 707)
@@ -233,8 +236,17 @@ async def test_shortened_or_unobserved_bout_preserves_credit_without_awarding_ba
             copy = default_presentation()
             renderer = NS(copy=copy, _now=runtime.clock.now)
             notice, _ = DiscordTransport._recovery_notice(renderer, route, read_in)
-            assert "Getting Graphic" in notice.description
-            assert "Getting Graphic" in render(read_in, kind="rules")[0].description
+            name = copy.text(f"cards.{GETTING_GRAPHIC}.name")
+            expected_notice = copy.text(
+                "mode.scheduled_named_notice", seconds=RECOVERY_READ_IN_SECONDS, name=name
+            )
+            expected_reading = copy.text(
+                "mode.scheduled_named_reading",
+                timestamp=int(read_in.recovery_resume_at.timestamp()),
+                name=name,
+            )
+            assert notice.description.startswith(expected_notice)
+            assert render(read_in, kind="rules")[0].description.startswith(expected_reading)
         await fire(runtime, route, read_in.recovery_resume_at + timedelta(seconds=120))
         restored = await runtime.state(route.session_id)
         assert restored.mode is None and restored.round_number == 2

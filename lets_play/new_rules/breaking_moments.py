@@ -29,6 +29,7 @@ MODE_FAILURE_REASONS = {
     WHY_ARE_WE_SHOUTING: HEADING_REQUIRED,
 }
 _CUSTOM_EMOJI = re.compile(r"<a?:[A-Za-z0-9_]{2,32}:[1-9][0-9]{12,19}>")
+_BLANK_ITALIC_SPAN = re.compile(r"_ +_")
 
 
 @dataclass(frozen=True, slots=True)
@@ -97,13 +98,16 @@ def why_are_we_shouting(event: MessageEvent, choice: ModeChoice) -> RuleEvaluati
         )
     outcome = Outcome.NOT_APPLICABLE
     for line in text.replace("\r\n", "\n").replace("\r", "\n").split("\n"):
-        # Standalone underscores and escaped underscores are blank-line fillers.
-        if all(word in {"_", r"\_"} for word in line.split()):
+        stripped = line.strip()
+        # Discord can render a space wrapped in single underscores as blank.
+        if not stripped or _BLANK_ITALIC_SPAN.fullmatch(stripped):
             continue
         prefix, _, heading = line.partition(" ")
-        if prefix not in {"#", "##", "###"} or not heading.strip():
+        heading = heading.strip()
+        if prefix not in {"#", "##", "###"} or not heading:
             return RuleEvaluation(choice.instance_id, Outcome.FAIL, HEADING_REQUIRED)
-        outcome = Outcome.PASS
+        if not _BLANK_ITALIC_SPAN.fullmatch(heading):
+            outcome = Outcome.PASS
     return RuleEvaluation(choice.instance_id, outcome)
 
 

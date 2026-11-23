@@ -1,4 +1,4 @@
-# New Rules Discord preview — v0.3.48 / schema 19
+# New Rules Discord preview — v0.3.49 / schema 19
 
 This development build connects the existing ordinary engine to Discord. Run one
 bot process against a database. Private/requested scores, automatic interims and
@@ -159,9 +159,10 @@ A regular post, forward, or pasted message link faults Pass It On.
 
 14. Choose Why Are We Shouting. Send two headings in one post and try a plain
     line under a heading in a separate post. Expect a single mark on the mixed
-    post. A media-only post and a message that starts with `-# ` have no mode
-    observation. Offline tests check that three qualifying posts, zero mode
-    faults, and natural expiry are required for Head On and mode game credit.
+    post. Media-only posts, posts made of blank italic spans such as `_ _`, and
+    messages that start with `-# ` have no mode observation. Offline tests check
+    that Head On and mode game credit require three qualifying posts, zero mode
+    faults, and natural expiry.
 
 ## Delivery and ordering
 

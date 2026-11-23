@@ -51,8 +51,11 @@ link using the [standalone link rules](PARSER.md#gif-and-link-rules), or one GIF
 upload without a caption. Automatic link previews require no extra media check.
 Stickers, voice messages, forwards and competing links or uploads fail Getting
 Graphic. Why Are We Shouting checks each source line for one to three leading
-hash signs, an ASCII space, and heading text. Whitespace-only lines and standalone
-underscore fillers are ignored. A post with no applicable text adds traffic.
+hash signs, an ASCII space, and heading text. Whitespace-only lines and blank
+italic spans such as `_ _` are ignored, including when such a span is the only
+content in a heading. Escaped or unmatched underscores, list markers, and blank
+code, strikethrough, and underline spans are checked. A post with no applicable
+text adds traffic.
 An applicable outcome contributes one binary observation and a failed post
 requests one marker. Mode messages contribute no ordinary participation. A mode
 without a supported choice raises `NotImplementedError` on non-whisper posts.

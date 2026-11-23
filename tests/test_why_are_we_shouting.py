@@ -27,11 +27,11 @@ from lets_play.new_rules.contracts import (
     Outcome,
     SessionRoute,
 )
+from lets_play.presentation import default_presentation
 from lets_play.storage import bootstrap
 from lets_play.storage.migrations import MIGRATIONS, SCHEMA_VERSION
 
 IMAGE = AttachmentSnapshot(123, "sample.png", "image/png")
-DESCRIPTION = "Make every line of text a heading. (Start each line with `###\u00a0`)"
 
 
 @pytest.mark.parametrize(
@@ -41,7 +41,7 @@ DESCRIPTION = "Make every line of text a heading. (Start each line with `###\u00
         ("## second level", Outcome.PASS),
         ("### third level", Outcome.PASS),
         ("# first\r\n   \r\n## second\r### third\n", Outcome.PASS),
-        ("\n### first\n_ _   \n\\_ \\_  \n## second", Outcome.PASS),
+        ("\n### first\n_ _   \n  _   _  \n## second", Outcome.PASS),
         ("### 🎨", Outcome.PASS),
         ("### header\nplain", Outcome.FAIL),
         ("plain\n### header", Outcome.FAIL),
@@ -55,9 +55,18 @@ DESCRIPTION = "Make every line of text a heading. (Start each line with `###\u00
         ("###  ", Outcome.FAIL),
         ("```\n### within a fence\n```", Outcome.FAIL),
         ("_ some text _", Outcome.FAIL),
+        ("_", Outcome.FAIL),
+        ("___", Outcome.FAIL),
+        (r"\_ \_", Outcome.FAIL),
+        ("* *", Outcome.FAIL),
+        ("` `", Outcome.FAIL),
+        ("~~ ~~", Outcome.FAIL),
+        ("__ __", Outcome.FAIL),
         (None, Outcome.NOT_APPLICABLE),
         ("", Outcome.NOT_APPLICABLE),
         (" \n \t\r\n_ _    ", Outcome.NOT_APPLICABLE),
+        ("_ _" + "\n" * 13 + "_ _", Outcome.NOT_APPLICABLE),
+        ("### _ _", Outcome.NOT_APPLICABLE),
     ],
 )
 def test_each_nonblank_line_needs_a_heading(text, outcome):
@@ -88,16 +97,17 @@ async def test_each_clean_player_earns_credit_and_head_on_at_full_expiry(tmp_pat
         active = await runtime.state(route.session_id)
         assert active.mode.choice.card_id == WHY_ARE_WE_SHOUTING
         assert active.mode.ends_at == active.pacing.started_at + timedelta(seconds=120)
-        assert render(active, kind="rules")[0].description.startswith(f"{DESCRIPTION}\n\n")
+        description = default_presentation().text(f"cards.{WHY_ARE_WE_SHOUTING}.description")
+        assert render(active, kind="rules")[0].description.startswith(f"{description}\n\n")
 
         await send(runtime, route, 81001, "### first\n\n## second\n# third")
         await send(runtime, route, 81002, "-# whisper\nplain text", media=True)
         await send(runtime, route, 81003, "", media=True)
-        await send(runtime, route, 81004, "\n_ _   \n")
+        await send(runtime, route, 81004, "_ _" + "\n" * 13 + "_ _")
         await send(runtime, route, 81005)
         await send(runtime, route, 81006, "# a heading caption", media=True)
-        await send(runtime, route, 81007, "### heading\nplain\nmore plain", 707)
-        await send(runtime, route, 81007, "### heading\nplain\nmore plain", 707)
+        await send(runtime, route, 81007, "### heading\n* *\n` `", 707)
+        await send(runtime, route, 81007, "### heading\n* *\n` `", 707)
         await send(runtime, route, 81020, None, 909, media=True)
         for offset in range(3):
             await send(runtime, route, 81008 + offset, actor=707)

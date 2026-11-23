@@ -8,7 +8,7 @@ contains operational and API documentation only.
 
 ## Current implementation
 
-Application v0.3.48 uses schema 19. M1 closed at v0.2.9/schema 8, M2 at
+Application v0.3.49 uses schema 19. M1 closed at v0.2.9/schema 8, M2 at
 v0.3.30/schema 16, and M3 at v0.3.45/schema 17. Getting Graphic opens M4.
 Preserve the existing domain/storage APIs. This build is a development-only
 Discord preview.

@@ -267,6 +267,7 @@ async def test_rules_during_selected_transition_show_old_rules_until_cutover(tmp
     async with service(tmp_path, monkeypatch) as runtime:
         route = await opened(runtime)
         await activated(runtime, route)
+        await runtime.submit(route, "configure", templates=frozenset({"NR007", "NR023", "NR024"}))
         await posts(runtime, route)
         state = await next_offer(runtime, route)
         await runtime.submit(
