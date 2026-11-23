@@ -30,8 +30,13 @@ For Drawing Conclusions, schema 15 supports Pictoglyphs (`mode_emoji`). Three
 successful emoji-only posts from one actor in the same bout independently qualify
 gameplay credit and the badge. The third post and qualifying effects commit in one
 unit. An existing badge never blocks a game's credit, and later faults or an
-interrupted bout preserve earned awards. Profile presentation and other mode and
-theme predicates remain future work.
+interrupted bout preserve earned awards.
+
+Getting Graphic credits the game with the second valid GIF from a player in one
+bout. What Bandwidth (`mode_gif`) commits at natural expiry with at least five
+valid GIFs and zero mode faults in that bout. An early manager ending or a
+recovery interruption preserves credit already earned. Profile presentation and
+the remaining mode and theme predicates are future work.
 
 ## Actual round closure
 

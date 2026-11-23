@@ -13,6 +13,7 @@ from lets_play.discord_adapter.discord_io import render
 from lets_play.new_rules.breaking_moments import (
     BREAKING_MOMENT_SECONDS,
     DRAWING_CONCLUSIONS,
+    MODE_VALIDATORS,
     ModeChoice,
     drawing_conclusions,
     mode_ends_at,
@@ -38,14 +39,20 @@ class DrawLast:
     """Take the last template ticket first, where the optional mode is listed."""
 
     def __init__(self, seed):
-        pass
+        self.draws = 0
 
     def randrange(self, size):
+        self.draws += 1
+        if self.draws == 2:
+            return self.mode_index
         return size - 1
 
 
-async def scheduled(runtime, monkeypatch, *, expressionless=False):
-    monkeypatch.setattr(evolution_flow, "Random", DrawLast)
+async def scheduled(runtime, monkeypatch, *, expressionless=False, mode=DRAWING_CONCLUSIONS):
+    class DrawMode(DrawLast):
+        mode_index = tuple(MODE_VALIDATORS).index(mode)
+
+    monkeypatch.setattr(evolution_flow, "Random", DrawMode)
     route = await opened(runtime)
     if expressionless:
         opening = await choice(runtime, route)
@@ -75,8 +82,8 @@ async def scheduled(runtime, monkeypatch, *, expressionless=False):
     assert options[index].outgoing_ids == ()
     embed, view = render(offer)
     copy = default_presentation()
-    name = copy.text(f"cards.{DRAWING_CONCLUSIONS}.name")
-    description = copy.text(f"cards.{DRAWING_CONCLUSIONS}.description")
+    name = copy.text(f"cards.{mode}.name")
+    description = copy.text(f"cards.{mode}.description")
     mode_label = copy.text("mode.choice_label", minutes=BREAKING_MOMENT_SECONDS // 60)
     assert embed.title == copy.text("ordinary.offer_title")
     assert embed.fields[index].name == view.children[index].label == name

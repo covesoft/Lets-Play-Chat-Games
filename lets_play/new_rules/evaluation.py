@@ -7,7 +7,7 @@ The flow supplies the saved Breaking Moment choice when one owns enforcement.
 
 from dataclasses import dataclass, field
 
-from lets_play.new_rules.breaking_moments import ModeChoice, drawing_conclusions
+from lets_play.new_rules.breaking_moments import MODE_VALIDATORS, ModeChoice
 from lets_play.new_rules.catalog import CHATGAMES_MAX_ACTIVE_DONT_FORGET
 from lets_play.new_rules.contracts import (
     EmojiIdentity,
@@ -151,7 +151,7 @@ def evaluate_message(
     elif position.phase is Phase.MODE:
         if mode is None:
             raise NotImplementedError("Non-whisper mode messages need a mode validator.")
-        evaluation = drawing_conclusions(event, mode)
+        evaluation = MODE_VALIDATORS[mode.card_id](event, mode)
         evaluations, score = (evaluation,), mode_score(evaluation)
     else:
         view = parse_message(event.content)

@@ -28,6 +28,8 @@ TEMPLATE_FIELDS = {
     "mode.interrupted_reading": frozenset({"timestamp"}),
     "mode.scheduled_notice": frozenset({"seconds"}),
     "mode.scheduled_reading": frozenset({"timestamp"}),
+    "mode.scheduled_named_notice": frozenset({"seconds", "name"}),
+    "mode.scheduled_named_reading": frozenset({"timestamp", "name"}),
     "reboot.preplay": frozenset({"seconds"}),
     "reboot.preplay_reading": frozenset({"timestamp"}),
     "reboot.opening_activation": frozenset({"seconds"}),

@@ -8,8 +8,8 @@ contains operational and API documentation only.
 
 ## Current implementation
 
-Application v0.3.45 uses schema 17. M1 closed at v0.2.9/schema 8, and M2
-closed at v0.3.30/schema 16. M3 closes on the v0.3.45/schema 17 baseline.
+Application v0.3.46 uses schema 18. M1 closed at v0.2.9/schema 8, M2 at
+v0.3.30/schema 16, and M3 at v0.3.45/schema 17. Getting Graphic opens M4.
 Preserve the existing domain/storage APIs. This build is a development-only
 Discord preview.
 
@@ -17,8 +17,8 @@ Implemented: persisted three-human opening, message/raw-reaction scoring and
 markers, ordinary warning/picker/choice/replacement/timeout/cutover, held play,
 same-round revival, manager ending, private live scores, requested public reports,
 gated automatic interims, compact round-end boards and ranked final standings.
-Drawing Conclusions is the supported Breaking Moment. An eligible later hand
-can draw it as one template ticket. Opening and post-mode hands are ordinary-only.
+Eligible later hands use one shared Breaking Moment ticket for Drawing Conclusions
+and Getting Graphic. Opening and post-mode hands are ordinary-only.
 All forty ordinary predicates exist. The opening pool has ten templates.
 Later offers use up to forty templates. NR032 uses its private gameplay list.
 NR036 uses the ordered guild bank, seeded from optional operator defaults in
@@ -45,7 +45,7 @@ and unresolved engine, adapter, summary, round-report or older notice claims sta
 fenced. Published held play, revival, lobby, opening choices and announced first
 activation use the same unattended recovery. Original join and Continue buttons
 remain authoritative, and terminal lobby/revival deadlines win during read-in.
-Acknowledged Drawing Conclusions bouts interrupt on disruption. After the
+Acknowledged Breaking Moments interrupt on disruption. After the
 same read-in, restore ordinary rules within the saved round. If an acknowledged
 mode start passes during read-in, apply that round cutover once and interrupt the
 unobserved bout. Genuine blockers stay paused with a concise host-contact
@@ -135,7 +135,9 @@ migration or command sync; documentation-only patches need no reinstall/restart.
   120 seconds without a new draw/round. Mode results add binary observations, one
   marker per failed message, and no ordinary posts or reaction faults. Whispers
   add only traffic. Commit each third qualifying Drawing Conclusions post, game
-  credit and Pictoglyphs in the same unit. Credit and badge ownership are independent.
+  credit and Pictoglyphs in the same unit. Getting Graphic credits the game at
+  two GIFs from one player in one bout. Natural completion awards What Bandwidth
+  at five GIFs and zero mode faults. Credit and badge ownership are independent.
 - Lobby clocks start at actual publication (180 seconds; first choice 60).
   Starter plus two distinct humans is quorum; joins alone do not credit a game.
   Preplay has no fake playing round. First acknowledged activation creates it,
@@ -293,6 +295,6 @@ a claimed close, without reopening a game or occupying capacity.
 Inconclusive evidence keeps the claim unresolved. A live route stays paused
 and can be explicitly ended by a manager. An ended route remains ended without
 replaying an uncertain result. The existing authorized ending is the operator
-disposition for stalled games. The next M4 increment is Getting Graphic. Start
-with the existing Breaking Moment and GIF validation paths.
+disposition for stalled games. Continue M4 in bounded increments. Reuse the
+shared Breaking Moment lifecycle for the remaining modes.
 The owner’s soft patch-size limit is 200 KB.

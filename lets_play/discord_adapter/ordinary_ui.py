@@ -4,7 +4,12 @@ from datetime import UTC, datetime, timedelta
 
 import discord
 
-from lets_play.new_rules.breaking_moments import BREAKING_MOMENT_SECONDS, ModeChoice, mode_ends_at
+from lets_play.new_rules.breaking_moments import (
+    BREAKING_MOMENT_SECONDS,
+    DRAWING_CONCLUSIONS,
+    ModeChoice,
+    mode_ends_at,
+)
 from lets_play.new_rules.pacing import WARNING_SECONDS
 
 
@@ -20,12 +25,11 @@ def selected_option(offer):
 
 def scheduled_mode(state):
     offer = state.offer
-    return bool(
-        offer
-        and offer.stage == "selected"
-        and state.offer_display_ready
-        and isinstance(selected_option(offer).incoming, ModeChoice)
-    )
+    if offer and offer.stage == "selected" and state.offer_display_ready:
+        incoming = selected_option(offer).incoming
+        if isinstance(incoming, ModeChoice):
+            return incoming
+    return None
 
 
 def resumption_rules(state):
@@ -90,18 +94,27 @@ def render_ordinary(state, copy, button, *, kind=None, now=None):
         if state.recovery_resume_at:
             embed.title = copy.text("reboot.notice_title")
             embed.colour = copy.color("reboot")
-            embed.description = copy.text(
-                "mode.interrupted_reading"
-                if state.mode
-                else "mode.scheduled_reading"
-                if scheduled_mode(state)
-                else "reboot.activation_reading_description"
-                if offer and offer.stage == "selected" and state.offer_display_ready
-                else "reboot.revival_reading"
-                if revival and revival.stage == "published"
-                else "reboot.reading_description",
-                timestamp=int(state.recovery_resume_at.timestamp()),
-            )
+            mode = scheduled_mode(state)
+            timestamp = int(state.recovery_resume_at.timestamp())
+            if not state.mode and mode and mode.card_id != DRAWING_CONCLUSIONS:
+                embed.description = copy.text(
+                    "mode.scheduled_named_reading",
+                    timestamp=timestamp,
+                    name=copy.text(f"cards.{mode.card_id}.name"),
+                )
+            else:
+                embed.description = copy.text(
+                    "mode.interrupted_reading"
+                    if state.mode
+                    else "mode.scheduled_reading"
+                    if mode
+                    else "reboot.activation_reading_description"
+                    if offer and offer.stage == "selected" and state.offer_display_ready
+                    else "reboot.revival_reading"
+                    if revival and revival.stage == "published"
+                    else "reboot.reading_description",
+                    timestamp=timestamp,
+                )
         else:
             embed.description = (
                 copy.text("reboot.blocked_description")

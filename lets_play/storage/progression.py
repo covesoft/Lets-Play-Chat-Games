@@ -8,8 +8,12 @@ from dataclasses import dataclass
 from enum import StrEnum
 
 from lets_play.new_rules.breaking_moments import (
+    DRAWING_CONCLUSIONS,
     EMOJI_BADGE_MIN_MESSAGES,
     EMOJI_GAMEPLAY_MIN_MESSAGES,
+    GETTING_GRAPHIC,
+    GIF_BADGE_MIN_MESSAGES,
+    GIF_GAMEPLAY_MIN_MESSAGES,
 )
 from lets_play.new_rules.contracts import Lifecycle
 from lets_play.storage.game_codec import MAX_SQLITE_INTEGER, IncompatibleState
@@ -21,6 +25,10 @@ PROGRESSION_VERSION = "general-1"
 GENERAL_BADGES = frozenset(
     {"rulemaker", "spotless", "familiar_face", "party_animal", "very_careful"}
 )
+MODE_CREDIT_MIN_MESSAGES = {
+    DRAWING_CONCLUSIONS: EMOJI_GAMEPLAY_MIN_MESSAGES,
+    GETTING_GRAPHIC: GIF_GAMEPLAY_MIN_MESSAGES,
+}
 
 
 class ResolutionOrderError(ValueError):
@@ -145,31 +153,50 @@ class Progression:
         await self._credit(session_id, eligible, values)
 
     @_write
-    async def credit_drawing_conclusions(self, session_id, round_id, actor_id):
+    async def credit_mode_posts(self, session_id, round_id, actor_id):
         _actor(actor_id)
         context = await self._context(session_id)
         if context is None or context.position.round_id != round_id:
             return
         row = await _row(
             self.conn,
-            """SELECT s.mode_quality_n FROM nr_round_scores s
+            """SELECT m.kind,s.mode_quality_n FROM nr_round_scores s
             JOIN nr_breaking_moments m USING(session_id,round_id)
             WHERE s.session_id=? AND s.round_id=? AND s.actor_id=?
-            AND m.kind='drawing_conclusions'""",
+            AND m.outcome IS NULL""",
             (session_id, round_id, actor_id),
         )
         if row is None:
             return
-        successful_posts = int(row[0])
-        if successful_posts >= EMOJI_GAMEPLAY_MIN_MESSAGES:
+        mode, quality = row
+        successful_posts = int(quality)
+        if successful_posts >= MODE_CREDIT_MIN_MESSAGES[mode]:
             await self._credit(
                 session_id,
                 """SELECT actor_id FROM nr_player_progress
                 WHERE session_id=? AND actor_id=? AND game_count_credited=0""",
                 (session_id, actor_id),
             )
-        if successful_posts >= EMOJI_BADGE_MIN_MESSAGES:
+        if mode == DRAWING_CONCLUSIONS and successful_posts >= EMOJI_BADGE_MIN_MESSAGES:
             await self._badge(actor_id, "mode_emoji")
+
+    @_write
+    async def award_completed_mode(self, session_id: str, round_id: str) -> None:
+        """Award What Bandwidth from the completed bout's binary observations."""
+        # Each applied mode observation contributes either 1 (pass) or 0 (fault).
+        # Equality of exact quality and observation count proves zero mode faults.
+        await _execute(
+            self.conn,
+            """INSERT INTO nr_badges(actor_id,badge_key)
+            SELECT s.actor_id,'mode_gif' FROM nr_round_scores s
+            JOIN nr_breaking_moments m USING(session_id,round_id)
+            JOIN nr_profiles p ON p.actor_id=s.actor_id
+            WHERE s.session_id=? AND s.round_id=? AND m.kind=? AND m.outcome='completed'
+            AND s.mode_observations>=? AND s.mode_quality_d='1'
+            AND s.mode_quality_n=CAST(s.mode_observations AS TEXT)
+            ON CONFLICT(actor_id,badge_key) DO NOTHING""",
+            (session_id, round_id, GETTING_GRAPHIC, GIF_BADGE_MIN_MESSAGES),
+        )
 
     async def _credit(self, session_id, eligible, values):
         if await _row(self.conn, f"SELECT 1 FROM ({eligible}) LIMIT 1", values) is None:

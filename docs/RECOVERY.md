@@ -149,13 +149,14 @@ result post with the output-specific View final results control. Silent ending
 edits only the saved panel. If the panel is gone, the claim stays unresolved
 without a replacement post.
 
-## Drawing Conclusions
+## Breaking Moments
 
 Startup requires the saved bout, its original acknowledged activation, and the
 same delivery and fresh-access checks as an ordinary round. The notice announces
 the interruption. Once read-in finishes, the exact suspended cards are restored
 in the same round with its original activation time. Committed mode scores,
-game credit and Pictoglyphs survive. If a published mode start passes during
+game credit and earned badges survive. An interrupted Getting Graphic bout
+cannot earn What Bandwidth. If a published mode start passes during
 read-in, the selected round change still commits once at its saved timestamp
 and an unobserved bout is interrupted immediately. A future start remains
 scheduled. Ordinary and interrupted-mode read-in notices show a relative

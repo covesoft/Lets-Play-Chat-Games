@@ -3,7 +3,7 @@
 The package can prepare legal ordinary additions/replacements, construct a
 complete three-template offer, and revalidate a frozen choice. It performs no
 I/O, publication, activation, phrase consumption, round closure, or awards.
-The live adapter enables the Drawing Conclusions ticket for eligible later
+The live adapter enables the shared Breaking Moment ticket for eligible later
 hands. Later hands can draw NR036 from the [ordered guild bank](CONFIGURATION.md#dont-forget).
 
 ## Implemented catalog
@@ -129,9 +129,10 @@ The builder samples distinct templates without replacement. NR036 has one ticket
 regardless of phrase count; it freezes an eligible phrase only after selecting
 that template. Replacement targets likewise do not create extra tickets.
 Injected RNG is the sole source of randomness; fixed inputs/seeds reproduce an
-offer. When enabled, Drawing Conclusions contributes a single ticket. It has
-one completion that preserves the exact ordinary inventory. Opening hands and
-the hand after a mode-led round use ordinary tickets only.
+offer. When the shared mode ticket is drawn, select one supported mode uniformly.
+Drawing Conclusions and Getting Graphic each have one completion that preserves
+the exact ordinary inventory. Opening hands and the hand after a mode-led round
+use ordinary tickets only.
 
 The ordered `PhraseChoice` snapshot accepts at most 15 entries. The supplied
 session window is 5 or 15: slice **before** filtering used/incompatible wording,

@@ -1,4 +1,4 @@
-"""The supported Breaking Moment choice and its pure message predicate."""
+"""Supported Breaking Moment choices and their pure message predicates."""
 
 import re
 from dataclasses import dataclass
@@ -7,26 +7,34 @@ from typing import ClassVar
 
 import emoji
 
-from lets_play.new_rules.contracts import MessageEvent, Outcome, RuleEvaluation
-from lets_play.new_rules.parsing import MAX_PARSER_CODEPOINTS, ParserLimitError
+from lets_play.new_rules.contracts import MessageEvent, Outcome, ReferenceKind, RuleEvaluation
+from lets_play.new_rules.gif_media import is_gif_attachment, is_gif_link
+from lets_play.new_rules.parsing import MAX_PARSER_CODEPOINTS, ParserLimitError, parse_message
 
 DRAWING_CONCLUSIONS = "drawing_conclusions"
+GETTING_GRAPHIC = "getting_graphic"
 BREAKING_MOMENT_SECONDS = 120
 EMOJI_BADGE_MIN_MESSAGES = 3
 EMOJI_GAMEPLAY_MIN_MESSAGES = 3
+GIF_BADGE_MIN_MESSAGES = 5
+GIF_GAMEPLAY_MIN_MESSAGES = 2
 EMOJI_REQUIRED = "emoji_only_required"
+GIF_REQUIRED = "single_gif_required"
+MODE_FAILURE_REASONS = {DRAWING_CONCLUSIONS: EMOJI_REQUIRED, GETTING_GRAPHIC: GIF_REQUIRED}
 _CUSTOM_EMOJI = re.compile(r"<a?:[A-Za-z0-9_]{2,32}:[1-9][0-9]{12,19}>")
 
 
 @dataclass(frozen=True, slots=True)
 class ModeChoice:
     instance_id: str
-    card_id: ClassVar[str] = DRAWING_CONCLUSIONS
+    card_id: str = DRAWING_CONCLUSIONS
     parameters: ClassVar[tuple] = ()
 
     def __post_init__(self):
         if not isinstance(self.instance_id, str) or not self.instance_id:
             raise ValueError("A Breaking Moment needs an instance identity.")
+        if self.card_id not in MODE_FAILURE_REASONS:
+            raise ValueError("Unsupported Breaking Moment.")
 
 
 def mode_ends_at(started_at: datetime) -> datetime:
@@ -50,6 +58,31 @@ def drawing_conclusions(event: MessageEvent, choice: ModeChoice) -> RuleEvaluati
         Outcome.PASS if valid else Outcome.FAIL,
         None if valid else EMOJI_REQUIRED,
     )
+
+
+def getting_graphic(event: MessageEvent, choice: ModeChoice) -> RuleEvaluation:
+    view = parse_message(event.content)
+    valid = False
+    if not (
+        event.sticker_ids or event.is_voice_message or event.reference_kind is ReferenceKind.FORWARD
+    ):
+        if event.attachments:
+            valid = (
+                len(event.attachments) == 1
+                and not (event.content or "").strip()
+                and is_gif_attachment(event.attachments[0])
+            )
+        else:
+            link = view.single_link(view.shared_links)
+            valid = link is not None and is_gif_link(link.destination)
+    return RuleEvaluation(
+        choice.instance_id,
+        Outcome.PASS if valid else Outcome.FAIL,
+        None if valid else GIF_REQUIRED,
+    )
+
+
+MODE_VALIDATORS = {DRAWING_CONCLUSIONS: drawing_conclusions, GETTING_GRAPHIC: getting_graphic}
 
 
 def _emoji_only(text: str) -> bool:

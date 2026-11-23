@@ -3,7 +3,7 @@
 import json
 from datetime import UTC, datetime, timedelta
 
-from lets_play.new_rules.breaking_moments import DRAWING_CONCLUSIONS, ModeChoice
+from lets_play.new_rules.breaking_moments import MODE_VALIDATORS, ModeChoice
 from lets_play.new_rules.compatibility import (
     LegalCompletion,
     inventory_rejection,
@@ -199,6 +199,6 @@ def _unproven_completions(owner, active, incoming, targets):
 
 def decode_choice(data):
     instance, card, params = data
-    if card == DRAWING_CONCLUSIONS and params == []:
-        return ModeChoice(instance)
+    if card in MODE_VALIDATORS and params == []:
+        return ModeChoice(instance, card)
     return _read_rule(data)

@@ -17,7 +17,7 @@ from pathlib import Path
 
 import aiosqlite
 
-from lets_play.new_rules.breaking_moments import EMOJI_REQUIRED
+from lets_play.new_rules.breaking_moments import MODE_FAILURE_REASONS
 from lets_play.new_rules.contracts import EventKind, Lifecycle, Outcome, Phase, SessionPosition
 from lets_play.new_rules.evaluation import (
     EVALUATOR_VERSION,
@@ -570,9 +570,7 @@ class GameUnitOfWork:
             progression = Progression(self)
             if p.phase is Phase.MODE:
                 if decision.score.mode_quality:
-                    await progression.credit_drawing_conclusions(
-                        session_id, p.round_id, decision.actor_id
-                    )
+                    await progression.credit_mode_posts(session_id, p.round_id, decision.actor_id)
             else:
                 await progression.credit_ordinary(session_id, decision.actor_id)
         return ApplyStatus.APPLIED
@@ -597,7 +595,11 @@ class GameUnitOfWork:
                         result.rule_instance_id == bout.choice.instance_id
                         and result.outcome in (Outcome.PASS, Outcome.FAIL)
                         and result.reason_code
-                        == (EMOJI_REQUIRED if result.outcome is Outcome.FAIL else None)
+                        == (
+                            MODE_FAILURE_REASONS[bout.choice.card_id]
+                            if result.outcome is Outcome.FAIL
+                            else None
+                        )
                         and decision.score == mode_score(result)
                     ):
                         return

@@ -4,7 +4,7 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from enum import StrEnum
 
-from lets_play.new_rules.breaking_moments import DRAWING_CONCLUSIONS, ModeChoice
+from lets_play.new_rules.breaking_moments import MODE_VALIDATORS, ModeChoice
 from lets_play.new_rules.catalog import CARD_SPECS
 from lets_play.new_rules.compatibility import (
     DEFAULT_WITNESS_BUDGET,
@@ -129,6 +129,8 @@ class OrdinaryHand:
             for option in self.options
         ):
             raise ValueError("A Breaking Moment can only suspend a later hand's exact rules.")
+        if sum(isinstance(option.incoming, ModeChoice) for option in self.options) > 1:
+            raise ValueError("A hand can contain at most one Breaking Moment.")
         if (
             len({o.incoming.card_id for o in self.options}) != 3
             or len({o.incoming.instance_id for o in self.options}) != 3
@@ -259,25 +261,21 @@ def build_hand(
                 variants.append(HandOption(instance, completions))
         if variants:
             pool.append((card, tuple(variants)))
+    eligible = tuple(card for card, _ in pool)
     if include_breaking_moment and p.lifecycle is Lifecycle.PLAYING:
-        mode = ModeChoice(f"{offer_id}:{DRAWING_CONCLUSIONS}")
-        pool.append(
-            (
-                mode.card_id,
-                (
-                    HandOption(
-                        mode,
-                        choice_completions(
-                            context.active_instances,
-                            mode,
-                            budget=budget,
-                            profanity=context.profanity,
-                        ),
-                    ),
+        # Keep a single mode ticket so adding a mode cannot increase its draw rate.
+        modes = (ModeChoice(f"{offer_id}:{card}", card) for card in MODE_VALIDATORS)
+        variants = tuple(
+            HandOption(
+                mode,
+                choice_completions(
+                    context.active_instances, mode, budget=budget, profanity=context.profanity
                 ),
             )
+            for mode in modes
         )
-    eligible = tuple(card for card, _ in pool)
+        pool.append((variants[0].incoming.card_id, variants))
+        eligible += tuple(option.incoming.card_id for option in variants)
     if len(pool) < 3:
         return HandBuild(blocked=BlockedReason.TOO_FEW, eligible_templates=eligible)
     selected = []

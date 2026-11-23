@@ -44,10 +44,13 @@ active NR032, evaluation requires the matching list revision.
 An exact received `-# ` prefix exempts the whole message, including its media,
 before parsing. Its decision contains only human-traffic/whisper counters, with
 no enrollment, score observation, or marker. This also works during a mode.
-During a saved Drawing Conclusions bout, the flow supplies the `mode` choice to
-`evaluate_message`. One or more recognized Unicode or custom emoji, with optional
-whitespace, passes if the post contains only emoji and has no attachments, stickers,
-or voice memo. The outcome contributes one binary observation and a failed post
+During a saved bout, the flow supplies the `mode` choice to `evaluate_message`.
+Drawing Conclusions accepts recognized Unicode or custom emoji with optional
+whitespace and no additional content. Getting Graphic accepts one recognized GIF
+link using the [standalone link rules](PARSER.md#gif-and-link-rules), or one GIF
+upload without a caption. Automatic link previews require no extra media check.
+Stickers, voice messages, forwards and competing links or uploads fail Getting
+Graphic. The outcome contributes one binary observation and a failed post
 requests one marker. Mode messages contribute no ordinary participation. A mode
 without a supported choice raises `NotImplementedError` on non-whisper posts.
 Ordinary reaction enforcement is suspended during a mode. `None` outside a playing position means no enforcement candidate from

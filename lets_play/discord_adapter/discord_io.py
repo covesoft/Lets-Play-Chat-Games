@@ -17,6 +17,7 @@ from lets_play.discord_adapter.ordinary_ui import (
     scheduled_mode,
 )
 from lets_play.discord_adapter.score_ui import detailed_player_entry
+from lets_play.new_rules.breaking_moments import DRAWING_CONCLUSIONS
 from lets_play.new_rules.contracts import (
     AttachmentSnapshot,
     EmojiIdentity,
@@ -172,8 +173,12 @@ def _recovery_notice_key(state):
         )
     if state.revival and state.revival.stage == "published":
         return "reboot.revival"
-    if scheduled_mode(state):
-        return "mode.scheduled_notice"
+    if mode := scheduled_mode(state):
+        return (
+            "mode.scheduled_notice"
+            if mode.card_id == DRAWING_CONCLUSIONS
+            else "mode.scheduled_named_notice"
+        )
     if state.offer and state.offer.stage == "selected" and state.offer_display_ready:
         return "reboot.activation_description"
     return "reboot.notice_countdown"
@@ -564,6 +569,13 @@ class DiscordTransport:
                 seconds=RECOVERY_READ_IN_SECONDS
             )
             embed.description = self.copy.text(key, timestamp=int(deadline.timestamp()))
+        elif key == "mode.scheduled_named_notice":
+            mode = scheduled_mode(state)
+            embed.description = self.copy.text(
+                key,
+                seconds=RECOVERY_READ_IN_SECONDS,
+                name=self.copy.text(f"cards.{mode.card_id}.name"),
+            )
         else:
             embed.description = self.copy.text(key, seconds=RECOVERY_READ_IN_SECONDS)
         if state.offer_panel_id:

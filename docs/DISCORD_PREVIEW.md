@@ -1,10 +1,10 @@
-# New Rules Discord preview — v0.3.45 / schema 17
+# New Rules Discord preview — v0.3.46 / schema 18
 
 This development build connects the existing ordinary engine to Discord. Run one
 bot process against a database. Private/requested scores, automatic interims and
 compact round-end reports and acknowledged ordinary-phase reboot recovery are
-wired. Drawing Conclusions uses the same announced cutover, and an interrupted
-bout restores ordinary play after read-in. Other Breaking Moments and remaining
+wired. Drawing Conclusions and Getting Graphic use the same announced cutover.
+An interrupted bout restores ordinary play after read-in. Other Breaking Moments and remaining
 release work are still open.
 
 ## Install and enable
@@ -151,6 +151,12 @@ A regular post, forward, or pasted message link faults Pass It On.
    panel when play resumes, and the saved scores. Expect no separate green notice
    after read-in.
 
+13. Choose Getting Graphic when it appears. During the two-minute bout, send a
+    lone GIF link with its generated preview and then one GIF upload. Try a GIF
+    with a caption and check for one marker. At expiry, check the green notice and
+    restored `/rules`. Offline progression tests cover game credit at two GIFs
+    and the separate What Bandwidth award at five fault-free GIFs on full expiry.
+
 ## Delivery and ordering
 
 One bounded FIFO per session orders Gateway chat/reactions, controls, ACKs and
@@ -182,7 +188,7 @@ highest first, with unrated players last and ID breaking exact ties. They retain
 clickable non-pinging identities and no score footer on preplay closures.
 Private live scores, requested public reports, automatic interims and actual
 round-end boards are wired. Richer fault/rule/streak and badge presentation,
-Drawing Conclusions, settings, owner grants, profile commands, remaining recovery
+additional Breaking Moments, settings, owner grants, profile commands, remaining recovery
 phases/uncertain-send reconciliation and final-output retry/24-hour cleanup workers
 remain unfinished.
 Failed terminal delivery retains durable results evidence. This is a development
@@ -241,6 +247,6 @@ reference and require creation strictly before the saved cutover. Held and
 recovery notices also carry exact references. A verified recovery notice from
 a superseded restart clears the old uncertainty. The latest restart gets its
 own announcement and read-in. Recovery notices use a read-only Game status
-button. Public score posts use Check current scores. Drawing Conclusions follows recovery. Keep
+button. Public score posts use Check current scores. Both supported modes follow recovery. Keep
 recovery unattended; technical reconciliation is host/service work. Do not reintroduce a
 manager resume gate or expand retired debug UI. See [RECOVERY.md](RECOVERY.md).

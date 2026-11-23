@@ -3,7 +3,7 @@
 from dataclasses import dataclass, replace
 from datetime import datetime
 
-from lets_play.new_rules.breaking_moments import DRAWING_CONCLUSIONS, ModeChoice, mode_ends_at
+from lets_play.new_rules.breaking_moments import MODE_VALIDATORS, ModeChoice, mode_ends_at
 from lets_play.new_rules.contracts import Advancement, Lifecycle, Phase
 from lets_play.storage.game_codec import IncompatibleState
 from lets_play.storage.game_store import _execute, _row
@@ -30,11 +30,11 @@ class BreakingFlow:
         )
         if row is None:
             return None
-        if row["kind"] != DRAWING_CONCLUSIONS:
+        if row["kind"] not in MODE_VALIDATORS:
             raise IncompatibleState("The saved Breaking Moment needs a supported predicate.")
         return BreakingMoment(
             row["offer_id"],
-            ModeChoice(row["choice_id"]),
+            ModeChoice(row["choice_id"], row["kind"]),
             utc_datetime(row["ends_at_utc"]),
             row["outcome"],
         )
@@ -95,6 +95,9 @@ class BreakingFlow:
 
         # After an interruption the recovery panel already shows the restored rules.
         if not interrupted:
+            from lets_play.storage.progression import Progression
+
+            await Progression(self.unit).award_completed_mode(p.route.session_id, p.round_id)
             await _execute(
                 self.conn,
                 "INSERT INTO nr_evolution_outputs(session_id,token,kind) VALUES (?,?,'mode_ended')",

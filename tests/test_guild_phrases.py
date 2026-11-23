@@ -82,7 +82,7 @@ async def test_schema_16_upgrade_and_seeds_survive_default_edits_and_explicit_em
     with monkeypatch.context() as old:
         old.setattr(bootstrap, "MIGRATIONS", bootstrap.MIGRATIONS[:16])
         assert (await bootstrap.initialize_database(db)).schema_version == 16
-    assert (await bootstrap.initialize_database(db)).schema_version == 17
+    assert (await bootstrap.initialize_database(db)).schema_version == bootstrap.SCHEMA_VERSION
     initial = parse_phrase_bank(STARTER_TEXT)
     async with (
         open_game_store(db, guild_phrase_defaults=initial) as store,
