@@ -1,4 +1,4 @@
-# New Rules Discord preview — v0.3.46 / schema 18
+# New Rules Discord preview — v0.3.47 / schema 18
 
 This development build connects the existing ordinary engine to Discord. Run one
 bot process against a database. Private/requested scores, automatic interims and
@@ -9,11 +9,10 @@ release work are still open.
 
 ## Install and enable
 
-The current schema is **17**, with WAL and foreign keys enabled. Before an
+The current schema is **18**, with WAL and foreign keys enabled. Before an
 upgrade, stop the bot and verify a database backup. Run
-`python -m lets_play --init-db` to apply migration 17 or initialize a fresh
-database. Migration 17 adds the guild phrase bank. See
-[RECOVERY.md](RECOVERY.md) and [STORAGE.md](STORAGE.md).
+`python -m lets_play --init-db` to apply pending migrations or initialize a fresh
+database. See [RECOVERY.md](RECOVERY.md) and [STORAGE.md](STORAGE.md).
 
 
 Keep token, owner IDs and actual emoji markup in the private `.env`:
@@ -25,10 +24,11 @@ CHATGAMES_DING_EMOJI=
 ```
 
 Supply your own custom marker privately before starting a game. No bundled asset
-or fallback exists. The three commands remain `/start-game new-rules`, `/rules`
-and `/end-game`; no additional command sync is needed for this increment. For a
-new installation, explicitly enable sync once, then turn it off. Message Content
-Intent must be available. Start normally with `python -m lets_play`.
+or fallback exists. The default commands are `/start-game new-rules`, `/rules`,
+and `/end-game`. Set `CHATGAMES_LINK_SUPPORT` or `CHATGAMES_SUPPORT_INVITE_CODE`
+to add `/support-server` with a private join button. On a new installation or
+after adding or removing that command, enable sync once, then turn it off.
+Message Content Intent must be available. Start with `python -m lets_play`.
 
 Admission first checks development/readiness/human context, static permissions,
 marker configuration, archived/locked state and the shared read-only eligibility

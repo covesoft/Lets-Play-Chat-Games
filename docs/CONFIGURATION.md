@@ -44,6 +44,11 @@ be positive ASCII integers below 2^64. Links must be HTTPS and cannot contain
 embedded credentials or whitespace. Error messages identify the setting, not its
 supplied value. Syntax validation does not prove a URL is live or an emoji usable.
 
+With either support setting configured, `/support-server` replies privately with
+a join button. The full URL takes precedence over the invite code. Enable global
+command sync once after adding or removing the support configuration. The
+offline `--check-config` command reports whether the support URL is configured.
+
 Only the seven current install permissions are requested. No Administrator,
 Manage Messages, member-list access, voice connection, or moderation permission
 is required by M0. Missing Message Content access must be addressed before

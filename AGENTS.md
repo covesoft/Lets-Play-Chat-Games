@@ -8,7 +8,7 @@ contains operational and API documentation only.
 
 ## Current implementation
 
-Application v0.3.46 uses schema 18. M1 closed at v0.2.9/schema 8, M2 at
+Application v0.3.47 uses schema 18. M1 closed at v0.2.9/schema 8, M2 at
 v0.3.30/schema 16, and M3 at v0.3.45/schema 17. Getting Graphic opens M4.
 Preserve the existing domain/storage APIs. This build is a development-only
 Discord preview.
@@ -19,6 +19,7 @@ same-round revival, manager ending, private live scores, requested public report
 gated automatic interims, compact round-end boards and ranked final standings.
 Eligible later hands use one shared Breaking Moment ticket for Drawing Conclusions
 and Getting Graphic. Opening and post-mode hands are ordinary-only.
+`/support-server` is registered when the resolved support URL is configured.
 All forty ordinary predicates exist. The opening pool has ten templates.
 Later offers use up to forty templates. NR032 uses its private gameplay list.
 NR036 uses the ordered guild bank, seeded from optional operator defaults in

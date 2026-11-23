@@ -67,6 +67,11 @@ def main(argv: list[str] | None = None, *, base_dir: Path | None = None) -> int:
                 if settings.invite_url
                 else "Bot Invite: omitted until CHATGAMES_APP_ID is set."
             )
+            print(
+                "Support server: configured."
+                if settings.support_url
+                else "Support server: no invite configured."
+            )
             if settings.profanity_list_path is None:
                 print("Mind Your Language: disabled (no private gameplay list configured).")
             elif (gameplay_list := load_profanity_list(settings.profanity_list_path)) is None:

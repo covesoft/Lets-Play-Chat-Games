@@ -41,6 +41,7 @@ COMMAND_START = "start-game"
 COMMAND_NEW_RULES = "new-rules"
 COMMAND_RULES = "rules"
 COMMAND_END = "end-game"
+COMMAND_SUPPORT_SERVER = "support-server"
 CONTROL = re.compile(
     r"nr:([a-f0-9]{32}):(join|pick|target|revive|results)(?::([0-9]{1,7}))?(?::([0-9]{1,7}))?\Z"
 )
@@ -750,6 +751,14 @@ class DiscordGame:
                 callback=self.end,
             )
         )
+        if bot.settings.support_url:
+            bot.tree.add_command(
+                app_commands.Command(
+                    name=COMMAND_SUPPORT_SERVER,
+                    description=self.copy.text("commands.support_server.description"),
+                    callback=self.support_server,
+                )
+            )
 
     @property
     def copy(self):
@@ -818,6 +827,18 @@ class DiscordGame:
 
     async def rules(self, interaction: discord.Interaction):
         await self._show_rules(interaction, self.route(interaction))
+
+    async def support_server(self, interaction: discord.Interaction):
+        view = discord.ui.View()
+        view.add_item(
+            discord.ui.Button(
+                label=self.copy.text("buttons.join_support_server"),
+                url=self.bot.settings.support_url,
+            )
+        )
+        await interaction.response.send_message(
+            self.copy.text("support_server.message"), view=view, ephemeral=True
+        )
 
     async def _show_rules(self, interaction, route):
         await interaction.response.defer(ephemeral=True, thinking=True)

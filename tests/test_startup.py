@@ -4,6 +4,7 @@ import os
 import subprocess
 import sys
 from pathlib import Path
+from types import SimpleNamespace
 from unittest.mock import AsyncMock
 
 import discord
@@ -45,6 +46,45 @@ async def test_sdk_construction_and_close_need_no_token_or_network(tmp_path):
 
 @pytest.mark.asyncio
 @pytest.mark.parametrize(
+    ("environ", "url"),
+    [
+        ({"CHATGAMES_SUPPORT_INVITE_CODE": "test-code"}, "https://discord.gg/test-code"),
+        (
+            {"CHATGAMES_LINK_SUPPORT": "https://example.invalid/support"},
+            "https://example.invalid/support",
+        ),
+        (
+            {
+                "CHATGAMES_LINK_SUPPORT": "https://example.invalid/support",
+                "CHATGAMES_SUPPORT_INVITE_CODE": "unused-code",
+            },
+            "https://example.invalid/support",
+        ),
+    ],
+)
+async def test_configured_support_command_uses_a_private_link_button(tmp_path, environ, url):
+    bot = LetsPlayBot(load_settings(base_dir=tmp_path, environ=environ))
+    async with bot:
+        command = bot.tree.get_command("support-server")
+        assert command is not None
+        copy = bot.presentation
+        assert command.description == copy.text("commands.support_server.description")
+        send = AsyncMock()
+        interaction = SimpleNamespace(response=SimpleNamespace(send_message=send))
+        await command._do_call(interaction, {})
+        send.assert_awaited_once()
+        assert send.call_args.args == (copy.text("support_server.message"),)
+        assert send.call_args.kwargs["ephemeral"] is True
+        (button,) = send.call_args.kwargs["view"].children
+        assert button.style is discord.ButtonStyle.link
+        assert button.label == copy.text("buttons.join_support_server")
+        assert button.url == url
+        assert bot.game_runtime is None
+    assert not list(tmp_path.iterdir())
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
     "sync,has_command,should_sync",
     [
         (False, True, False),
@@ -79,10 +119,13 @@ def test_check_config_reports_status_without_disclosing_token_or_creating_db(
     tmp_path, monkeypatch, capsys
 ):
     monkeypatch.setenv("CHATGAMES_DISCORD_TOKEN", "fake-token-sentinel")
+    monkeypatch.setenv("CHATGAMES_LINK_SUPPORT", "https://example.invalid/private-test-code")
     assert main(["--check-config"], base_dir=tmp_path) == 0
     output = capsys.readouterr()
     assert "configured" in output.out
+    assert "Support server: configured." in output.out
     assert "fake-token-sentinel" not in output.out + output.err
+    assert "private-test-code" not in output.out + output.err
     assert not list(tmp_path.iterdir())
 
 
