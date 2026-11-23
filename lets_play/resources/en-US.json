@@ -14,6 +14,8 @@
     "cards.drawing_conclusions.description": "Post only emojis! (Spaces are fine too)",
     "cards.getting_graphic.name": "Getting Graphic",
     "cards.getting_graphic.description": "Post exactly one GIF link or file per message. Leave out captions, other links, and extra media.",
+    "cards.why_are_we_shouting.name": "Why Are We Shouting",
+    "cards.why_are_we_shouting.description": "Make every line of text a heading. (Start each line with `### `)",
     "mode.active_description": "Ordinary rules are suspended. They return <t:{ends}:R> in this same round.",
     "mode.scheduled_description": "Starts <t:{starts}:R>. Ordinary rules pause at the start and return <t:{ends}:R>.",
     "mode.interrupted_notice": "My connection was interrupted during the Breaking Moment. Scores and earned progress are saved. Ordinary rules return in this same round in {seconds} seconds.",

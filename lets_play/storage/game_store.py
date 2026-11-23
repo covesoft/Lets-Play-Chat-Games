@@ -17,7 +17,7 @@ from pathlib import Path
 
 import aiosqlite
 
-from lets_play.new_rules.breaking_moments import MODE_FAILURE_REASONS
+from lets_play.new_rules.breaking_moments import MODE_FAILURE_REASONS, WHY_ARE_WE_SHOUTING
 from lets_play.new_rules.contracts import EventKind, Lifecycle, Outcome, Phase, SessionPosition
 from lets_play.new_rules.evaluation import (
     EVALUATOR_VERSION,
@@ -593,7 +593,10 @@ class GameUnitOfWork:
                     result = decision.evaluations[0]
                     if (
                         result.rule_instance_id == bout.choice.instance_id
-                        and result.outcome in (Outcome.PASS, Outcome.FAIL)
+                        and (
+                            result.outcome is not Outcome.NOT_APPLICABLE
+                            or bout.choice.card_id == WHY_ARE_WE_SHOUTING
+                        )
                         and result.reason_code
                         == (
                             MODE_FAILURE_REASONS[bout.choice.card_id]

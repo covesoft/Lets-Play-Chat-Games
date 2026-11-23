@@ -31,7 +31,7 @@ from lets_play.new_rules.contracts import (
 )
 from lets_play.presentation import default_presentation
 from lets_play.storage import bootstrap
-from lets_play.storage.migrations import MIGRATIONS
+from lets_play.storage.migrations import MIGRATIONS, SCHEMA_VERSION
 from lets_play.storage.progression import Progression
 
 GIF = "https://example.invalid/pond.gif"
@@ -284,5 +284,5 @@ async def test_schema_17_active_drawing_conclusions_and_earned_badge_survive_upg
         )
         earned = await profile(runtime, 606)
         assert earned.games_played == 1 and earned.badges == ("mode_emoji",)
-        assert rows(db, "PRAGMA user_version") == [(18,)]
+        assert rows(db, "PRAGMA user_version") == [(SCHEMA_VERSION,)]
         assert rows(db, "PRAGMA foreign_key_check") == []

@@ -1,15 +1,15 @@
-# New Rules Discord preview — v0.3.47 / schema 18
+# New Rules Discord preview — v0.3.48 / schema 19
 
 This development build connects the existing ordinary engine to Discord. Run one
 bot process against a database. Private/requested scores, automatic interims and
 compact round-end reports and acknowledged ordinary-phase reboot recovery are
-wired. Drawing Conclusions and Getting Graphic use the same announced cutover.
+wired. The three supported Breaking Moments use the same announced cutover.
 An interrupted bout restores ordinary play after read-in. Other Breaking Moments and remaining
 release work are still open.
 
 ## Install and enable
 
-The current schema is **18**, with WAL and foreign keys enabled. Before an
+The current schema is **19**, with WAL and foreign keys enabled. Before an
 upgrade, stop the bot and verify a database backup. Run
 `python -m lets_play --init-db` to apply pending migrations or initialize a fresh
 database. See [RECOVERY.md](RECOVERY.md) and [STORAGE.md](STORAGE.md).
@@ -156,6 +156,12 @@ A regular post, forward, or pasted message link faults Pass It On.
     with a caption and check for one marker. At expiry, check the green notice and
     restored `/rules`. Offline progression tests cover game credit at two GIFs
     and the separate What Bandwidth award at five fault-free GIFs on full expiry.
+
+14. Choose Why Are We Shouting. Send two headings in one post and try a plain
+    line under a heading in a separate post. Expect a single mark on the mixed
+    post. A media-only post and a message that starts with `-# ` have no mode
+    observation. Offline tests check that three qualifying posts, zero mode
+    faults, and natural expiry are required for Head On and mode game credit.
 
 ## Delivery and ordering
 

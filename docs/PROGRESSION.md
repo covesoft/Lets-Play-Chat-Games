@@ -35,8 +35,13 @@ interrupted bout preserve earned awards.
 Getting Graphic credits the game with the second valid GIF from a player in one
 bout. What Bandwidth (`mode_gif`) commits at natural expiry with at least five
 valid GIFs and zero mode faults in that bout. An early manager ending or a
-recovery interruption preserves credit already earned. Profile presentation and
-the remaining mode and theme predicates are future work.
+recovery interruption preserves credit already earned.
+
+Why Are We Shouting credits the game and grants Head On (`mode_heading`) at
+natural expiry. Each qualifying player must have three or more valid posts and
+zero mode faults in that bout. A post with multiple headings counts once. Both
+effects commit with the bout outcome. Profile presentation and the remaining
+mode and theme predicates are future work.
 
 ## Actual round closure
 

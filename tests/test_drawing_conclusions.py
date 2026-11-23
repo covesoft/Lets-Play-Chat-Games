@@ -44,7 +44,7 @@ class DrawLast:
     def randrange(self, size):
         self.draws += 1
         if self.draws == 2:
-            return self.mode_index
+            return min(self.mode_index, size - 1)
         return size - 1
 
 

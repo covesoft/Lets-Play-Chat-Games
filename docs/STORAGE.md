@@ -2,14 +2,14 @@
 
 The package supplies bootstrap/migration infrastructure and an offline New Rules
 event unit of work. The development Discord adapter wires the supported ordinary
-subset, Drawing Conclusions, and Getting Graphic.
+subset and the supported Breaking Moments.
 Pure ordinary-subset [hand preparation](HANDS.md) supplies legal result states.
 Schema 3's [ordinary flow](ORDINARY_FLOW.md) persists later-round offers,
 publication acknowledgements, selection, announced cutover and pending-award
 closure boundaries. Schema 4 composes [general progression](PROGRESSION.md) with
 ordinary cutover. Schema 15 adds Drawing Conclusions bout ownership and its action award.
-Schema 18 adds Getting Graphic and its badge while retaining existing bout and
-badge rows.
+Schema 18 adds Getting Graphic and its badge. Schema 19 adds Why Are We Shouting
+and Head On. Both migrations retain the existing bout and badge rows.
 `initialize_database()` opens one aiosqlite connection, initializes it, reports
 safe metadata, and closes it on success or failure. `--init-db` invokes it without
 Discord. The live shell invokes it in `setup_hook()` before command sync.

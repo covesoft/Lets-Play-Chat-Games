@@ -155,9 +155,9 @@ Startup requires the saved bout, its original acknowledged activation, and the
 same delivery and fresh-access checks as an ordinary round. The notice announces
 the interruption. Once read-in finishes, the exact suspended cards are restored
 in the same round with its original activation time. Committed mode scores,
-game credit and earned badges survive. An interrupted Getting Graphic bout
-cannot earn What Bandwidth. If a published mode start passes during
-read-in, the selected round change still commits once at its saved timestamp
+game credit and earned badges survive. What Bandwidth and Head On require
+natural expiry, as does game credit from Why Are We Shouting. If a published
+mode start passes during read-in, the selected round change still commits once at its saved timestamp
 and an unobserved bout is interrupted immediately. A future start remains
 scheduled. Ordinary and interrupted-mode read-in notices show a relative
 deadline. The initial countdown is corrected once the receipt commits the

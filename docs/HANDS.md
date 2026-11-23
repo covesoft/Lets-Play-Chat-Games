@@ -130,7 +130,7 @@ regardless of phrase count; it freezes an eligible phrase only after selecting
 that template. Replacement targets likewise do not create extra tickets.
 Injected RNG is the sole source of randomness; fixed inputs/seeds reproduce an
 offer. When the shared mode ticket is drawn, select one supported mode uniformly.
-Drawing Conclusions and Getting Graphic each have one completion that preserves
+Each supported mode has one completion that preserves
 the exact ordinary inventory. Opening hands and the hand after a mode-led round
 use ordinary tickets only.
 
