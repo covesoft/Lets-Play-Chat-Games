@@ -208,6 +208,7 @@
     "summary.posted_round_footer": "Scores when posted.",
     "summary.lead": "{status}\nUse /rules for the current requirements.\n{as_of}",
     "summary.round_traffic_heading": "Round {round} so far",
+    "summary.round_traffic_heading_ended": "Round {round}:",
     "summary.game_traffic_heading": "Conversation",
     "summary.traffic": "{messages:,} human posts, including {whispers:,} whispers.",
     "summary.as_of": "Last game update: <t:{timestamp}:T>.",
