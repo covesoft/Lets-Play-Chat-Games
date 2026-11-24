@@ -25,6 +25,7 @@ from lets_play.new_rules.contracts import (
 )
 from lets_play.new_rules.evaluation import EvaluationContext, evaluate_message, evaluate_reaction
 from lets_play.new_rules.parsing import MAX_PARSER_CODEPOINTS, parse_message
+from lets_play.new_rules.profanity import ProfanityList
 from lets_play.new_rules.text_rules import RuleConfigurationError, evaluate_text_rule
 
 ROUTE = SessionRoute(101, 202, "session-a")
@@ -144,11 +145,13 @@ def test_gif_link_classification_is_shared_by_both_cards(destination, gif):
     assert decision.score.ordinary_faults == decision.score.ordinary_offending_messages == 1
 
 
-@pytest.mark.parametrize("card", ["NR017", "NR018", "NR019", "NR020", "NR021", "NR039"])
+@pytest.mark.parametrize(
+    "card", ["NR007", "NR008", "NR017", "NR018", "NR019", "NR020", "NR021", "NR039"]
+)
 @pytest.mark.parametrize(
     "content",
     [
-        "https://example.invalid/a(long-path)?size=12#preview",
+        "https://example.invalid/A(Long-Path)?size=12#preview",
         "  <https://example.invalid/clip>   ",
         "[https://klipy.com/gifs/duck-pond-example](https://klipy.com/gifs/duck-pond-example)",
         "www.example.invalid/start\nhttps://example.invalid/end",
@@ -156,12 +159,47 @@ def test_gif_link_classification_is_shared_by_both_cards(destination, gif):
         "<player@example.invalid>",
     ],
 )
-def test_url_only_posts_are_unqualified_for_brevity(content, card):
+def test_url_only_posts_are_unqualified_for_brevity_and_casing(content, card):
     decision = evaluate_message(message(content), context(card))
     assert decision.evaluations[0].outcome is Outcome.NOT_APPLICABLE
     assert decision.score.ordinary_posts == 1
     assert decision.score.ordinary_observations == decision.score.raw_faults == 0
     assert not decision.needs_marker
+
+
+@pytest.mark.parametrize(
+    "card,caption,outcome",
+    [
+        ("NR007", "quiet", Outcome.PASS),
+        ("NR007", "Quiet", Outcome.FAIL),
+        ("NR008", "LOUD", Outcome.PASS),
+        ("NR008", "Loud", Outcome.FAIL),
+    ],
+)
+def test_casing_applies_to_captions_and_visible_link_labels(card, caption, outcome):
+    url = "https://example.invalid/a-MixedCase-URL"
+    for text in (f"**{caption}** {url}", f"[{caption}]({url})"):
+        decision = evaluate_message(message(text), context(card))
+        assert decision.evaluations[0].outcome is outcome
+
+
+def test_casing_exemption_preserves_single_gif_detection_and_visible_url_profanity():
+    profanity = ProfanityList("turnip")
+    ordinary = context("NR007", "NR005")
+    active = replace(
+        ordinary,
+        active_instances=(*ordinary.active_instances, profanity.instantiate("list")),
+        profanity=profanity,
+    )
+    url = "https://klipy.com/gifs/duck-TURNIP-AbC"
+    decision = evaluate_message(message(f"[{url}]({url})"), active)
+    assert [result.outcome for result in decision.evaluations] == [
+        Outcome.NOT_APPLICABLE,
+        Outcome.PASS,
+        Outcome.FAIL,
+    ]
+    assert decision.score.raw_faults == 1
+    assert decision.evaluations[-1].reason_code == "profanity_forbidden"
 
 
 @pytest.mark.parametrize(
@@ -211,11 +249,11 @@ def test_sticker_gif_link_and_gif_upload_keep_independent_rule_faults():
         message(None, attachments=(AttachmentSnapshot(501, "duck.gif", "image/gif"),)),
     )
     decisions = [evaluate_message(event, active) for event in events]
-    assert [item.score.raw_faults for item in decisions] == [0, 2, 2]
+    assert [item.score.raw_faults for item in decisions] == [0, 1, 2]
     assert [item.score.ordinary_observations for item in decisions] == [1, 1, 1]
     assert [item.needs_marker for item in decisions] == [False, True, True]
     assert decisions[1].evaluations[1].outcome is Outcome.NOT_APPLICABLE
-    assert decisions[1].evaluations[4].reason_code == "uppercase_required"
+    assert decisions[1].evaluations[4].outcome is Outcome.NOT_APPLICABLE
     assert decisions[1].evaluations[5].reason_code == "gif_forbidden"
 
 

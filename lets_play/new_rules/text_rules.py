@@ -131,8 +131,8 @@ def evaluate_text_rule(
         raise RuleConfigurationError("The frozen private gameplay list is unavailable.")
     if view.is_whisper or not view.has_text:
         return RuleEvaluation(instance.instance_id, Outcome.NOT_APPLICABLE)
-    if CARD_SPECS[instance.card_id].deck is Deck.BREVITY:
-        text_view = view.for_brevity()
+    if instance.card_id in {"NR007", "NR008"} or CARD_SPECS[instance.card_id].deck is Deck.BREVITY:
+        text_view = view.without_urls()
         if text_view is None:
             return RuleEvaluation(instance.instance_id, Outcome.NOT_APPLICABLE)
         view = text_view

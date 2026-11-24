@@ -128,7 +128,9 @@ a phrase-offer/consumption service. No production word list is used or needed.
 
 ## Additional predicate policy
 
-NR007/NR008 compare logical text with Python's Unicode lower/uppercase mapping.
+NR007/NR008 compare visible text with Python's Unicode lower/uppercase mapping
+after removing recognized URLs. Ordinary captions and masked-link label text
+are checked. If URL removal leaves only whitespace, the card is not applicable.
 Uncased scripts/numbers do not require an alphabetic letter to be present; a
 titlecase letter must meet the selected mapping, and lowercase `ß` fails uppercase
 while `SS` passes. Markup wrappers/object identifiers are not displayed letters.
@@ -144,9 +146,9 @@ Discord objects/emoji are not word credit. Present wordless text can satisfy a
 maximum but fails an exact-one requirement. NR022 disallows repeated normalized
 word identities; canonical Unicode, case and apostrophe variants compare equally.
 
-All six Brevity cards (NR017–NR021 and NR039) remove recognized URLs from the
-visible text before measuring words, graphemes, or letters. A masked link keeps
-its authored label, with any URL text in the label removed. Punctuation outside
+All six Brevity cards (NR017–NR021 and NR039) use the same URL-filtered text
+as Inside Voice and SPEAK UP to measure words, graphemes, or letters. A masked
+link keeps its authored label, with any URL text in the label removed. Punctuation outside
 a URL stays part of the message. If removing URLs leaves only whitespace, the
 Brevity card is not applicable for that post. Other cards use their own input
 views, including link and attachment metadata.
@@ -272,6 +274,10 @@ words in a phrase. Discord objects and visible symbols such as emoji break a
 phrase. Formatting, spoilers and code use their parsed text. A listed `turnip`
 matches `TURNIP!` and `**turnip**`; `turnips` passes. A listed `purple carrot`
 matches `purple-carrot`; `purple 🥕 carrot` passes.
+
+The scan includes visible URL text. For example, `https://example.invalid/turnip`
+matches a listed `turnip`, while `[garden](https://example.invalid/turnip)` presents
+only `garden` for scanning.
 
 An ordinary text post with one or more matches fails Mind Your Language once.
 Textless media is not applicable to this card, and whispers retain their usual

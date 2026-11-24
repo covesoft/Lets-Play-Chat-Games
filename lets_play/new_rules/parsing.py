@@ -103,7 +103,7 @@ class MessageView:
     parser_version: str = PARSER_VERSION
     _sole_explicit_link: Link | None = field(default=None, repr=False)
     has_explicit_mention: bool = False
-    _brevity_logical: str | None = field(default=None, repr=False)
+    _logical_without_urls: str | None = field(default=None, repr=False)
 
     @property
     def has_text(self) -> bool:
@@ -132,9 +132,9 @@ class MessageView:
                 destinations.add(destination)
         return self.links + tuple(bare)
 
-    def for_brevity(self) -> "MessageView | None":
+    def without_urls(self) -> "MessageView | None":
         """Use the visible text without URL spans, or skip a URL-only post."""
-        text = self._brevity_logical
+        text = self._logical_without_urls
         if text is None:
             text = _without_bare_links(self.logical)
         if text == self.logical:
@@ -305,13 +305,13 @@ def parse_message(content: str | None) -> MessageView:
     # Keep uncovered source lines literal. In particular, the upstream nesting
     # guard may omit an inner block; it must never erase its evaluable content.
     lines = normalized_lines.copy()
-    brevity_lines = {}
+    lines_without_urls = {}
     parser = make_markdown_parser()
     tokens = parser.parse(source)
     for token in tokens:
         match token.type:
             case "inline":
-                text, inline_mass_mention, brevity = _inline(
+                text, inline_mass_mention, without_urls = _inline(
                     token.children or [], styles, links, objects
                 )
                 has_mass_mention |= inline_mass_mention
@@ -320,8 +320,8 @@ def parse_message(content: str | None) -> MessageView:
                 # Source maps preserve blank-line boundaries without adding
                 # whitespace between adjacent inline formatting fragments.
                 lines[start:stop] = parts + [""] * max(0, stop - start - len(parts))
-                if brevity is not None:
-                    brevity_lines.update(enumerate(brevity.split("\n"), start))
+                if without_urls is not None:
+                    lines_without_urls.update(enumerate(without_urls.split("\n"), start))
             case "fence":
                 styles.add(Formatting.CODE_BLOCK)
                 start, stop = token.map
@@ -350,12 +350,14 @@ def parse_message(content: str | None) -> MessageView:
         tuple(objects),
         _sole_explicit_link=sole_link,
         has_explicit_mention=has_mass_mention or any(obj.startswith("<@") for obj in objects),
-        _brevity_logical=(
+        _logical_without_urls=(
             "\n".join(
-                brevity_lines[index] if index in brevity_lines else _without_bare_links(line)
+                lines_without_urls[index]
+                if index in lines_without_urls
+                else _without_bare_links(line)
                 for index, line in enumerate(lines)
             )
-            if brevity_lines
+            if lines_without_urls
             else None
         ),
     )
