@@ -144,6 +144,13 @@ Discord objects/emoji are not word credit. Present wordless text can satisfy a
 maximum but fails an exact-one requirement. NR022 disallows repeated normalized
 word identities; canonical Unicode, case and apostrophe variants compare equally.
 
+All six Brevity cards (NR017–NR021 and NR039) remove recognized URLs from the
+visible text before measuring words, graphemes, or letters. A masked link keeps
+its authored label, with any URL text in the label removed. Punctuation outside
+a URL stays part of the message. If removing URLs leaves only whitespace, the
+Brevity card is not applicable for that post. Other cards use their own input
+views, including link and attachment metadata.
+
 NR024/NR033 require the first logical word to be `yes`/`please`, through supported
 heading/formatting wrappers. `yesterday`/`pleased` and an earlier different word
 do not qualify. Leading whitespace, quotes, and punctuation may precede a

@@ -1,6 +1,6 @@
 """Transient source, logical-content, and formatting views. No HTTP, logging, or DB."""
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from enum import StrEnum
 from unicodedata import category, normalize
 
@@ -28,6 +28,30 @@ _BARE_LINK = regex.compile(
         |mailto:[^@\s<>`"|\ufffc]+@[\p{L}\p{N}][\p{L}\p{N}.-]*
     )"""
 )
+
+
+def _bare_links(text: str):
+    for match in _BARE_LINK.finditer(text):
+        destination = match[0].rstrip(".,!?:;’'”")
+        # Keep balanced URL parentheses and IPv6 brackets, but drop prose wrappers.
+        for left, right in (("(", ")"), ("[", "]"), ("{", "}")):
+            excess = max(0, destination.count(right) - destination.count(left))
+            if excess:
+                trimmed = destination.rstrip(right)
+                destination = destination[: max(len(trimmed), len(destination) - excess)]
+        yield match.start(), destination
+
+
+def _without_bare_links(text: str) -> str:
+    parts = []
+    end = 0
+    for start, destination in _bare_links(text):
+        parts.append(text[end:start])
+        end = start + len(destination)
+    if not parts:
+        return text
+    parts.append(text[end:])
+    return "".join(parts)
 
 
 class ParserLimitError(ValueError):
@@ -79,6 +103,7 @@ class MessageView:
     parser_version: str = PARSER_VERSION
     _sole_explicit_link: Link | None = field(default=None, repr=False)
     has_explicit_mention: bool = False
+    _brevity_logical: str | None = field(default=None, repr=False)
 
     @property
     def has_text(self) -> bool:
@@ -101,18 +126,22 @@ class MessageView:
         """Explicit links and visible bare URLs for rules that inspect destinations."""
         destinations = {link.destination for link in self.links}
         bare = []
-        for match in _BARE_LINK.finditer(self.logical):
-            destination = match[0].rstrip(".,!?:;’'”")
-            # Keep balanced URL parentheses and IPv6 brackets, but drop prose wrappers.
-            for left, right in (("(", ")"), ("[", "]"), ("{", "}")):
-                excess = max(0, destination.count(right) - destination.count(left))
-                if excess:
-                    trimmed = destination.rstrip(right)
-                    destination = destination[: max(len(trimmed), len(destination) - excess)]
+        for _, destination in _bare_links(self.logical):
             if destination not in destinations:
                 bare.append(Link(destination, masked=False))
                 destinations.add(destination)
         return self.links + tuple(bare)
+
+    def for_brevity(self) -> "MessageView | None":
+        """Use the visible text without URL spans, or skip a URL-only post."""
+        text = self._brevity_logical
+        if text is None:
+            text = _without_bare_links(self.logical)
+        if text == self.logical:
+            return self
+        if not text.strip():
+            return None
+        return replace(self, logical=text, words=_words(text))
 
     def single_link(self, shared_links: tuple[Link, ...]) -> Link | None:
         """Match one complete source link, keeping captions and duplicate URLs distinct."""
@@ -176,6 +205,13 @@ def word_key(word: str) -> str:
     return normalize("NFC", word).translate(_APOSTROPHE_MAP).casefold()
 
 
+def _words(text: str) -> tuple[Word, ...]:
+    return tuple(
+        Word(match[0], word_key(match[0]), match.start(), match.end())
+        for match in _WORDS.finditer(text)
+    )
+
+
 def is_word_gap(text: str) -> bool:
     """Punctuation/spacing between phrase words, including apostrophe substitutes.
 
@@ -191,10 +227,24 @@ def is_word_gap(text: str) -> bool:
     )
 
 
+def _inline_without_urls(pieces: list[str], boundaries: list[tuple[int, int]]) -> str:
+    # Keep labels separate from adjacent text while recognizing URLs.
+    parts = []
+    end = autolinks = 0
+    for stop, change in boundaries:
+        if not autolinks:
+            parts.append(_without_bare_links("".join(pieces[end:stop])))
+        end = stop
+        autolinks += change
+    parts.append(_without_bare_links("".join(pieces[end:])))
+    return "".join(parts)
+
+
 def _inline(
     tokens: list[Token], styles: set[Formatting], links: list[Link], objects: list[str]
-) -> tuple[str, bool]:
+) -> tuple[str, bool, str | None]:
     pieces = []
+    link_boundaries = []
     has_mass_mention = False
     for token in tokens:
         match token.type:
@@ -224,12 +274,19 @@ def _inline(
                 styles.add(Formatting.SPOILER)
             case "link_open":
                 masked = token.markup != "autolink"
+                link_boundaries.append((len(pieces), int(not masked)))
                 links.append(Link(token.attrGet("href") or "", masked))
                 if masked:
                     styles.add(Formatting.MASKED_LINK)
                 else:
                     styles.add(Formatting.ANGLE_LINK)
-    return "".join(pieces), has_mass_mention
+            case "link_close":
+                link_boundaries.append((len(pieces), -int(token.markup == "autolink")))
+    return (
+        "".join(pieces),
+        has_mass_mention,
+        _inline_without_urls(pieces, link_boundaries) if link_boundaries else None,
+    )
 
 
 def parse_message(content: str | None) -> MessageView:
@@ -248,18 +305,23 @@ def parse_message(content: str | None) -> MessageView:
     # Keep uncovered source lines literal. In particular, the upstream nesting
     # guard may omit an inner block; it must never erase its evaluable content.
     lines = normalized_lines.copy()
+    brevity_lines = {}
     parser = make_markdown_parser()
     tokens = parser.parse(source)
     for token in tokens:
         match token.type:
             case "inline":
-                text, inline_mass_mention = _inline(token.children or [], styles, links, objects)
+                text, inline_mass_mention, brevity = _inline(
+                    token.children or [], styles, links, objects
+                )
                 has_mass_mention |= inline_mass_mention
                 start, stop = token.map
                 parts = text.split("\n")
                 # Source maps preserve blank-line boundaries without adding
                 # whitespace between adjacent inline formatting fragments.
                 lines[start:stop] = parts + [""] * max(0, stop - start - len(parts))
+                if brevity is not None:
+                    brevity_lines.update(enumerate(brevity.split("\n"), start))
             case "fence":
                 styles.add(Formatting.CODE_BLOCK)
                 start, stop = token.map
@@ -274,10 +336,6 @@ def parse_message(content: str | None) -> MessageView:
             case "bullet_list_open" | "ordered_list_open":
                 styles.add(Formatting.LIST)
     logical = "\n".join(lines)
-    words = tuple(
-        Word(match[0], word_key(match[0]), match.start(), match.end())
-        for match in _WORDS.finditer(logical)
-    )
     sole_link = None
     if len(links) == 1 and len(tokens) == 3 and tokens[0].type == "paragraph_open":
         children = tokens[1].children or []
@@ -286,10 +344,18 @@ def parse_message(content: str | None) -> MessageView:
     return MessageView(
         content,
         logical,
-        words,
+        _words(logical),
         frozenset(styles),
         tuple(links),
         tuple(objects),
         _sole_explicit_link=sole_link,
         has_explicit_mention=has_mass_mention or any(obj.startswith("<@") for obj in objects),
+        _brevity_logical=(
+            "\n".join(
+                brevity_lines[index] if index in brevity_lines else _without_bare_links(line)
+                for index, line in enumerate(lines)
+            )
+            if brevity_lines
+            else None
+        ),
     )

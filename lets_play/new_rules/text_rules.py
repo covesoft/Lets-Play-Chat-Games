@@ -1,5 +1,6 @@
 """Representative ordinary text predicates, with no storage or Discord effects."""
 
+from lets_play.new_rules.catalog import CARD_SPECS, Deck
 from lets_play.new_rules.contracts import Outcome, RuleEvaluation, RuleInstance
 from lets_play.new_rules.gif_media import is_gif_link
 from lets_play.new_rules.parsing import MessageView, grapheme_count, is_word_gap, parse_message
@@ -130,6 +131,11 @@ def evaluate_text_rule(
         raise RuleConfigurationError("The frozen private gameplay list is unavailable.")
     if view.is_whisper or not view.has_text:
         return RuleEvaluation(instance.instance_id, Outcome.NOT_APPLICABLE)
+    if CARD_SPECS[instance.card_id].deck is Deck.BREVITY:
+        text_view = view.for_brevity()
+        if text_view is None:
+            return RuleEvaluation(instance.instance_id, Outcome.NOT_APPLICABLE)
+        view = text_view
     match instance.card_id:
         case "NR001":
             passed = not view.has_emoji

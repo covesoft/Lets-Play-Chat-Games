@@ -144,6 +144,81 @@ def test_gif_link_classification_is_shared_by_both_cards(destination, gif):
     assert decision.score.ordinary_faults == decision.score.ordinary_offending_messages == 1
 
 
+@pytest.mark.parametrize("card", ["NR017", "NR018", "NR019", "NR020", "NR021", "NR039"])
+@pytest.mark.parametrize(
+    "content",
+    [
+        "https://example.invalid/a(long-path)?size=12#preview",
+        "  <https://example.invalid/clip>   ",
+        "[https://klipy.com/gifs/duck-pond-example](https://klipy.com/gifs/duck-pond-example)",
+        "www.example.invalid/start\nhttps://example.invalid/end",
+        "`https://example.invalid/start`",
+        "<player@example.invalid>",
+    ],
+)
+def test_url_only_posts_are_unqualified_for_brevity(content, card):
+    decision = evaluate_message(message(content), context(card))
+    assert decision.evaluations[0].outcome is Outcome.NOT_APPLICABLE
+    assert decision.score.ordinary_posts == 1
+    assert decision.score.ordinary_observations == decision.score.raw_faults == 0
+    assert not decision.needs_marker
+
+
+@pytest.mark.parametrize(
+    "card,caption,outcome",
+    [
+        ("NR017", "one two three four five", Outcome.PASS),
+        ("NR018", "one two three four", Outcome.FAIL),
+        ("NR019", "duck", Outcome.PASS),
+        ("NR020", "short", Outcome.FAIL),
+        ("NR021", "x" * 40, Outcome.PASS),
+        ("NR039", "quacks", Outcome.PASS),
+        ("NR039", "quacker", Outcome.FAIL),
+    ],
+)
+def test_brevity_applies_thresholds_to_caption_text(card, caption, outcome):
+    url = "https://example.invalid/a-deliberately-long-address-with-several-words"
+    for text in (f"**{caption}** {url}", f"[{caption}]({url})"):
+        decision = evaluate_message(message(text), context(card))
+        assert decision.evaluations[0].outcome is outcome
+
+
+@pytest.mark.parametrize(
+    "content,card,outcome",
+    [
+        ("[https://example.invalid](https://example.invalid)duck", "NR019", Outcome.PASS),
+        ("pre<https://example.invalid>fix", "NR019", Outcome.PASS),
+        (
+            "[one two <https://example.invalid> three four five](https://other.invalid)",
+            "NR018",
+            Outcome.PASS,
+        ),
+        ("(https://example.invalid/a(b))!", "NR019", Outcome.FAIL),
+        ("https://example.invalid/a(b) " + "x" * 40 + "!", "NR021", Outcome.FAIL),
+    ],
+)
+def test_brevity_keeps_visible_text_and_punctuation_around_urls(content, card, outcome):
+    decision = evaluate_message(message(content), context(card))
+    assert decision.evaluations[0].outcome is outcome
+
+
+def test_sticker_gif_link_and_gif_upload_keep_independent_rule_faults():
+    active = context("NR026", "NR017", "NR015", "NR004", "NR008", "NR002")
+    url = "https://klipy.com/gifs/duck-pond-example"
+    events = (
+        message(None, sticker_ids=(601,)),
+        message(f"[{url}]({url})"),
+        message(None, attachments=(AttachmentSnapshot(501, "duck.gif", "image/gif"),)),
+    )
+    decisions = [evaluate_message(event, active) for event in events]
+    assert [item.score.raw_faults for item in decisions] == [0, 2, 2]
+    assert [item.score.ordinary_observations for item in decisions] == [1, 1, 1]
+    assert [item.needs_marker for item in decisions] == [False, True, True]
+    assert decisions[1].evaluations[1].outcome is Outcome.NOT_APPLICABLE
+    assert decisions[1].evaluations[4].reason_code == "uppercase_required"
+    assert decisions[1].evaluations[5].reason_code == "gif_forbidden"
+
+
 @pytest.mark.parametrize(
     ("filename", "mime", "gif"),
     [
