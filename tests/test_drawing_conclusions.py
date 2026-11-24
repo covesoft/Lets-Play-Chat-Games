@@ -278,9 +278,9 @@ async def test_mode_cutover_scoring_timer_award_restore_and_hand_spacing(tmp_pat
         assert restored.context.position.round_id == active.context.position.round_id
         assert restored.context.active_instances == original.context.active_instances
         assert restored.pacing.started_at == starts
-        assert [f.name for f in render(restored, kind="rules")[0].fields] == [
-            copy.text("cards.NR006.name")
-        ]
+        rules = render(restored, kind="rules")[0].fields
+        assert [f.name for f in rules] == [copy.text("rules.field_heading")]
+        assert copy.text("cards.NR006.name") in rules[0].value
         assert rows(db, "SELECT outcome FROM nr_breaking_moments") == [("completed",)]
         assert rows(db, "SELECT COUNT(*) FROM nr_round_resolutions") == [(1,)]
         await runtime.submit(route, "event", event=ignored)

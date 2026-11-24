@@ -276,7 +276,13 @@ async def test_rules_during_selected_transition_show_old_rules_until_cutover(tmp
         state = await until(runtime, route, lambda s: s.offer and s.offer.stage == "selected")
         current, _ = render(state, kind="rules")
         scheduled, _ = render(state, kind="ordinary_activation")
-        assert len(current.fields) == 1 and len(scheduled.fields) == 2
+        copy = default_presentation()
+        old_name = copy.text("cards.NR034.name")
+        incoming_name = copy.text(f"cards.{state.offer.hand.options[0].incoming.card_id}.name")
+        assert len(current.fields) == len(scheduled.fields) == 1
+        assert old_name in current.fields[0].value and old_name in scheduled.fields[0].value
+        assert incoming_name not in current.fields[0].value
+        assert incoming_name in scheduled.fields[0].value
 
 
 async def custom_open(runtime, monkeypatch, card):

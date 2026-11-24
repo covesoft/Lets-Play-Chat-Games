@@ -20,7 +20,7 @@ hands. Later hands can draw NR036 from the [ordered guild bank](CONFIGURATION.md
 | NR006 | Expressionless | Prohibited reaction actors; Expression |
 | NR007 | Inside Voice | Lowercase mapping; casing slot |
 | NR008 | SPEAK UP | Uppercase mapping; casing slot |
-| NR009 | No Accounting | No Unicode digits or specified number emoji (Typography) |
+| NR009 | No Accounting | No Unicode digits, Discord timestamps, or specified number emoji (Typography) |
 | NR010 | Questionable Conduct | [Question ending](PARSER.md#additional-predicate-policy); terminal slot |
 | NR011 | Are You Sure? | At least three consecutive terminal ASCII periods; terminal slot |
 | NR012 | With Gusto | [Exclamation ending](PARSER.md#additional-predicate-policy); terminal slot |

@@ -30,8 +30,7 @@ from lets_play.new_rules.hands import (
     choice_completions,
     revalidate_choice,
 )
-from lets_play.new_rules.parsing import parse_message
-from lets_play.new_rules.text_rules import phrase_keys
+from lets_play.new_rules.text_rules import is_phrase_key, phrase_keys
 from lets_play.storage.breaking_flow import BreakingFlow
 from lets_play.storage.game_store import ApplyStatus, GameUnitOfWork, _execute, _row
 from lets_play.storage.game_store import _unit_mutating as _write
@@ -157,14 +156,8 @@ class OrdinaryFlow:
 
     @staticmethod
     def _key(key):
-        if (
-            not isinstance(key, tuple)
-            or not key
-            or not all(isinstance(word, str) and word for word in key)
-        ):
-            raise ValueError("A nonempty normalized phrase identity is required.")
-        if parse_message(" ".join(key)).word_keys != key:
-            raise ValueError("A phrase key must use shared normalized word identities.")
+        if not is_phrase_key(key):
+            raise ValueError("A phrase key must use normalized words or a GIF URL.")
         return json.dumps(key, ensure_ascii=False, separators=(",", ":"))
 
     async def pending_outputs(self, *, limit=100, session_id=None) -> tuple[OutputIntent, ...]:

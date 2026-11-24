@@ -17,7 +17,7 @@ from lets_play.presentation import PresentationError, load_presentation
 
 logger = logging.getLogger(__name__)
 # Operator-facing CLI/log presentation is kept together for easy owner edits.
-CLI_DESCRIPTION = "Let's Play — New Rules (development scaffold)"
+CLI_DESCRIPTION = "Let's Play — New Rules (a Discord chat game)"
 CLI_VERSION = "Let's Play is on version {version}!"
 LOG_FORMAT = "%(levelname)s:%(name)s:%(message)s"
 LOG_SEPARATOR = "=" * 55

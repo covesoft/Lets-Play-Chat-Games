@@ -7,6 +7,7 @@ from pathlib import Path
 from types import SimpleNamespace as NS
 from unittest.mock import AsyncMock
 
+import discord
 import pytest
 from test_discord_runtime import choice, opened, service
 
@@ -15,8 +16,11 @@ from lets_play.config import load_settings
 from lets_play.discord_adapter import score_ui
 from lets_play.discord_adapter.discord_io import DiscordTransport, render
 from lets_play.discord_adapter.lane import LaneUnavailable
+from lets_play.discord_adapter.ordinary_ui import add_active_rules
 from lets_play.discord_adapter.runtime import ORDINARY_CARDS
 from lets_play.discord_adapter.score_ui import detailed_player_entry, player_score_line
+from lets_play.new_rules.catalog import CARD_SPECS
+from lets_play.new_rules.contracts import RuleInstance
 from lets_play.new_rules.scoring import ScoreTotals
 from lets_play.presentation import PresentationError, load_presentation
 
@@ -25,6 +29,37 @@ def override(tmp_path, data):
     path = tmp_path / "copy.json"
     path.write_text(json.dumps(data), encoding="utf-8")
     return path
+
+
+def test_rules_embed_groups_ten_rules_and_preserves_order():
+    copy = load_presentation()
+    cards = tuple(CARD_SPECS)[:23]
+    embed = discord.Embed()
+    add_active_rules(embed, copy, tuple(RuleInstance(card, card) for card in cards))
+    assert [len(field.value.split("\n\n")) for field in embed.fields] == [10, 10, 3]
+    assert all(field.name == copy.text("rules.field_heading") for field in embed.fields)
+    assert all(len(field.value) <= 1024 for field in embed.fields)
+    assert "\n\n".join(field.value for field in embed.fields).split("\n\n") == [
+        copy.text(
+            "rules.field_entry",
+            name=copy.text(f"cards.{card}.name"),
+            description=copy.text(f"cards.{card}.description"),
+        )
+        for card in cards
+    ]
+
+
+def test_rules_embed_splits_long_fields_and_rejects_oversized_entries(tmp_path):
+    cards = ("NR001", "NR002")
+    key = {f"cards.{card}.description": "a" * 525 for card in cards}
+    copy = load_presentation(override(tmp_path, {"strings": key}))
+    embed = discord.Embed()
+    add_active_rules(embed, copy, tuple(RuleInstance(card, card) for card in cards))
+    assert len(embed.fields) == 2
+    assert all(len(field.value) <= 1024 for field in embed.fields)
+    key["cards.NR001.description"] = "a" * 1025
+    with pytest.raises(PresentationError, match="Rules field entry exceeds"):
+        load_presentation(override(tmp_path, {"strings": key}))
 
 
 def test_score_copy_supports_custom_layout_and_accepts_old_overrides(tmp_path, monkeypatch):

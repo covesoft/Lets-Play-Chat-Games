@@ -336,8 +336,9 @@ async def test_sdk_recovery_uses_existing_panel_to_verify_marker_and_publishes_o
         )
         assert payload["allowed_mentions"].everyone is False
         assert [field.name for field in payload["embed"].fields] == [
-            transport.copy.text("cards.NR034.name")
+            transport.copy.text("rules.field_heading")
         ]
+        assert transport.copy.text("cards.NR034.name") in payload["embed"].fields[0].value
         await transport.refresh_recovery_countdown(route, state)
         panel.edit.assert_awaited_once()
         channel.send.assert_awaited_once()
@@ -369,8 +370,9 @@ async def test_rules_has_no_debug_entry_and_retired_controls_reply_privately(tmp
             payload = request.followup.send.call_args.kwargs
             assert not any(c.custom_id.startswith("nrx:") for c in payload["view"].children)
             assert [field.name for field in payload["embed"].fields] == [
-                bot.presentation.text("cards.NR034.name")
+                bot.presentation.text("rules.field_heading")
             ]
+            assert bot.presentation.text("cards.NR034.name") in payload["embed"].fields[0].value
             request.message.flags = NS(ephemeral=True)
             request.edit_original_response = AsyncMock()
             request.data = {"custom_id": f"nrx:{route.session_id}:retired"}

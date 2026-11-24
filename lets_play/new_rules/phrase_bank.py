@@ -8,7 +8,7 @@ import regex
 from lets_play.new_rules.hands import PhraseChoice
 from lets_play.new_rules.parsing import parse_message
 from lets_play.new_rules.profanity import ProfanityList, load_profanity_list
-from lets_play.new_rules.text_rules import RuleConfigurationError
+from lets_play.new_rules.text_rules import RuleConfigurationError, gif_phrase_url
 
 MAX_GUILD_PHRASES = 15
 MAX_PHRASE_WORDS = 5
@@ -33,16 +33,21 @@ def parse_phrase_bank(
             continue
         if len(phrases) == MAX_GUILD_PHRASES:
             raise PhraseBankError("The file can contain up to 15 phrases.")
-        if len(phrase) > MAX_PHRASE_CHARACTERS or not _PLAIN_PHRASE.fullmatch(phrase):
-            raise PhraseBankError(f"Line {number} must be a plain phrase of up to 80 characters.")
+        if len(phrase) > MAX_PHRASE_CHARACTERS:
+            raise PhraseBankError(
+                f"Line {number} must be a plain phrase or GIF URL up to 80 characters."
+            )
         view = parse_message(phrase)
-        if (
-            not 1 <= len(view.words) <= MAX_PHRASE_WORDS
+        if not gif_phrase_url(view) and (
+            not _PLAIN_PHRASE.fullmatch(phrase)
+            or not 1 <= len(view.words) <= MAX_PHRASE_WORDS
             or view.formatting
             or view.shared_links
             or view.objects
         ):
-            raise PhraseBankError(f"Line {number} must contain one to five plain words.")
+            raise PhraseBankError(
+                f"Line {number} must be a plain phrase of one to five words or one GIF URL."
+            )
         if suitability is not None and suitability.matches(view):
             raise PhraseBankError(f"Line {number} does not pass the compulsory-phrase policy.")
         try:

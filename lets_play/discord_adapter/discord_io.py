@@ -10,10 +10,10 @@ from discord import app_commands
 from lets_play.discord_adapter import requested_summary, round_report_ui
 from lets_play.discord_adapter.lane import LaneUnavailable
 from lets_play.discord_adapter.ordinary_ui import (
+    add_active_rules,
     choice_detail,
     render_ordinary,
     resumption_rules,
-    rule_text,
     scheduled_mode,
 )
 from lets_play.discord_adapter.score_ui import detailed_player_entry
@@ -574,12 +574,7 @@ class DiscordTransport:
                     inline=False,
                 )
         else:
-            for instance in resumption_rules(state):
-                embed.add_field(
-                    name=self.copy.text(f"cards.{instance.card_id}.name"),
-                    value=rule_text(self.copy, instance),
-                    inline=False,
-                )
+            add_active_rules(embed, self.copy, resumption_rules(state))
         if key in _RECOVERY_COUNTDOWN_KEYS:
             deadline = state.recovery_resume_at or self._now() + timedelta(
                 seconds=RECOVERY_READ_IN_SECONDS

@@ -4,6 +4,7 @@ import re
 
 import discord
 
+from lets_play.discord_adapter.ordinary_ui import add_rule_fields
 from lets_play.discord_adapter.score_ui import detailed_player_entry
 from lets_play.presentation import PresentationError
 from lets_play.storage.summary_store import SUMMARY_PAGE_SIZE
@@ -68,16 +69,11 @@ def render(page, copy, *, snapshot=None, public=False, publication_control=None)
         )
     if snapshot and page.scope == "round":
         # Names only here; /rules retains the complete current instructions.
-        names = [copy.text(f"cards.{r.card_id}.name") for r in snapshot.rules]
-        chunk = ""
-        for name in names:
-            line = copy.text("summary.rule", rule=name)
-            if len(chunk) + len(line) + 1 > 1024:
-                embed.add_field(name=copy.text("summary.rules_heading"), value=chunk, inline=False)
-                chunk = ""
-            chunk += ("\n" if chunk else "") + line
-        if chunk:
-            embed.add_field(name=copy.text("summary.rules_heading"), value=chunk, inline=False)
+        entries = (
+            copy.text("summary.rule", rule=copy.text(f"cards.{rule.card_id}.name"))
+            for rule in snapshot.rules
+        )
+        add_rule_fields(embed, copy.text("summary.rules_heading"), entries, separator="\n")
     for actor, score in page.players:
         embed.add_field(
             name=copy.text("results.player_heading"),

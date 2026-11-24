@@ -53,7 +53,8 @@ async def test_warning_countdown_and_threshold_include_bot_posts_and_whispers(
         private, _ = render(warned, kind="rules")
         assert not public.fields
         assert public.description == copy.text("warning.countdown", timestamp=timestamp)
-        assert [f.name for f in private.fields] == [copy.text("cards.NR034.name")]
+        assert [f.name for f in private.fields] == [copy.text("rules.field_heading")]
+        assert copy.text("cards.NR034.name") in private.fields[0].value
 
         bot = LetsPlayBot(load_settings(base_dir=tmp_path, environ={}))
         async with bot:
@@ -217,7 +218,8 @@ async def test_breaking_moment_expiry_posts_one_separate_lime_green_notice(tmp_p
         embed, _ = render(notices[0], kind="evolution_mode_ended")
         assert embed.colour == discord.Colour(copy.color("mode_ended"))
         assert embed.description == copy.text("mode.ended_description")
-        assert [field.name for field in embed.fields] == [copy.text("cards.NR034.name")]
+        assert [field.name for field in embed.fields] == [copy.text("rules.field_heading")]
+        assert copy.text("cards.NR034.name") in embed.fields[0].value
         assert notices[0].mode_end_rules == active.context.active_instances
 
         sent = NS(id=1780)
@@ -313,7 +315,8 @@ async def test_reboot_restores_rules_and_retires_a_legacy_unsent_interruption_no
         await sdk.refresh(route, state)
         embed = panel.edit.await_args.kwargs["embed"]
         assert embed.colour == discord.Colour(copy.color("active"))
-        assert [field.name for field in embed.fields] == [copy.text("cards.NR034.name")]
+        assert [field.name for field in embed.fields] == [copy.text("rules.field_heading")]
+        assert copy.text("cards.NR034.name") in embed.fields[0].value
         assert rows(db, "SELECT output_id FROM nr_evolution_outputs WHERE kind='mode_ended'") == []
         assert not any(kind == "evolution_mode_ended" for _, kind, _ in transport.messages)
 

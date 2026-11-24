@@ -3,6 +3,7 @@
 from lets_play.new_rules.catalog import CARD_SPECS, Deck
 from lets_play.new_rules.contracts import Outcome, RuleEvaluation, RuleInstance
 from lets_play.new_rules.gif_media import is_gif_link
+from lets_play.new_rules.markdown import TIMESTAMP_MARKUP
 from lets_play.new_rules.parsing import MessageView, grapheme_count, is_word_gap, parse_message
 from lets_play.new_rules.profanity import ProfanityList, list_available
 
@@ -81,6 +82,25 @@ def decree_case(word: str) -> str:
     return word
 
 
+def gif_phrase_url(view: MessageView) -> str | None:
+    """Recognize a bare GIF URL as a complete Don't Forget requirement."""
+    if view.formatting:
+        return None
+    link = view.single_link(view.shared_links)
+    return link.destination if link and is_gif_link(link.destination) else None
+
+
+def is_phrase_key(key: tuple[str, ...]) -> bool:
+    if (
+        not isinstance(key, tuple)
+        or not key
+        or not all(isinstance(part, str) and part for part in key)
+    ):
+        return False
+    view = parse_message(" ".join(key))
+    return view.word_keys == key or (len(key) == 1 and gif_phrase_url(view) == key[0])
+
+
 def phrase_keys(instance: RuleInstance) -> tuple[str, ...]:
     """Validate evaluator input, not guild-bank suitability or session legality.
 
@@ -91,6 +111,8 @@ def phrase_keys(instance: RuleInstance) -> tuple[str, ...]:
     if not params.get("phrase") or params.keys() - {"phrase", "phrase_revision"}:
         raise RuleConfigurationError("A frozen phrase and optional revision are required.")
     view = parse_message(params["phrase"])
+    if url := gif_phrase_url(view):
+        return (url,)
     gaps = []
     end = 0
     for word in view.words:
@@ -104,12 +126,14 @@ def phrase_keys(instance: RuleInstance) -> tuple[str, ...]:
         or view.objects
         or not all(is_word_gap(gap) for gap in gaps)
     ):
-        raise RuleConfigurationError("The frozen phrase must contain plain words and punctuation.")
+        raise RuleConfigurationError("The frozen phrase must be plain text or one GIF URL.")
     return view.word_keys
 
 
 def _contains_phrase(view: MessageView, keys: tuple[str, ...]) -> bool:
     size = len(keys)
+    if size == 1 and is_gif_link(keys[0]):
+        return any(link.destination == keys[0] for link in view.shared_links)
     message_keys = view.word_keys
     for start in range(len(message_keys) - size + 1):
         if message_keys[start : start + size] != keys:
@@ -162,7 +186,11 @@ def evaluate_text_rule(
         case "NR009":
             passed = not (
                 any(char.isdigit() or char in _NUMERIC_EMOJI for char in view.logical)
-                or any(obj.startswith(_NUMERIC_CUSTOM_EMOJI_PREFIXES) for obj in view.objects)
+                or any(
+                    TIMESTAMP_MARKUP.fullmatch(obj)
+                    or obj.startswith(_NUMERIC_CUSTOM_EMOJI_PREFIXES)
+                    for obj in view.objects
+                )
             )
         case "NR010" | "NR011" | "NR012":
             passed = view.ending.endswith(REQUIRED_ENDINGS[instance.card_id])

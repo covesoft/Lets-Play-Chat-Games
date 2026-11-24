@@ -11,12 +11,40 @@ from lets_play.new_rules.breaking_moments import (
     mode_ends_at,
 )
 from lets_play.new_rules.pacing import WARNING_SECONDS
+from lets_play.presentation import EMBED_FIELD_VALUE_LIMIT, RULES_PER_FIELD
 
 
 def rule_text(copy, instance):
     if instance.card_id == "NR036":
         return copy.text("cards.NR036.description", phrase=dict(instance.parameters)["phrase"])
     return copy.text(f"cards.{instance.card_id}.description")
+
+
+def add_rule_fields(embed, heading, entries, *, separator="\n\n"):
+    chunk = []
+    length = 0
+    for entry in entries:
+        next_length = length + len(entry) + (len(separator) if chunk else 0)
+        if chunk and (len(chunk) == RULES_PER_FIELD or next_length > EMBED_FIELD_VALUE_LIMIT):
+            embed.add_field(name=heading, value=separator.join(chunk), inline=False)
+            chunk.clear()
+            next_length = len(entry)
+        chunk.append(entry)
+        length = next_length
+    if chunk:
+        embed.add_field(name=heading, value=separator.join(chunk), inline=False)
+
+
+def add_active_rules(embed, copy, instances):
+    entries = (
+        copy.text(
+            "rules.field_entry",
+            name=copy.text(f"cards.{instance.card_id}.name"),
+            description=rule_text(copy, instance),
+        )
+        for instance in instances
+    )
+    add_rule_fields(embed, copy.text("rules.field_heading"), entries)
 
 
 def selected_option(offer):
@@ -70,12 +98,7 @@ def render_ordinary(state, copy, button, *, kind=None, now=None):
     rules_only = kind == "rules"
 
     def rules(instances):
-        for instance in instances:
-            embed.add_field(
-                name=copy.text(f"cards.{instance.card_id}.name"),
-                value=rule_text(copy, instance),
-                inline=False,
-            )
+        add_active_rules(embed, copy, instances)
 
     def show_mode(choice, timing):
         name = copy.text(f"cards.{choice.card_id}.name")
@@ -164,8 +187,12 @@ def render_ordinary(state, copy, button, *, kind=None, now=None):
             embed.description = copy.text(
                 "ordinary.target_description", picker=offer.hand.picker_id, deadline=clock
             )
-            rules(targets)
             for target_index, target in enumerate(targets):
+                embed.add_field(
+                    name=copy.text(f"cards.{target.card_id}.name"),
+                    value=rule_text(copy, target),
+                    inline=False,
+                )
                 button(
                     view,
                     copy.text(f"cards.{target.card_id}.name"),

@@ -61,6 +61,15 @@ def test_link_destinations_and_discord_object_ids_do_not_become_words():
     assert not view.ends_with_word("over")  # The visible emoji follows the ending.
 
 
+@pytest.mark.parametrize("style", ["", ":t", ":T", ":d", ":D", ":f", ":F", ":s", ":S", ":R"])
+def test_no_accounting_faults_on_every_timestamp_style(style):
+    token = f"<t:-1234567890{style}>"
+    view = parse_message(f"{token} https://example.invalid/12")
+    assert view.objects == (token,)
+    assert evaluate_text_rule(view, RuleInstance("digits", "NR009")).outcome is Outcome.FAIL
+    assert evaluate_text_rule(view, RuleInstance("upper", "NR008")).outcome is Outcome.PASS
+
+
 def test_shared_links_keep_destinations_without_changing_legacy_formatting_or_word_views():
     view = parse_message(
         "[pond](https://example.invalid/hidden) (https://example.invalid/wiki/Duck_(bird)), "

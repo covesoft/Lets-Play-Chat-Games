@@ -23,9 +23,9 @@ from lets_play.new_rules.contracts import (
     SessionPosition,
 )
 from lets_play.new_rules.evaluation import EVALUATOR_VERSION, EvaluationContext
-from lets_play.new_rules.parsing import PARSER_VERSION, parse_message
+from lets_play.new_rules.parsing import PARSER_VERSION
 from lets_play.new_rules.profanity import list_available
-from lets_play.new_rules.text_rules import RuleConfigurationError, phrase_keys
+from lets_play.new_rules.text_rules import RuleConfigurationError, is_phrase_key, phrase_keys
 
 
 @dataclass(frozen=True, slots=True)
@@ -174,15 +174,8 @@ def _available(templates: frozenset[str] | None) -> frozenset[str]:
 def _used(
     keys: frozenset[tuple[str, ...]], active: tuple[RuleInstance, ...]
 ) -> frozenset[tuple[str, ...]]:
-    if not isinstance(keys, frozenset) or any(
-        not isinstance(key, tuple)
-        or not key
-        or any(not isinstance(word, str) or not word for word in key)
-        for key in keys
-    ):
-        raise RuleConfigurationError("Used phrases must be frozen nonempty word-identity tuples.")
-    if any(parse_message(" ".join(key)).word_keys != key for key in keys):
-        raise RuleConfigurationError("Used phrase identities must use the shared normalized words.")
+    if not isinstance(keys, frozenset) or not all(is_phrase_key(key) for key in keys):
+        raise RuleConfigurationError("Used phrases must be frozen normalized words or GIF URLs.")
     return keys | frozenset(phrase_keys(i) for i in active if i.card_id == "NR036")
 
 

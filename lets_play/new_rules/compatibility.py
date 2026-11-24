@@ -3,7 +3,7 @@
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from enum import StrEnum
-from itertools import combinations, permutations
+from itertools import chain, combinations, permutations
 
 from lets_play.new_rules.catalog import (
     CARD_SPECS,
@@ -25,6 +25,7 @@ from lets_play.new_rules.contracts import (
     SessionRoute,
 )
 from lets_play.new_rules.evaluation import EvaluationContext, evaluate_message
+from lets_play.new_rules.gif_media import is_gif_link
 from lets_play.new_rules.parsing import (
     MAX_PARSER_CODEPOINTS,
     ParserLimitError,
@@ -198,6 +199,22 @@ def _witness_texts(
             yield len(padded), _render_witness(padded, cards, punctuation)
 
 
+def _with_gif_phrases(text, urls, suffix, punctuation):
+    if not urls:
+        yield text
+        return
+    if len(urls) == 1:
+        # A single GIF can carry all the needed readable text in its label.
+        yield f"[{text}](<{urls[0]}>)"
+    body = text.removesuffix(punctuation)
+    if suffix:
+        before, _, last = body.rpartition(" ")
+        parts = (before, *urls, last)
+    else:
+        parts = (body, *urls)
+    yield " ".join(filter(None, parts)) + punctuation
+
+
 def assess_state(
     instances: tuple[RuleInstance, ...],
     *,
@@ -218,6 +235,9 @@ def assess_state(
         return Assessment(rejection=Rejection.INVALID)
     if any(len(phrase) > budget.max_words for phrase in phrases):
         return Assessment(rejection=Rejection.SEARCH_LIMIT)
+    urls = tuple(phrase[0] for phrase in phrases if len(phrase) == 1 and is_gif_link(phrase[0]))
+    if urls:
+        phrases = tuple(phrase for phrase in phrases if phrase[0] not in urls)
     cards = {i.card_id for i in instances}
     # A native reply to the public game panel is available when the rule starts.
     reply_kind = ReferenceKind.REPLY if "NR040" in cards else ReferenceKind.NONE
@@ -263,7 +283,7 @@ def assess_state(
                 candidates.add(words)
             else:
                 candidates.update((word,) for word in fallback_words[: budget.max_candidates])
-    texts = (
+    captions = (
         trial
         for words in sorted(candidates, key=lambda item: (len(item), item))
         for trial in _witness_texts(
@@ -275,6 +295,14 @@ def assess_state(
             filler_words=filler_words,
         )
     )
+    texts = chain(
+        ((0, urls[0]),) if len(urls) == 1 else (),
+        (
+            (word_count, trial)
+            for word_count, text in captions
+            for trial in _with_gif_phrases(text, urls, suffix, punctuation)
+        ),
+    )
     for index, (word_count, text) in enumerate(texts):
         if index >= budget.max_candidates:
             limited = True
@@ -283,6 +311,9 @@ def assess_state(
             limited = True
             continue
         view = parse_message(text)
+        if urls and len(view.words) > budget.max_words:
+            limited = True
+            continue
         if not view.has_text or not view.words or view.is_whisper:
             continue
         envelope = EventEnvelope(_ROUTE, EventKind.MESSAGE_CREATE, "witness", 1, _TIME, _TIME, 0)

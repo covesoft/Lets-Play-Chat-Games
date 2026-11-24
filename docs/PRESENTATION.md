@@ -66,7 +66,8 @@ and surrounding text without changing application code. Preserve these names:
 | `ordinary.replacement` | `{description}`, `{targets}` |
 | `ordinary.current_during_choice` | `{picker}` |
 | `revival.description` | `{joined}` |
-| `cards.NR036.description` | `{phrase}`; legacy display only, not offered by this preview |
+| `cards.NR036.description` | `{phrase}` |
+| `rules.field_entry` | `{name}`, `{description}` |
 
 Private and requested summary templates add:
 

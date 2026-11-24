@@ -15,6 +15,8 @@ from string import Formatter
 from types import MappingProxyType
 
 MAX_CATALOG_BYTES = 128 * 1024
+EMBED_FIELD_VALUE_LIMIT = 1024
+RULES_PER_FIELD = 10
 # Only these templates accept arguments. Attribute/index lookups are prohibited.
 TEMPLATE_FIELDS = {
     "warning.countdown": frozenset({"timestamp"}),
@@ -59,6 +61,7 @@ TEMPLATE_FIELDS = {
         {"session", "round_messages", "round_whispers", "game_messages", "game_whispers"}
     ),
     "summary.rule": frozenset({"rule"}),
+    "rules.field_entry": frozenset({"name", "description"}),
     "summary.description": frozenset({"round", "messages", "whispers", "as_of", "status"}),
     "summary.as_of": frozenset({"timestamp"}),
     "summary.lead": frozenset({"status", "as_of"}),
@@ -233,7 +236,21 @@ def load_presentation(path: Path | None = None):
         if not isinstance(value, str) or not re.fullmatch(r"#[0-9a-fA-F]{6}", value):
             raise PresentationError(f"Presentation color must use #RRGGBB: {key}")
         colors[key] = int(value[1:], 16)
-    return Presentation(locale, MappingProxyType(strings), MappingProxyType(colors))
+    copy = Presentation(locale, MappingProxyType(strings), MappingProxyType(colors))
+    if len(copy.text("rules.field_heading")) > 256:
+        raise PresentationError("Rules field heading exceeds 256 characters.")
+    for key in strings:
+        if key.startswith("cards.") and key.endswith(".name"):
+            description_key = key.removesuffix(".name") + ".description"
+            values = {"phrase": "x" * 80} if description_key == "cards.NR036.description" else {}
+            entry = copy.text(
+                "rules.field_entry",
+                name=copy.text(key),
+                description=copy.text(description_key, **values),
+            )
+            if len(entry) > EMBED_FIELD_VALUE_LIMIT:
+                raise PresentationError(f"Rules field entry exceeds 1024 characters: {key}")
+    return copy
 
 
 @lru_cache(maxsize=1)

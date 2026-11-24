@@ -237,9 +237,9 @@ async def test_known_announced_activation_is_shown_in_read_in_and_committed_once
         saved = await reading(runtime, route)
         embed, view = render(saved, kind="rules")
         assert "saved rule change" in embed.description
-        assert [f.name for f in embed.fields] == [
-            default_presentation().text(f"cards.{i.card_id}.name") for i in future
-        ]
+        copy = default_presentation()
+        assert [f.name for f in embed.fields] == [copy.text("rules.field_heading")]
+        assert all(copy.text(f"cards.{i.card_id}.name") in embed.fields[0].value for i in future)
         assert not any(":pick:" in b.custom_id or ":target:" in b.custom_id for b in view.children)
         assert (
             saved.context.position.round_id == old_round
@@ -255,7 +255,7 @@ async def test_known_announced_activation_is_shown_in_read_in_and_committed_once
         await sdk.publish_recovery(route, saved)
         notice = channel.send.call_args.kwargs
         assert "saved rule change" in notice["embed"].description
-        assert [f.name for f in notice["embed"].fields] == [f.name for f in embed.fields]
+        assert notice["embed"].to_dict()["fields"] == embed.to_dict()["fields"]
         await fire(runtime, route, saved.recovery_resume_at)
         resumed = await runtime.state(route.session_id)
         assert resumed.context.active_instances == future

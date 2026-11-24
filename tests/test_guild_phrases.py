@@ -8,14 +8,18 @@ from test_reboot_recovery import RecoveryTransport, fire, reading
 from lets_play.cli import main
 from lets_play.discord_adapter.discord_io import render
 from lets_play.discord_adapter.runtime import OPENING_CARDS
+from lets_play.new_rules.contracts import Outcome, RuleInstance
+from lets_play.new_rules.parsing import parse_message
 from lets_play.new_rules.phrase_bank import PhraseBankError, load_guild_phrases, parse_phrase_bank
 from lets_play.new_rules.profanity import ProfanityList
+from lets_play.new_rules.text_rules import evaluate_text_rule
 from lets_play.storage import bootstrap
 from lets_play.storage.game_store import open_game_store
 from lets_play.storage.guild_phrases import GuildPhraseBank
 
 STARTER_TEXT = "gimme\nfor real\nnice hat\nnever mind\nhave a good\n"
 TEMPLATES = frozenset({"NR004", "NR006", "NR036"})
+GIF = "https://klipy.com/gifs/duck-turnip-AbC"
 
 
 @pytest.mark.parametrize(
@@ -44,6 +48,35 @@ def test_operator_suitability_is_independent_and_reports_line_only():
     assert len(parse_phrase_bank(STARTER_TEXT, suitability=policy)) == 5
     with pytest.raises(PhraseBankError, match="Line 2 does not pass"):
         parse_phrase_bank("green duck\nA TURNIP", suitability=policy)
+
+
+def test_gif_phrase_uses_the_link_destination_and_preserves_url_case():
+    (choice,) = parse_phrase_bank(GIF)
+    instance = choice.instantiate("gif-phrase")
+    assert choice.key == (GIF,)
+    for content in (GIF, f"look here {GIF}", f"[my duck]({GIF})", f"<{GIF}>"):
+        assert evaluate_text_rule(parse_message(content), instance).outcome is Outcome.PASS
+    for content in (f"{GIF}-other", GIF.lower(), "duck turnip AbC"):
+        assert evaluate_text_rule(parse_message(content), instance).outcome is Outcome.FAIL
+    with pytest.raises(PhraseBankError, match="duplicates"):
+        parse_phrase_bank(f"{GIF}\n{GIF}")
+    with pytest.raises(PhraseBankError, match="does not pass"):
+        parse_phrase_bank(GIF, suitability=ProfanityList("turnip"))
+
+
+@pytest.mark.parametrize(
+    ("card", "content", "parameters"),
+    [
+        ("NR034", "https://example.invalid/over", ()),
+        ("NR035", "https://example.invalid/we", ()),
+        ("NR036", "https://example.invalid/red-duck", (("phrase", "red duck"),)),
+    ],
+)
+def test_ordinary_positive_requirements_can_still_match_visible_url_words(
+    card, content, parameters
+):
+    result = evaluate_text_rule(parse_message(content), RuleInstance(card, card, parameters))
+    assert result.outcome is Outcome.PASS
 
 
 def test_check_config_and_import_share_validation(tmp_path, monkeypatch, capsys):
@@ -150,3 +183,33 @@ async def posts_for_phrase(runtime, route, phrase):
             item = event(runtime, route, 500000 + actor * 100 + n, f"{phrase} over", actor)
             await runtime.submit(route, "event", event=item)
     await settle(runtime)
+
+
+@pytest.mark.asyncio
+async def test_gif_phrase_is_dealt_persisted_and_scored(tmp_path, monkeypatch):
+    defaults = parse_phrase_bank(f"{GIF}\nblue moon")
+    async with service(tmp_path, monkeypatch, guild_phrase_defaults=defaults) as runtime:
+        route = await opened(runtime)
+        await activated(runtime, route)
+        await settle(runtime)
+        await runtime.submit(route, "configure", templates=TEMPLATES)
+        # Bind the draw to the single GIF fixture, then reintroduce the full bank.
+        async with runtime.store.transaction() as unit:
+            await GuildPhraseBank(unit).replace(route.guild_id, defaults[:1])
+        await posts(runtime, route)
+        offer = await next_offer(runtime, route)
+        incoming = phrase_option(offer)
+        assert dict(incoming.parameters)["phrase"] == GIF
+        played = await choose_card(runtime, route, offer, "NR036")
+        assert incoming in played.context.active_instances
+        await runtime.submit(
+            route, "event", event=event(runtime, route, 96001, f"[duck over]({GIF})")
+        )
+        await runtime.submit(route, "event", event=event(runtime, route, 96002, "duck over"))
+        await settle(runtime)
+        assert runtime.transport.markers == [96002]
+        async with runtime.store.transaction() as unit:
+            await GuildPhraseBank(unit).replace(route.guild_id, defaults)
+        await posts_for_phrase(runtime, route, GIF)
+        next_state = await next_offer(runtime, route)
+        assert dict(phrase_option(next_state).parameters)["phrase"] == "blue moon"

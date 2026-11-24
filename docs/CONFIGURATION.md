@@ -91,9 +91,11 @@ for the matching rules.
 
 Point `CHATGAMES_GUILD_PHRASES_FILE_PATH` to a private UTF-8 file with one phrase
 per line, in draw order. Paths in `.env` resolve from the configuration root.
-Use up to 15 entries, each one to five words and at most 80 characters. The file
-size limit is 16 KiB. Blank lines are ignored. The loader rejects normalized
-duplicates, markup, mentions, links and symbols outside plain punctuation.
+Use up to 15 entries of at most 80 characters each. An entry can be one to
+five plain words or a single bare URL recognized by the game's GIF detector.
+The file size limit is 16 KiB. Blank lines are ignored. The loader rejects
+duplicates, markup, mentions and other links. GIF entries preserve the URL's
+case and match the whole link destination.
 If you configure `CHATGAMES_PHRASE_SUITABILITY_LIST_PATH`, the phrases must pass
 that separate compulsory-phrase policy. The operator curates the defaults and
 reviews their tone. `--check-config` reports the valid count or an error without

@@ -103,8 +103,8 @@ position; complete session routing/activity scheduling remains engine work.
 
 ## Frozen phrase input
 
-NR036 requires an immutable `RuleInstance.parameters` entry named `phrase`; an
-optional `phrase_revision` records its source revision. For example:
+NR036 requires an immutable `RuleInstance.parameters` entry named `phrase`.
+The optional `phrase_revision` records its source revision.
 
 ```python
 instance = RuleInstance(
@@ -121,6 +121,10 @@ visible symbol, emoji, or Discord object interrupts the phrase. Markup wrappers
 are handled by the same logical view as the other predicates. Phrase punctuation
 is not an additional literal-match requirement. Single words obey the same word
 boundaries and apostrophe/case/canonical-Unicode normalization.
+
+Visible URL words can satisfy a plain phrase, The Royal We, or Roger Wilco.
+A configured bare GIF URL instead matches the whole destination as written.
+A bare, angle-wrapped, or masked occurrence of that destination qualifies.
 
 Missing, wordless, formatted, object-containing, or unknown parameter inputs raise
 `RuleConfigurationError` even when the message has no text. The parser input limit
@@ -180,10 +184,9 @@ Arabic-Indic digits, superscripts such as `²`, and digit keycaps. Numeric
 characters such as `½` fall outside that digit class. No Accounting also
 counts 🔢, 🔟, and 💯. A literal `:100:` fails because it contains digits.
 Static and animated custom emoji fail if their names are exactly `100` or
-`1000`. Discord object IDs and hidden link destinations are excluded from
-the scan. The expanded check applies to newly received messages after the
-v0.3.34 update, including resumed rounds. Recorded scores keep their original
-outcomes. One Breath checks
+`1000`. Every recognized Discord timestamp faults, including timestamps
+with no style and the short date/time styles `:s` and `:S`. Other Discord
+object IDs and hidden link destinations are excluded from the scan. One Breath checks
 the original message for CR or LF, including breaks inside Markdown. A Small
 Pause requires an ASCII comma in logical content.
 
