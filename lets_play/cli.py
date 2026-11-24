@@ -56,7 +56,8 @@ def main(argv: list[str] | None = None, *, base_dir: Path | None = None) -> int:
         settings = load_settings(base_dir=base_dir)
         if args.check_config:
             load_presentation(settings.presentation_path)
-            print("Configuration valid. No Discord connection or database write performed.")
+            print(f"Let's Play v{__version__} - Configuration valid.")
+            print("No Discord connection or database write performed.")
             print(
                 "Discord token: configured."
                 if settings.token
