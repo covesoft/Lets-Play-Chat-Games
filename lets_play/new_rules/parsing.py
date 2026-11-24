@@ -185,6 +185,8 @@ class MessageView:
         if not self.words or self.words[-1].key != word_key(word):
             return False
         tail = self.logical[self.words[-1].end :]
+        # Both presentations of the double exclamation mark count as punctuation here.
+        tail = tail.replace("‼\ufe0f", "‼")
         return all(
             char.isspace() or char in _APOSTROPHES or category(char).startswith("P")
             for char in tail

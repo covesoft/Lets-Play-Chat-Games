@@ -126,6 +126,10 @@ Visible URL words can satisfy a plain phrase, The Royal We, or Roger Wilco.
 A configured bare GIF URL instead matches the whole destination as written.
 A bare, angle-wrapped, or masked occurrence of that destination qualifies.
 
+Roger Wilco accepts either presentation of a double exclamation mark after
+its ending word, as in `over‼` and `over‼️`. Both forms still count as emoji for
+Poker Face.
+
 Missing, wordless, formatted, object-containing, or unknown parameter inputs raise
 `RuleConfigurationError` even when the message has no text. The parser input limit
 also applies to phrase input. Error messages do not echo the phrase. This is an

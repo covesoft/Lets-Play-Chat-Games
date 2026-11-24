@@ -1,4 +1,4 @@
-# New Rules Discord preview — v0.3.55 / schema 19
+# New Rules Discord preview — v0.3.56 / schema 19
 
 This development build connects the existing ordinary engine to Discord. Run one
 bot process against a database. Private/requested scores, automatic interims and

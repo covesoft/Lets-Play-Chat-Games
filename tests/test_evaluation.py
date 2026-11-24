@@ -70,6 +70,26 @@ def test_composed_text_outcomes_make_one_fractional_observation_and_one_marker()
     assert decision.actor_id == 303
 
 
+@pytest.mark.parametrize(
+    ("content", "wilco"),
+    [
+        ("over‼", Outcome.PASS),
+        ("over‼️", Outcome.PASS),
+        ("“**over‼️**”", Outcome.PASS),
+        ("over‼️ 🦆", Outcome.FAIL),
+        ("over‼️ later", Outcome.FAIL),
+    ],
+)
+def test_roger_wilco_allows_double_exclamation_punctuation_independently_of_poker_face(
+    content, wilco
+):
+    decision = evaluate_message(message(content), context("NR034", "NR001"))
+    assert [item.outcome for item in decision.evaluations] == [wilco, Outcome.FAIL]
+    assert decision.score.raw_faults == (1 if wilco is Outcome.PASS else 2)
+    assert decision.score.ordinary_offending_messages == 1
+    assert decision.needs_marker
+
+
 @pytest.mark.parametrize("content", [None, ""])
 def test_absent_text_is_not_credited_as_text_compliance(content):
     decision = evaluate_message(message(content), context("NR034", "NR006"))
