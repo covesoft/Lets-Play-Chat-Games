@@ -136,9 +136,9 @@ titlecase letter must meet the selected mapping, and lowercase `ß` fails upperc
 while `SS` passes. Markup wrappers/object identifiers are not displayed letters.
 
 NR010 and NR012 require the quote-aware logical ending to finish with ASCII
-`?` and `!` respectively. Repeated marks are allowed. NR013 and NR014 forbid
-their matching ASCII mark anywhere in logical content, including code and
-spoilers. Fullwidth `？` and `！` retain their own identities.
+`?` and `!` respectively. Repeated marks are allowed. NR013 forbids ASCII `?` in
+URL-filtered text, including code and spoilers. NR014 forbids ASCII `!` in
+logical content. Fullwidth `？` and `！` retain their own identities.
 
 NR017 counts at most five parser words; NR019 requires exactly one. Numbers count
 as words, contractions retain internal apostrophes, hyphens split words, and opaque
@@ -146,12 +146,12 @@ Discord objects/emoji are not word credit. Present wordless text can satisfy a
 maximum but fails an exact-one requirement. NR022 disallows repeated normalized
 word identities; canonical Unicode, case and apostrophe variants compare equally.
 
-All six Brevity cards (NR017–NR021 and NR039) use the same URL-filtered text
-as Inside Voice and SPEAK UP to measure words, graphemes, or letters. A masked
-link keeps its authored label, with any URL text in the label removed. Punctuation outside
-a URL stays part of the message. If removing URLs leaves only whitespace, the
-Brevity card is not applicable for that post. Other cards use their own input
-views, including link and attachment metadata.
+All six Brevity cards (NR017–NR021 and NR039), Inside Voice, SPEAK UP,
+No Accounting, No Questions, and Decree Mode use URL-filtered text. A masked
+link keeps its authored label, with any URL text in the label removed.
+Punctuation outside a URL stays part of the message. If removing URLs leaves
+only whitespace, these cards are not applicable for that post. No Doubts
+checks visible URL words, including words in a GIF slug.
 
 NR024/NR033 require the first logical word to be `yes`/`please`, through supported
 heading/formatting wrappers. `yesterday`/`pleased` and an earlier different word

@@ -50,6 +50,7 @@ REQUIRED_ENDINGS = {"NR010": "?", "NR011": "...", "NR012": "!"}
 ROYAL_WORDS = frozenset({"we", "our", "us"})
 _NUMERIC_EMOJI = frozenset("🔢🔟💯")
 _NUMERIC_CUSTOM_EMOJI_PREFIXES = ("<:100:", "<:1000:", "<a:100:", "<a:1000:")
+_URL_FILTERED_TYPOGRAPHY = frozenset({"NR007", "NR008", "NR009", "NR013", "NR037"})
 _FORBIDDEN_WORDS = {
     "NR025": frozenset({"sorry"}),
     "NR026": frozenset({"lol", "lmao", "haha"}),
@@ -131,7 +132,10 @@ def evaluate_text_rule(
         raise RuleConfigurationError("The frozen private gameplay list is unavailable.")
     if view.is_whisper or not view.has_text:
         return RuleEvaluation(instance.instance_id, Outcome.NOT_APPLICABLE)
-    if instance.card_id in {"NR007", "NR008"} or CARD_SPECS[instance.card_id].deck is Deck.BREVITY:
+    if (
+        instance.card_id in _URL_FILTERED_TYPOGRAPHY
+        or CARD_SPECS[instance.card_id].deck is Deck.BREVITY
+    ):
         text_view = view.without_urls()
         if text_view is None:
             return RuleEvaluation(instance.instance_id, Outcome.NOT_APPLICABLE)

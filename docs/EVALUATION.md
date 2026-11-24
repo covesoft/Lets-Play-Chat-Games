@@ -28,9 +28,9 @@ including changes that later return to the same visible state.
 | NR004 | Every ordinary human message; no attachments passes, one or more attachments fails once. Native voice attachments count; link previews do not. |
 | NR005 | Present ordinary text. Recognized links fail once unless the whole post is a single GIF link. See [GIF detection boundaries](PARSER.md#gif-and-link-rules). |
 | NR006 | Ordinary reaction actions by their actor; message creates return not-applicable for this card. |
-| NR007–NR008 | Inside Voice and SPEAK UP check case after URL removal. A post whose URLs leave no visible text is not-applicable for the card and still counts as an ordinary post. |
-| NR009–NR016, NR022, NR024–NR031, NR033–NR035, NR037–NR038 | Present ordinary text, including whitespace/punctuation-only text. Absent or empty text is not-applicable. |
-| NR017–NR021, NR039 | Brevity measures present text after URL removal. A post whose URLs leave no visible text is not-applicable for the card and still counts as an ordinary post. |
+| NR007–NR009, NR013, NR037 | Inside Voice, SPEAK UP, No Accounting, No Questions, and Decree Mode use visible text after URL removal. Captions and visible link labels are checked. URL-only posts are not-applicable for these cards and still count as ordinary posts. |
+| NR010–NR012, NR014–NR016, NR022, NR024–NR031, NR033–NR035, NR038 | Present ordinary text, including whitespace/punctuation-only text. Absent or empty text is not-applicable. No Doubts still checks visible URL words. |
+| NR017–NR021, NR039 | Brevity uses the same URL-filtered text as the five typography cards above. |
 | NR023 | Present ordinary text. Any explicit user, bot, role, `@here` or `@everyone` mention fails once. Automatic reply pings are ignored. |
 | NR032 | Present ordinary text against the configured gameplay list. One or more matches fail the card once. The instance pins a list revision. |
 | NR036 | Present ordinary text against a frozen phrase; each active instance is evaluated separately. |

@@ -146,7 +146,20 @@ def test_gif_link_classification_is_shared_by_both_cards(destination, gif):
 
 
 @pytest.mark.parametrize(
-    "card", ["NR007", "NR008", "NR017", "NR018", "NR019", "NR020", "NR021", "NR039"]
+    "card",
+    [
+        "NR007",
+        "NR008",
+        "NR009",
+        "NR013",
+        "NR017",
+        "NR018",
+        "NR019",
+        "NR020",
+        "NR021",
+        "NR037",
+        "NR039",
+    ],
 )
 @pytest.mark.parametrize(
     "content",
@@ -159,7 +172,7 @@ def test_gif_link_classification_is_shared_by_both_cards(destination, gif):
         "<player@example.invalid>",
     ],
 )
-def test_url_only_posts_are_unqualified_for_brevity_and_casing(content, card):
+def test_url_only_posts_are_unqualified_for_url_filtered_cards(content, card):
     decision = evaluate_message(message(content), context(card))
     assert decision.evaluations[0].outcome is Outcome.NOT_APPLICABLE
     assert decision.score.ordinary_posts == 1
@@ -174,10 +187,18 @@ def test_url_only_posts_are_unqualified_for_brevity_and_casing(content, card):
         ("NR007", "Quiet", Outcome.FAIL),
         ("NR008", "LOUD", Outcome.PASS),
         ("NR008", "Loud", Outcome.FAIL),
+        ("NR009", "Duck Pond", Outcome.PASS),
+        ("NR009", "Duck 2", Outcome.FAIL),
+        ("NR009", "Duck 💯", Outcome.FAIL),
+        ("NR009", "Duck <a:1000:123456789012345678>", Outcome.FAIL),
+        ("NR013", "Duck Pond", Outcome.PASS),
+        ("NR013", "Duck Pond?", Outcome.FAIL),
+        ("NR037", "Duck Pond", Outcome.PASS),
+        ("NR037", "duck pond", Outcome.FAIL),
     ],
 )
-def test_casing_applies_to_captions_and_visible_link_labels(card, caption, outcome):
-    url = "https://example.invalid/a-MixedCase-URL"
+def test_url_filtered_cards_check_captions_and_visible_link_labels(card, caption, outcome):
+    url = "https://example.invalid/a-MixedCase-URL?size=12"
     for text in (f"**{caption}** {url}", f"[{caption}]({url})"):
         decision = evaluate_message(message(text), context(card))
         assert decision.evaluations[0].outcome is outcome
@@ -200,6 +221,25 @@ def test_casing_exemption_preserves_single_gif_detection_and_visible_url_profani
     ]
     assert decision.score.raw_faults == 1
     assert decision.evaluations[-1].reason_code == "profanity_forbidden"
+
+
+def test_no_doubts_still_reads_visible_gif_urls():
+    url = "https://klipy.com/gifs/duck-maybe-123?size=12"
+    active = context("NR037", "NR013", "NR009", "NR027", "NR005")
+    decision = evaluate_message(message(f"[{url}]({url})"), active)
+    assert [result.outcome for result in decision.evaluations] == [
+        Outcome.NOT_APPLICABLE,
+        Outcome.NOT_APPLICABLE,
+        Outcome.NOT_APPLICABLE,
+        Outcome.FAIL,
+        Outcome.PASS,
+    ]
+    assert decision.score.raw_faults == 1
+    assert decision.evaluations[3].reason_code == "maybe_forbidden"
+    assert decision.needs_marker
+
+    labeled = evaluate_message(message(f"[Duck Pond]({url})"), context("NR027"))
+    assert labeled.evaluations[0].outcome is Outcome.PASS
 
 
 @pytest.mark.parametrize(
