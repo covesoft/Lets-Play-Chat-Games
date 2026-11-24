@@ -163,6 +163,18 @@ class AttachmentSnapshot:
 
 
 @dataclass(frozen=True, slots=True)
+class ForwardedMessageSnapshot:
+    """Transient content of the single Discord forward used by Drawing Conclusions."""
+
+    content: str = field(repr=False)
+    has_media: bool = False
+
+    def __post_init__(self) -> None:
+        if not isinstance(self.content, str) or type(self.has_media) is not bool:
+            raise ValueError("A forwarded snapshot requires text and a media flag.")
+
+
+@dataclass(frozen=True, slots=True)
 class MessageEvent:
     envelope: EventEnvelope
     content: str | None = field(default=None, repr=False)
@@ -174,6 +186,9 @@ class MessageEvent:
     is_bot: bool = False
     is_webhook: bool = False
     is_system: bool = False
+    forwarded_message: ForwardedMessageSnapshot | None = field(
+        default=None, repr=False, kw_only=True
+    )
 
     def __post_init__(self) -> None:
         if self.envelope.kind is not EventKind.MESSAGE_CREATE or self.envelope.actor_id is None:
@@ -184,6 +199,11 @@ class MessageEvent:
             raise ValueError("Message metadata collections must be immutable tuples.")
         if not isinstance(self.reference_kind, ReferenceKind):
             raise ValueError("A typed reference kind is required.")
+        if self.forwarded_message is not None and (
+            self.reference_kind is not ReferenceKind.FORWARD
+            or not isinstance(self.forwarded_message, ForwardedMessageSnapshot)
+        ):
+            raise ValueError("A forwarded snapshot requires a forward reference.")
         if any(not isinstance(item, AttachmentSnapshot) for item in self.attachments):
             raise ValueError("Attachments must be plain metadata snapshots.")
         for sticker_id in self.sticker_ids:

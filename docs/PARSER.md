@@ -54,7 +54,9 @@ when syntax is unsupported.
 
 Supported style features include asterisk emphasis/bold, underscore italic and
 underline, strikethrough, paired spoilers, inline/backtick-fenced code, headings
-of levels 1–3, subtext, blockquotes, lists, and masked/angle links. Leading heading
+of levels 1–3, subtext, blockquotes, lists, and masked/angle links. The multiline
+blockquote marker `>>> ` counts as formatting and is omitted from logical text.
+Leading heading
 and subtext markers require a space. Headings do not remove arbitrary hash text
 at the end of a line. The initial link subset accepts HTTP(S)/mailto destinations;
 relative destinations remain literal text. Keep It Here uses the separate
@@ -135,10 +137,12 @@ Uncased scripts/numbers do not require an alphabetic letter to be present; a
 titlecase letter must meet the selected mapping, and lowercase `ß` fails uppercase
 while `SS` passes. Markup wrappers/object identifiers are not displayed letters.
 
-NR010 and NR012 require the quote-aware logical ending to finish with ASCII
-`?` and `!` respectively. Repeated marks are allowed. NR013 forbids ASCII `?` in
-URL-filtered text, including code and spoilers. NR014 forbids ASCII `!` in
-logical content. Fullwidth `？` and `！` retain their own identities.
+NR010 accepts terminal `?`, `？`, `⁉️`, `❓`, `❔`, `:interrobang:`, `:question:`,
+and `:grey_question:`. NR012 accepts terminal `!`, `！`, `‼️`, and `:bangbang:`.
+The same interrobang and double exclamation characters also qualify without
+their emoji presentation selectors. For a mixed ASCII sequence, the last
+mark determines the result. NR013 forbids ASCII `?` in URL-filtered text,
+including code and spoilers. NR014 forbids ASCII `!` in logical content.
 
 NR017 counts at most five parser words; NR019 requires exactly one. Numbers count
 as words, contractions retain internal apostrophes, hyphens split words, and opaque

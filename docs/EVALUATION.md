@@ -48,7 +48,10 @@ before parsing. Its decision contains only human-traffic/whisper counters, with
 no enrollment, score observation, or marker. This also works during a mode.
 During a saved bout, the flow supplies the `mode` choice to `evaluate_message`.
 Drawing Conclusions accepts recognized Unicode or custom emoji with optional
-whitespace and no additional content. Getting Graphic accepts one recognized GIF
+whitespace. An emoji-only forward also qualifies when its snapshot contains
+only emoji and its optional note is emoji-only. Forwarded media or an unavailable
+snapshot fails. Only Drawing Conclusions evaluates the forwarded snapshot.
+Getting Graphic accepts one recognized GIF
 link using the [standalone link rules](PARSER.md#gif-and-link-rules), or one GIF
 upload without a caption. Automatic link previews require no extra media check.
 Stickers, voice messages, forwards and competing links or uploads fail Getting
@@ -57,7 +60,8 @@ hash signs, an ASCII space, and heading text. Whitespace-only lines and blank
 italic spans such as `_ _` are ignored, including when such a span is the only
 content in a heading. Escaped or unmatched underscores, list markers, and blank
 code, strikethrough, and underline spans are checked. A post with no applicable
-text adds traffic.
+text adds traffic. A valid heading with an invisible character as its body can
+qualify.
 An applicable outcome contributes one binary observation and a failed post
 requests one marker. Mode messages contribute no ordinary participation. A mode
 without a supported choice raises `NotImplementedError` on non-whisper posts.

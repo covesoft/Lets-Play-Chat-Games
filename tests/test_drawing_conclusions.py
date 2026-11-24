@@ -1,5 +1,6 @@
 """The supported Breaking Moment through the Discord lane, SQLite and reboot."""
 
+from dataclasses import replace
 from datetime import timedelta
 
 import discord
@@ -23,9 +24,11 @@ from lets_play.new_rules.contracts import (
     EmojiIdentity,
     EventEnvelope,
     EventKind,
+    ForwardedMessageSnapshot,
     MessageEvent,
     Outcome,
     ReactionEvent,
+    ReferenceKind,
     SessionRoute,
 )
 from lets_play.presentation import default_presentation
@@ -162,6 +165,30 @@ def test_emoji_only(text, metadata, passes):
     assert (result.outcome is Outcome.PASS) == passes
 
 
+@pytest.mark.parametrize(
+    ("note", "forwarded", "passes"),
+    [
+        ("", ForwardedMessageSnapshot("🎨"), True),
+        ("  ", ForwardedMessageSnapshot("🎨"), True),
+        ("🦆", ForwardedMessageSnapshot("🎨 <:star:123456789123456789>"), True),
+        ("go 🦆", ForwardedMessageSnapshot("🎨"), False),
+        ("🦆", ForwardedMessageSnapshot("🎨 then 🦆"), False),
+        ("🦆", ForwardedMessageSnapshot(""), False),
+        ("🦆", ForwardedMessageSnapshot("🎨", has_media=True), False),
+        ("🦆", None, False),
+    ],
+)
+def test_emoji_only_forward_checks_source_and_optional_note(note, forwarded, passes):
+    frame = EventEnvelope(
+        SessionRoute(1, 2, "session"), EventKind.MESSAGE_CREATE, "s", 3, NOW, NOW, 1
+    )
+    post = MessageEvent(
+        frame, note, reference_kind=ReferenceKind.FORWARD, forwarded_message=forwarded
+    )
+    result = drawing_conclusions(post, ModeChoice("bout"))
+    assert result.outcome is (Outcome.PASS if passes else Outcome.FAIL)
+
+
 @pytest.mark.asyncio
 async def test_mode_cutover_scoring_timer_award_restore_and_hand_spacing(tmp_path, monkeypatch):
     db = tmp_path / "game.sqlite3"
@@ -193,13 +220,29 @@ async def test_mode_cutover_scoring_timer_award_restore_and_hand_spacing(tmp_pat
         await runtime.submit(route, "event", event=event(runtime, route, 81002, "🤝"))
         await runtime.submit(route, "event", event=event(runtime, route, 81003, "😀", 707))
         await runtime.submit(
-            route, "event", event=event(runtime, route, 81004, "-# ← whisper", 808)
+            route,
+            "event",
+            event=replace(
+                event(runtime, route, 81004, "-# ← whisper", 808),
+                reference_kind=ReferenceKind.FORWARD,
+                forwarded_message=ForwardedMessageSnapshot("plain text"),
+            ),
         )
         async with runtime.store.transaction(write=False) as unit:
             assert (await Progression(unit).profile(606)).games_played == 0
             assert await unit.get_score(route.session_id, 808) is None
-        await runtime.submit(route, "event", event=event(runtime, route, 81005, "😂"))
-        bad = event(runtime, route, 81006, "emoji and words 😂")
+        replay = replace(
+            event(runtime, route, 81005, ""),
+            reference_kind=ReferenceKind.FORWARD,
+            forwarded_message=ForwardedMessageSnapshot("😂 😂"),
+        )
+        await runtime.submit(route, "event", event=replay)
+        await runtime.submit(route, "event", event=replay)
+        bad = replace(
+            event(runtime, route, 81006, "😂"),
+            reference_kind=ReferenceKind.FORWARD,
+            forwarded_message=ForwardedMessageSnapshot("emoji and words 😂"),
+        )
         await runtime.submit(route, "event", event=bad)
         await runtime.submit(route, "event", event=bad)
         runtime.clock.at += timedelta(seconds=30)

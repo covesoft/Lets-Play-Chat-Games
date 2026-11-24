@@ -98,9 +98,45 @@ def _fence(state: StateBlock, start: int, end: int, silent: bool) -> bool:
 
 def _quote(state: StateBlock, start: int, end: int, silent: bool) -> bool:
     line = _line(state, start)
-    return (line.startswith("> ") or line.startswith(">>> ")) and blockquote(
-        state, start, end, silent
-    )
+    if line.startswith("> "):
+        if not silent:
+            # A later multiline marker starts its own quote instead of being
+            # consumed as a single-line quote continuation.
+            terminators = state.md.block.ruler.getRules("blockquote")
+            for number in range(start + 1, end):
+                if state.isEmpty(number) or state.sCount[number] < state.blkIndent:
+                    break
+                continuation = _line(state, number)
+                if continuation.startswith(">>> "):
+                    end = number
+                    break
+                if not continuation.startswith(">") and any(
+                    rule(state, number, end, True) for rule in terminators
+                ):
+                    break
+        return blockquote(state, start, end, silent)
+    if not line.startswith(">>> ") or state.is_code_block(start):
+        return False
+    if silent:
+        return True
+    # Discord's multiline marker applies to the following lines without
+    # requiring each line to start with a quote marker.
+    opening = state.push("blockquote_open", "blockquote", 1)
+    opening.markup = ">>>"
+    opening.content = line[4:]
+    before = (state.bMarks[start], state.tShift[start], state.sCount[start], state.lineMax)
+    body = before[0] + before[1] + 4
+    state.bMarks[start] = body
+    state.tShift[start] = state.skipSpaces(body) - body
+    state.sCount[start] = state.blkIndent
+    state.lineMax = end
+    try:
+        state.md.block.tokenize(state, start, end)
+    finally:
+        state.bMarks[start], state.tShift[start], state.sCount[start], state.lineMax = before
+    opening.map = [start, state.line]
+    state.push("blockquote_close", "blockquote", -1).markup = ">>>"
+    return True
 
 
 def _list(state: StateBlock, start: int, end: int, silent: bool) -> bool:

@@ -224,7 +224,7 @@ def assess_state(
     reply_target = 1 if reply_kind is ReferenceKind.REPLY else None
     prefix = ("yes",) if "NR024" in cards else ("please",) if "NR033" in cards else ()
     suffix = ("over",) if "NR034" in cards else ()
-    punctuation = next((ending for card, ending in REQUIRED_ENDINGS.items() if card in cards), "")
+    punctuation = next((ends[0] for card, ends in REQUIRED_ENDINGS.items() if card in cards), "")
     filler_words = _FILLER_WORDS
     fallback_words = ("hello",)
     if "NR032" in cards:

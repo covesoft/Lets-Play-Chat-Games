@@ -43,6 +43,7 @@ IMAGE = AttachmentSnapshot(123, "sample.png", "image/png")
         ("# first\r\n   \r\n## second\r### third\n", Outcome.PASS),
         ("\n### first\n_ _   \n  _   _  \n## second", Outcome.PASS),
         ("### 🎨", Outcome.PASS),
+        ("### \u200b", Outcome.PASS),
         ("### header\nplain", Outcome.FAIL),
         ("plain\n### header", Outcome.FAIL),
         ("### first\nplain\n## second", Outcome.FAIL),

@@ -3,7 +3,7 @@
 Let’s Play is a Discord chat-game bot. Its first game, **New Rules**, is a party
 conversation game where unusual rules accumulate as people chat.
 
-**Current status: v0.3.53 — development-only Discord preview (M4 underway).**
+**Current status: v0.3.54 — development-only Discord preview (M4 underway).**
 M1 is accepted and closed at v0.2.9/schema 8. The Discord adapter connects a
 persisted three-human opening, message/raw-reaction scoring, markers, timed
 warnings, picker succession, three-card choices, replacements, and announced

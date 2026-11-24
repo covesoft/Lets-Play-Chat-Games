@@ -21,9 +21,9 @@ hands. Later hands can draw NR036 from the [ordered guild bank](CONFIGURATION.md
 | NR007 | Inside Voice | Lowercase mapping; casing slot |
 | NR008 | SPEAK UP | Uppercase mapping; casing slot |
 | NR009 | No Accounting | No Unicode digits or specified number emoji (Typography) |
-| NR010 | Questionable Conduct | ASCII question-mark ending; terminal slot |
+| NR010 | Questionable Conduct | [Question ending](PARSER.md#additional-predicate-policy); terminal slot |
 | NR011 | Are You Sure? | At least three consecutive terminal ASCII periods; terminal slot |
-| NR012 | With Gusto | ASCII exclamation-mark ending; terminal slot |
+| NR012 | With Gusto | [Exclamation ending](PARSER.md#additional-predicate-policy); terminal slot |
 | NR013 | No Questions | No ASCII question marks; conflicts with NR010 |
 | NR014 | Curb The Enthusiasm | No ASCII exclamation marks; conflicts with NR012 |
 | NR015 | One Breath | No original CR or LF (Typography) |

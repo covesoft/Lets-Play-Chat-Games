@@ -20,6 +20,7 @@ from lets_play.discord_adapter.discord_io import (
     reaction_snapshot,
     render,
 )
+from lets_play.new_rules.breaking_moments import ModeChoice, drawing_conclusions
 from lets_play.new_rules.contracts import Outcome, ReferenceKind, SessionRoute
 from lets_play.new_rules.evaluation import evaluate_message
 from lets_play.presentation import default_presentation
@@ -84,6 +85,7 @@ def test_message_snapshot_retains_transient_metadata_without_history_fetch():
         content="**over...**",
         created_at=NOW,
         attachments=[NS(id=12, filename="memo.ogg", content_type="audio/ogg", duration=4.0)],
+        message_snapshots=[],
         stickers=[NS(id=13)],
         reference=reference,
         type=discord.MessageType.reply,
@@ -101,6 +103,57 @@ def test_message_snapshot_retains_transient_metadata_without_history_fetch():
         message_snapshot(message, snapshot.envelope.route, NOW).reference_kind
         is ReferenceKind.FORWARD
     )
+
+
+@pytest.mark.parametrize("with_file", [False, True])
+def test_discord_forward_payload_only_exposes_snapshot_to_drawing_conclusions(with_file):
+    raw = {
+        "id": "1441341766047752159",
+        "type": 0,
+        "content": "🦆",
+        "author": {"id": "3", "username": "Tester", "discriminator": "0", "avatar": None},
+        "message_reference": {"type": 1, "message_id": "99", "channel_id": "20"},
+        "message_snapshots": [
+            {
+                "message": {
+                    "type": 0,
+                    "content": "🎨",
+                    "timestamp": NOW.isoformat(),
+                    "edited_timestamp": None,
+                    "embeds": [],
+                    "attachments": [
+                        {
+                            "id": "101",
+                            "filename": "duck.gif",
+                            "content_type": "image/gif",
+                            "size": 3,
+                            "url": "https://example.invalid/duck.gif",
+                            "proxy_url": "https://example.invalid/duck.gif",
+                        }
+                    ]
+                    if with_file
+                    else [],
+                }
+            }
+        ],
+    }
+    active = context("NR002", "NR004", "NR040")
+    client = discord.Client(intents=discord.Intents.none())
+    incoming = discord.Message(state=client._connection, channel=NS(guild=None, id=2), data=raw)
+    snapshot = message_snapshot(incoming, active.position.route, NOW)
+    assert snapshot.reference_kind is ReferenceKind.FORWARD
+    assert snapshot.forwarded_message.content == "🎨"
+    assert snapshot.forwarded_message.has_media is with_file
+    assert "🎨" not in repr(snapshot) + repr(snapshot.forwarded_message)
+    assert not snapshot.attachments
+    assert drawing_conclusions(snapshot, ModeChoice("bout")).outcome is (
+        Outcome.FAIL if with_file else Outcome.PASS
+    )
+    assert [item.outcome for item in evaluate_message(snapshot, active).evaluations] == [
+        Outcome.PASS,
+        Outcome.PASS,
+        Outcome.FAIL,
+    ]
 
 
 def test_raw_reaction_snapshot_uses_action_receipt_not_target_creation_time():

@@ -23,6 +23,7 @@ from lets_play.new_rules.contracts import (
     EmojiIdentity,
     EventEnvelope,
     EventKind,
+    ForwardedMessageSnapshot,
     MessageEvent,
     ReactionEvent,
     ReferenceKind,
@@ -80,10 +81,23 @@ def capabilities(channel, member, *, marker_verified=False):
 def message_snapshot(message, route, received):
     reference = ReferenceKind.NONE
     target = None
+    forwarded = None
     if message.reference:
         target = message.reference.message_id
         if message.reference.type is discord.MessageReferenceType.forward:
             reference = ReferenceKind.FORWARD
+            if len(message.message_snapshots) == 1:
+                item = message.message_snapshots[0]
+                forwarded = ForwardedMessageSnapshot(
+                    item.content,
+                    bool(
+                        item.attachments
+                        or item.stickers
+                        or item.embeds
+                        or item.components
+                        or item.flags.voice
+                    ),
+                )
         elif message.type is discord.MessageType.thread_starter_message:
             reference = ReferenceKind.THREAD_STARTER
         elif (
@@ -114,6 +128,7 @@ def message_snapshot(message, route, received):
         message.author.bot,
         message.webhook_id is not None,
         message.is_system(),
+        forwarded_message=forwarded,
     )
 
 

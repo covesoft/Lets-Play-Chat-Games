@@ -46,7 +46,12 @@ TEXT_FAILURE_REASONS = {
 SUPPORTED_TEXT_RULES = frozenset(TEXT_FAILURE_REASONS)
 MIN_WORDS = 5
 MIN_CHARACTERS = 20
-REQUIRED_ENDINGS = {"NR010": "?", "NR011": "...", "NR012": "!"}
+# The first ending for each card is the canonical spelling for hand witnesses.
+REQUIRED_ENDINGS = {
+    "NR010": ("?", "？", "⁉", "⁉️", "❓", "❔", ":interrobang:", ":question:", ":grey_question:"),
+    "NR011": ("...",),
+    "NR012": ("!", "！", "‼", "‼️", ":bangbang:"),
+}
 ROYAL_WORDS = frozenset({"we", "our", "us"})
 _NUMERIC_EMOJI = frozenset("🔢🔟💯")
 _NUMERIC_CUSTOM_EMOJI_PREFIXES = ("<:100:", "<:1000:", "<a:100:", "<a:1000:")

@@ -51,16 +51,23 @@ def mode_ends_at(started_at: datetime) -> datetime:
 
 def drawing_conclusions(event: MessageEvent, choice: ModeChoice) -> RuleEvaluation:
     text = event.content or ""
-    if len(text) > MAX_PARSER_CODEPOINTS:
+    forwarded = event.forwarded_message
+    if len(text) > MAX_PARSER_CODEPOINTS or (
+        forwarded is not None and len(forwarded.content) > MAX_PARSER_CODEPOINTS
+    ):
         raise ParserLimitError(
             "Message exceeds the parser input limit; do not score truncated text."
         )
-    valid = (
-        not event.attachments
-        and not event.sticker_ids
-        and not event.is_voice_message
-        and _emoji_only(text)
-    )
+    valid = not (event.attachments or event.sticker_ids or event.is_voice_message)
+    if valid and event.reference_kind is ReferenceKind.FORWARD:
+        valid = (
+            forwarded is not None
+            and not forwarded.has_media
+            and _emoji_only(forwarded.content)
+            and (not text.strip() or _emoji_only(text))
+        )
+    elif valid:
+        valid = _emoji_only(text)
     return RuleEvaluation(
         choice.instance_id,
         Outcome.PASS if valid else Outcome.FAIL,

@@ -357,7 +357,7 @@
     "id": "NR010-3",
     "card": "NR010",
     "content": "over？",
-    "outcome": "fail"
+    "outcome": "pass"
   },
   {
     "id": "NR010-4",
@@ -969,7 +969,7 @@
     "id": "NR012-m3-2",
     "card": "NR012",
     "content": "over！",
-    "outcome": "fail"
+    "outcome": "pass"
   },
   {
     "id": "NR012-m3-3",

@@ -333,6 +333,10 @@ def parse_message(content: str | None) -> MessageView:
                 styles.add(Formatting.SUBTEXT)
             case "blockquote_open":
                 styles.add(Formatting.BLOCKQUOTE)
+                if token.markup == ">>>":
+                    # If tokenization skipped an empty or deeply nested body,
+                    # the fallback line must still omit the quote marker.
+                    lines[token.map[0]] = token.content
             case "bullet_list_open" | "ordered_list_open":
                 styles.add(Formatting.LIST)
     logical = "\n".join(lines)

@@ -89,6 +89,60 @@ def test_parsing_preserves_raw_and_line_breaks_without_a_code_or_spoiler_escape(
     assert "**turnover...**" in view.logical  # Code content remains literal.
 
 
+@pytest.mark.parametrize(
+    ("source", "logical"),
+    [
+        (">>> " + "a" * 40, "a" * 40),
+        (">>> **ducks**\r\n\r\npond", "ducks\n\npond"),
+        (">>> \npond", "\npond"),
+        ("> duck\n>>> pond\nswim", "duck\npond\nswim"),
+        (">>> ```\n>>> literal\n```", "\n>>> literal\n"),
+    ],
+)
+def test_multiline_quotes_drop_one_marker_and_preserve_the_quoted_content(source, logical):
+    view = parse_message(source)
+    assert view.logical == logical and view.raw == source
+    assert Formatting.BLOCKQUOTE in view.formatting
+    assert evaluate_text_rule(view, RuleInstance("small", "NR021")).outcome is Outcome.PASS
+    assert evaluate_text_rule(view, RuleInstance("plain", "NR016")).outcome is Outcome.FAIL
+    assert evaluate_text_rule(view, RuleInstance("breath", "NR015")).outcome is (
+        Outcome.FAIL if "\n" in source else Outcome.PASS
+    )
+
+
+@pytest.mark.parametrize(
+    ("terminal", "question", "exclamation"),
+    [
+        ("?", True, False),
+        ("？", True, False),
+        ("⁉", True, False),
+        ("⁉️", True, False),
+        ("❓", True, False),
+        ("❔", True, False),
+        (":interrobang:", True, False),
+        (":question:", True, False),
+        (":grey_question:", True, False),
+        ("!", False, True),
+        ("！", False, True),
+        ("‼", False, True),
+        ("‼️", False, True),
+        (":bangbang:", False, True),
+        ("?!", False, True),
+        ("!?", True, False),
+        ("⁉️ 🦆", False, False),
+        (":question: later", False, False),
+    ],
+)
+def test_question_and_exclamation_cards_recognize_distinct_terminal_forms(
+    terminal, question, exclamation
+):
+    view = parse_message(f"“**Ducks {terminal}**”")
+    for card, passed in (("NR010", question), ("NR012", exclamation)):
+        assert evaluate_text_rule(view, RuleInstance(card, card)).outcome is (
+            Outcome.PASS if passed else Outcome.FAIL
+        )
+
+
 def test_parser_rejects_oversize_instead_of_silently_truncating_scored_text():
     with pytest.raises(ParserLimitError):
         parse_message("x" * (MAX_PARSER_CODEPOINTS + 1))
