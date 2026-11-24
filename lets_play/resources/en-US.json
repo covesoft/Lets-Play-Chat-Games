@@ -71,7 +71,7 @@
     "buttons.join_support_server": "Join support server",
     "start.development_only": "This game preview is available only in development mode.",
     "start.unavailable": "Start this game in an available server channel.",
-    "start.admitted": "Okay! I'll begin a game of New Rules in this channel.",
+    "start.admitted": "Okay! I'll begin a game of New Rules here.",
     "start.channel_busy": "This channel already has a game.",
     "start.capacity": "This server has reached its simultaneous-game limit. Premium allows more.",
     "start.failed": "A complete playable lobby could not be opened.",
