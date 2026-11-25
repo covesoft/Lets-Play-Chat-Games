@@ -53,7 +53,7 @@ REQUIRED_ENDINGS = {
     "NR011": ("...",),
     "NR012": ("!", "！", "‼", "‼️", ":bangbang:"),
 }
-ROYAL_WORDS = frozenset({"we", "our", "us"})
+ROYAL_WORDS = frozenset({"we", "our", "ours", "us"})
 _NUMERIC_EMOJI = frozenset("🔢🔟💯")
 _NUMERIC_CUSTOM_EMOJI_PREFIXES = ("<:100:", "<:1000:", "<a:100:", "<a:1000:")
 _URL_FILTERED_TYPOGRAPHY = frozenset({"NR007", "NR008", "NR009", "NR013", "NR037"})
