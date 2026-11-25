@@ -129,6 +129,10 @@ def message_snapshot(message, route, received):
         message.webhook_id is not None,
         message.is_system(),
         forwarded_message=forwarded,
+        is_native_poll=(
+            getattr(message, "poll", None) is not None
+            or getattr(message, "type", None) is discord.MessageType.poll_result
+        ),
     )
 
 

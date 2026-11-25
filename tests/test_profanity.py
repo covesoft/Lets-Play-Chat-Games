@@ -17,7 +17,7 @@ from lets_play.new_rules.contracts import Deadline, DeadlineKind, Outcome, RuleI
 from lets_play.new_rules.evaluation import EvaluationContext, evaluate_message
 from lets_play.new_rules.hands import build_hand
 from lets_play.new_rules.profanity import MAX_LIST_BYTES, ProfanityList, load_profanity_list
-from lets_play.new_rules.text_rules import RuleConfigurationError
+from lets_play.new_rules.text_rules import ROYAL_WORDS, RuleConfigurationError
 from lets_play.storage.offer_codec import encode_hand
 
 
@@ -99,7 +99,9 @@ def test_dependency_is_pinned_and_only_available_in_later_hands():
 
 
 def test_themes_and_vocabulary_cap_use_the_real_predicate():
-    profanity = ProfanityList("hello\nbright\ngreen\nwe\nour\nturnip")
+    royal_word = min(ROYAL_WORDS)
+    blocked_words = (ROYAL_WORDS - {royal_word}) | {"hello", "bright", "green", "turnip"}
+    profanity = ProfanityList("\n".join(sorted(blocked_words)))
     rule = profanity.instantiate("language")
     royal_court = (RuleInstance("decree", "NR037"), RuleInstance("royal", "NR035"), rule)
     complaint_department = (
@@ -110,8 +112,8 @@ def test_themes_and_vocabulary_cap_use_the_real_predicate():
     for instances in (royal_court, complaint_department, (rule, RuleInstance("long", "NR018"))):
         assert assess_state(instances, profanity=profanity).legal
         assert not assess_state(instances).legal
-    assert "us" in assess_state(royal_court, profanity=profanity).witness.text
-    blocked = ProfanityList("we\nour\nus\nplease")
+    assert assess_state(royal_court, profanity=profanity).witness.text.casefold() == royal_word
+    blocked = ProfanityList("\n".join(sorted(ROYAL_WORDS | {"please"})))
     for instances in (royal_court, complaint_department):
         assert (
             assess_state(

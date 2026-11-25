@@ -1,9 +1,9 @@
-# New Rules Discord preview — v0.3.56 / schema 19
+# New Rules Discord preview — v0.3.57 / schema 20
 
 This development build connects the existing ordinary engine to Discord. Run one
 bot process against a database. Private/requested scores, automatic interims and
 compact round-end reports and acknowledged ordinary-phase reboot recovery are
-wired. The three supported Breaking Moments use the same announced cutover.
+wired. The four supported Breaking Moments use the same announced cutover.
 An interrupted bout restores ordinary play after read-in. Other Breaking Moments and remaining
 release work are still open.
 
@@ -163,6 +163,13 @@ A regular post, forward, or pasted message link faults Pass It On.
     messages that start with `-# ` have no mode observation. Offline tests check
     that Head On and mode game credit require three qualifying posts, zero mode
     faults, and natural expiry.
+
+15. Choose Moment of Silence. Once it starts, try a whisper and a native poll.
+    Then try a sticker, a forward, a reply, or an upload. The whisper and poll
+    are ignored. Each other human post gets one marker. At expiry, check the
+    green notice and restored rules in the same round. Offline tests verify
+    Quietude at natural expiry for players with five outgoing-round posts and
+    no bout faults.
 
 ## Delivery and ordering
 

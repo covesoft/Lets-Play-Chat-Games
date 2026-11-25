@@ -9,7 +9,8 @@ publication acknowledgements, selection, announced cutover and pending-award
 closure boundaries. Schema 4 composes [general progression](PROGRESSION.md) with
 ordinary cutover. Schema 15 adds Drawing Conclusions bout ownership and its action award.
 Schema 18 adds Getting Graphic and its badge. Schema 19 adds Why Are We Shouting
-and Head On. Both migrations retain the existing bout and badge rows.
+and Head On. Schema 20 adds Moment of Silence and Quietude. These migrations
+retain existing bout and badge rows.
 `initialize_database()` opens one aiosqlite connection, initializes it, reports
 safe metadata, and closes it on success or failure. `--init-db` invokes it without
 Discord. The live shell invokes it in `setup_hook()` before command sync.

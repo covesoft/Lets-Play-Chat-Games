@@ -777,19 +777,20 @@ class OrdinaryFlow:
                 )
             return FlowResult(FlowStatus.IGNORED)
         mode = await BreakingFlow(self.unit).active(context.position)
-        if mode and isinstance(event, ReactionEvent) and not event.is_bot:
-            # Guard only this source, never consume the actor/target ordinary offense.
-            await _execute(
-                self.conn,
-                "INSERT INTO nr_paused_sources VALUES (?,?,?) ON CONFLICT DO NOTHING",
-                frame.source_key,
-            )
         decision = (
             evaluate_message(event, context, mode=mode.choice if mode else None)
             if isinstance(event, MessageEvent)
             else evaluate_reaction(event, context)
         )
         if decision is None:
+            human = event.is_human if isinstance(event, MessageEvent) else not event.is_bot
+            if mode and human:
+                # Keep ignored mode receipts from scoring after the cutover.
+                await _execute(
+                    self.conn,
+                    "INSERT INTO nr_paused_sources VALUES (?,?,?) ON CONFLICT DO NOTHING",
+                    frame.source_key,
+                )
             return FlowResult(FlowStatus.IGNORED)
         self.unit._ordered_flow = True
         try:

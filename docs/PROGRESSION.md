@@ -40,8 +40,16 @@ recovery interruption preserves credit already earned.
 Why Are We Shouting credits the game and grants Head On (`mode_heading`) at
 natural expiry. Each qualifying player must have three or more valid posts and
 zero mode faults in that bout. A post with multiple headings counts once. Both
-effects commit with the bout outcome. Profile presentation and the remaining
-mode and theme predicates are future work.
+effects commit with the bout outcome.
+
+Moment of Silence grants Quietude (`mode_silence`) and game credit at natural
+expiry. The bout's selected offer binds it to the immutable outgoing round
+closure. At least five ordinary posts in that round qualify a player, including
+posts made after the picker snapshot and before actual cutover. A player who
+faults during the bout loses that bout's eligibility. Whispers and native polls
+have no effect. Silence creates no success observations. The award and any
+uncredited game count commit with the completion, once per actor and game.
+Profile presentation and the remaining mode and theme predicates are future work.
 
 ## Actual round closure
 

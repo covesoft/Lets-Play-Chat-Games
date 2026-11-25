@@ -14,6 +14,7 @@ from lets_play.new_rules.parsing import MAX_PARSER_CODEPOINTS, ParserLimitError,
 DRAWING_CONCLUSIONS = "drawing_conclusions"
 GETTING_GRAPHIC = "getting_graphic"
 WHY_ARE_WE_SHOUTING = "why_are_we_shouting"
+MOMENT_OF_SILENCE = "moment_of_silence"
 BREAKING_MOMENT_SECONDS = 120
 EMOJI_BADGE_MIN_MESSAGES = 3
 EMOJI_GAMEPLAY_MIN_MESSAGES = 3
@@ -23,10 +24,12 @@ HEADING_MIN_MESSAGES = 3
 EMOJI_REQUIRED = "emoji_only_required"
 GIF_REQUIRED = "single_gif_required"
 HEADING_REQUIRED = "heading_on_every_line_required"
+SILENCE_REQUIRED = "silence_required"
 MODE_FAILURE_REASONS = {
     DRAWING_CONCLUSIONS: EMOJI_REQUIRED,
     GETTING_GRAPHIC: GIF_REQUIRED,
     WHY_ARE_WE_SHOUTING: HEADING_REQUIRED,
+    MOMENT_OF_SILENCE: SILENCE_REQUIRED,
 }
 _CUSTOM_EMOJI = re.compile(r"<a?:[A-Za-z0-9_]{2,32}:[1-9][0-9]{12,19}>")
 _BLANK_ITALIC_SPAN = re.compile(r"_ +_")
@@ -118,10 +121,15 @@ def why_are_we_shouting(event: MessageEvent, choice: ModeChoice) -> RuleEvaluati
     return RuleEvaluation(choice.instance_id, outcome)
 
 
+def moment_of_silence(event: MessageEvent, choice: ModeChoice) -> RuleEvaluation:
+    return RuleEvaluation(choice.instance_id, Outcome.FAIL, SILENCE_REQUIRED)
+
+
 MODE_VALIDATORS = {
     DRAWING_CONCLUSIONS: drawing_conclusions,
     GETTING_GRAPHIC: getting_graphic,
     WHY_ARE_WE_SHOUTING: why_are_we_shouting,
+    MOMENT_OF_SILENCE: moment_of_silence,
 }
 
 

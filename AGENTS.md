@@ -8,7 +8,7 @@ contains operational and API documentation only.
 
 ## Current implementation
 
-Application v0.3.56 uses schema 19. M1 closed at v0.2.9/schema 8, M2 at
+Application v0.3.57 uses schema 20. M1 closed at v0.2.9/schema 8, M2 at
 v0.3.30/schema 16, and M3 at v0.3.45/schema 17. Getting Graphic opens M4.
 Preserve the existing domain/storage APIs. This build is a development-only
 Discord preview.
@@ -18,7 +18,7 @@ markers, ordinary warning/picker/choice/replacement/timeout/cutover, held play,
 same-round revival, manager ending, private live scores, requested public reports,
 gated automatic interims, compact round-end boards and ranked final standings.
 Eligible later hands use one shared Breaking Moment ticket for Drawing Conclusions,
-Getting Graphic, and Why Are We Shouting. Opening and post-mode hands are
+Getting Graphic, Why Are We Shouting, and Moment of Silence. Opening and post-mode hands are
 ordinary-only.
 `/support-server` is registered when the resolved support URL is configured.
 All forty ordinary predicates exist. The opening pool has ten templates.
@@ -136,13 +136,16 @@ migration or command sync; documentation-only patches need no reinstall/restart.
   exact suspended inventory and incoming round clock. Restore ordinary rules after
   120 seconds without a new draw/round. Mode results add binary observations, one
   marker per failed message, and no ordinary posts or reaction faults. Whispers
-  add only traffic. Commit each third qualifying Drawing Conclusions post, game
+  add only traffic outside Moment of Silence. Commit each third qualifying Drawing Conclusions post, game
   credit and Pictoglyphs in the same unit. Getting Graphic credits the game at
   two GIFs from one player in one bout. Natural completion awards What Bandwidth
   at five GIFs and zero mode faults. Why Are We Shouting credits the game and
   awards Head On at natural expiry with three qualifying posts and zero mode
-  faults. A media-only post adds traffic without an observation. Credit and badge
-  ownership are independent.
+  faults. A media-only post in that mode adds traffic without an observation.
+  Moment of Silence ignores whispers, native poll posts and poll results. Each
+  other human post faults once. At natural expiry, Quietude and game credit use
+  five ordinary posts in the frozen outgoing round and zero faults in the bout.
+  Credit and badge ownership are independent.
 - Lobby clocks start at actual publication (180 seconds; first choice 60).
   Starter plus two distinct humans is quorum; joins alone do not credit a game.
   Preplay has no fake playing round. First acknowledged activation creates it,

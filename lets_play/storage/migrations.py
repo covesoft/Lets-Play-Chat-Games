@@ -767,4 +767,34 @@ MIGRATIONS += (
         ),
     ),
 )
+MIGRATIONS += (
+    Migration(
+        version=20,
+        name="moment_of_silence",
+        statements=(
+            """CREATE TABLE nr_breaking_moments_v20 (
+                session_id TEXT NOT NULL,round_id TEXT NOT NULL,offer_id TEXT NOT NULL,
+                choice_id TEXT NOT NULL,kind TEXT NOT NULL CHECK(kind IN
+                    ('drawing_conclusions','getting_graphic','why_are_we_shouting','moment_of_silence')),
+                ends_at_utc INTEGER NOT NULL,
+                outcome TEXT CHECK(outcome IN ('completed','interrupted','ended')),
+                PRIMARY KEY(session_id,round_id),
+                FOREIGN KEY(session_id,round_id) REFERENCES nr_rounds ON DELETE CASCADE
+            ) STRICT""",
+            "INSERT INTO nr_breaking_moments_v20 SELECT * FROM nr_breaking_moments",
+            "DROP TABLE nr_breaking_moments",
+            "ALTER TABLE nr_breaking_moments_v20 RENAME TO nr_breaking_moments",
+            """CREATE TABLE nr_badges_v20 (
+                actor_id INTEGER NOT NULL REFERENCES nr_profiles ON DELETE CASCADE,
+                badge_key TEXT NOT NULL CHECK(badge_key IN
+                    ('rulemaker','spotless','familiar_face','party_animal','very_careful',
+                    'mode_emoji','mode_gif','mode_heading','mode_silence')),
+                PRIMARY KEY(actor_id,badge_key)
+            ) STRICT""",
+            "INSERT INTO nr_badges_v20 SELECT actor_id,badge_key FROM nr_badges",
+            "DROP TABLE nr_badges",
+            "ALTER TABLE nr_badges_v20 RENAME TO nr_badges",
+        ),
+    ),
+)
 SCHEMA_VERSION = MIGRATIONS[-1].version

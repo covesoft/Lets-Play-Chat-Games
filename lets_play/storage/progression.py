@@ -15,6 +15,7 @@ from lets_play.new_rules.breaking_moments import (
     GIF_BADGE_MIN_MESSAGES,
     GIF_GAMEPLAY_MIN_MESSAGES,
     HEADING_MIN_MESSAGES,
+    MOMENT_OF_SILENCE,
     WHY_ARE_WE_SHOUTING,
 )
 from lets_play.new_rules.contracts import Lifecycle
@@ -197,17 +198,34 @@ class Progression:
             "SELECT kind FROM nr_breaking_moments WHERE session_id=? AND round_id=? AND outcome='completed'",
             (session_id, round_id),
         )
-        if bout is None or bout["kind"] not in COMPLETED_MODE_BADGES:
+        if bout is None:
             return
         mode = bout["kind"]
-        badge, minimum = COMPLETED_MODE_BADGES[mode]
-        # Each applied mode observation contributes either 1 (pass) or 0 (fault).
-        # Equality of exact quality and observation count proves zero mode faults.
-        eligible = """SELECT actor_id FROM nr_round_scores
-            WHERE session_id=? AND round_id=? AND mode_observations>=?
-            AND mode_quality_d='1' AND mode_quality_n=CAST(mode_observations AS TEXT)"""
-        values = (session_id, round_id, minimum)
-        if mode == WHY_ARE_WE_SHOUTING:
+        if mode == MOMENT_OF_SILENCE:
+            badge = "mode_silence"
+            # Activation freezes the outgoing ledger through the bout's unique
+            # offer ID. Silence eligibility needs no additional roster snapshot.
+            eligible = """SELECT prior.actor_id FROM nr_breaking_moments AS b
+                JOIN nr_round_closures AS c USING(session_id,offer_id)
+                JOIN nr_round_scores AS prior ON prior.session_id=c.session_id
+                    AND prior.round_id=c.round_id
+                WHERE b.session_id=? AND b.round_id=? AND prior.ordinary_posts>=5
+                AND NOT EXISTS (
+                    SELECT 1 FROM nr_round_scores AS current
+                    WHERE current.session_id=b.session_id AND current.round_id=b.round_id
+                    AND current.actor_id=prior.actor_id AND current.mode_observations>0
+                )"""
+            values = (session_id, round_id)
+        elif mode in COMPLETED_MODE_BADGES:
+            badge, minimum = COMPLETED_MODE_BADGES[mode]
+            # Equality of exact quality and observation count proves zero faults.
+            eligible = """SELECT actor_id FROM nr_round_scores
+                WHERE session_id=? AND round_id=? AND mode_observations>=?
+                AND mode_quality_d='1' AND mode_quality_n=CAST(mode_observations AS TEXT)"""
+            values = (session_id, round_id, minimum)
+        else:
+            return
+        if mode in {WHY_ARE_WE_SHOUTING, MOMENT_OF_SILENCE}:
             await self._credit(
                 session_id,
                 f"""SELECT actor_id FROM nr_player_progress WHERE session_id=?

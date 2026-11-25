@@ -45,7 +45,7 @@ active NR032, evaluation requires the matching list revision.
 
 An exact received `-# ` prefix exempts the whole message, including its media,
 before parsing. Its decision contains only human-traffic/whisper counters, with
-no enrollment, score observation, or marker. This also works during a mode.
+no enrollment, score observation, or marker. Moment of Silence ignores it entirely.
 During a saved bout, the flow supplies the `mode` choice to `evaluate_message`.
 Drawing Conclusions accepts recognized Unicode or custom emoji with optional
 whitespace. An emoji-only forward also qualifies when its snapshot contains
@@ -62,6 +62,10 @@ content in a heading. Escaped or unmatched underscores, list markers, and blank
 code, strikethrough, and underline spans are checked. A post with no applicable
 text adds traffic. A valid heading with an invisible character as its body can
 qualify.
+Moment of Silence faults every other human message once, regardless of content
+or media. It ignores Discord's native poll posts and automatic poll results.
+Whispers and polls create no traffic, observation, marker, or participation in
+this mode. The source guard prevents replay scoring after rules return.
 An applicable outcome contributes one binary observation and a failed post
 requests one marker. Mode messages contribute no ordinary participation. A mode
 without a supported choice raises `NotImplementedError` on non-whisper posts.

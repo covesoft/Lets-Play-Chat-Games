@@ -7,7 +7,7 @@ The flow supplies the saved Breaking Moment choice when one owns enforcement.
 
 from dataclasses import dataclass, field
 
-from lets_play.new_rules.breaking_moments import MODE_VALIDATORS, ModeChoice
+from lets_play.new_rules.breaking_moments import MODE_VALIDATORS, MOMENT_OF_SILENCE, ModeChoice
 from lets_play.new_rules.catalog import CHATGAMES_MAX_ACTIVE_DONT_FORGET
 from lets_play.new_rules.contracts import (
     EmojiIdentity,
@@ -144,9 +144,17 @@ def evaluate_message(
         return None
     if not context.dependencies_available:
         raise RuleConfigurationError("The frozen private gameplay list is unavailable.")
+    is_whisper = event.content is not None and event.content.startswith("-# ")
+    if (
+        position.phase is Phase.MODE
+        and mode is not None
+        and mode.card_id == MOMENT_OF_SILENCE
+        and (is_whisper or event.is_native_poll)
+    ):
+        return None
     # Exempt the whole received event before parsing, including mode traffic and
     # attachments. Oversize whispers need no unnecessary parser work.
-    if event.content is not None and event.content.startswith("-# "):
+    if is_whisper:
         evaluations, score = (), whisper_score()
     elif position.phase is Phase.MODE:
         if mode is None:

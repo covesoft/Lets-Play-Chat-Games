@@ -189,6 +189,7 @@ class MessageEvent:
     forwarded_message: ForwardedMessageSnapshot | None = field(
         default=None, repr=False, kw_only=True
     )
+    is_native_poll: bool = field(default=False, kw_only=True)
 
     def __post_init__(self) -> None:
         if self.envelope.kind is not EventKind.MESSAGE_CREATE or self.envelope.actor_id is None:

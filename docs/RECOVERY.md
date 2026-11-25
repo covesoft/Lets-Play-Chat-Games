@@ -155,8 +155,9 @@ Startup requires the saved bout, its original acknowledged activation, and the
 same delivery and fresh-access checks as an ordinary round. The notice announces
 the interruption. Once read-in finishes, the exact suspended cards are restored
 in the same round with its original activation time. Committed mode scores,
-game credit and earned badges survive. What Bandwidth and Head On require
-natural expiry, as does game credit from Why Are We Shouting. If a published
+game credit and earned badges survive. What Bandwidth, Head On, and Quietude
+require natural expiry. Why Are We Shouting and Moment of Silence also require
+natural expiry for mode game credit. If a published
 mode start passes during read-in, the selected round change still commits once at its saved timestamp
 and an unobserved bout is interrupted immediately. A future start remains
 scheduled. Ordinary and interrupted-mode read-in notices show a relative
