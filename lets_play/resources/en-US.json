@@ -64,7 +64,7 @@
     "scheduled.title": "New Rules — first rule scheduled",
     "scheduled.description": "The rule takes effect <t:{timestamp}:T>. No rule applies before then.",
     "active.title": "New Rules — chat carefully!",
-    "rules.field_heading": "Rules in effect",
+    "rules.field_heading": "\u200b",
     "rules.field_entry": "**{name}**\n{description}",
     "active.description": "Round 1 · Everyone posting here participates. Start with `-# ` to whisper.",
     "probe.message": "--- a New Rules game is starting here in a moment ---",
