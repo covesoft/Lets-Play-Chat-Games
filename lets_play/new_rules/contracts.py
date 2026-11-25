@@ -164,14 +164,17 @@ class AttachmentSnapshot:
 
 @dataclass(frozen=True, slots=True)
 class ForwardedMessageSnapshot:
-    """Transient content of the single Discord forward used by Drawing Conclusions."""
+    """Transient text and media facts from the single Discord forward."""
 
     content: str = field(repr=False)
     has_media: bool = False
+    is_voice_memo: bool = False
 
     def __post_init__(self) -> None:
-        if not isinstance(self.content, str) or type(self.has_media) is not bool:
-            raise ValueError("A forwarded snapshot requires text and a media flag.")
+        if not isinstance(self.content, str) or any(
+            type(value) is not bool for value in (self.has_media, self.is_voice_memo)
+        ):
+            raise ValueError("A forwarded snapshot requires text and boolean media facts.")
 
 
 @dataclass(frozen=True, slots=True)

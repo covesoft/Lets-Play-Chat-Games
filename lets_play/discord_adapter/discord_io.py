@@ -88,14 +88,12 @@ def message_snapshot(message, route, received):
             reference = ReferenceKind.FORWARD
             if len(message.message_snapshots) == 1:
                 item = message.message_snapshots[0]
+                extra_media = item.stickers or item.embeds or item.components
                 forwarded = ForwardedMessageSnapshot(
                     item.content,
-                    bool(
-                        item.attachments
-                        or item.stickers
-                        or item.embeds
-                        or item.components
-                        or item.flags.voice
+                    bool(item.attachments or extra_media or item.flags.voice),
+                    is_voice_memo=(
+                        item.flags.voice and len(item.attachments) == 1 and not extra_media
                     ),
                 )
         elif message.type is discord.MessageType.thread_starter_message:

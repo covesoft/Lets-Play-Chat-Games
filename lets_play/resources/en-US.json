@@ -18,6 +18,8 @@
     "cards.why_are_we_shouting.description": "Make every line of text a heading. (Start each line with `### `)",
     "cards.moment_of_silence.name": "Moment of Silence",
     "cards.moment_of_silence.description": "Send nothing.",
+    "cards.playing_telephone.name": "Playing Telephone",
+    "cards.playing_telephone.description": "Send only voice memos.",
     "mode.active_description": "Ordinary rules are suspended. They return <t:{ends}:R> in this same round.",
     "mode.scheduled_description": "Starts <t:{starts}:R>. Ordinary rules pause at the start and return <t:{ends}:R>.",
     "mode.interrupted_notice": "My connection was interrupted during the Breaking Moment. Scores and earned progress are saved. Ordinary rules return in this same round in {seconds} seconds.",

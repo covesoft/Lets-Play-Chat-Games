@@ -7,7 +7,13 @@ The flow supplies the saved Breaking Moment choice when one owns enforcement.
 
 from dataclasses import dataclass, field
 
-from lets_play.new_rules.breaking_moments import MODE_VALIDATORS, MOMENT_OF_SILENCE, ModeChoice
+from lets_play.new_rules.breaking_moments import (
+    MODE_VALIDATORS,
+    MOMENT_OF_SILENCE,
+    PLAYING_TELEPHONE,
+    ModeChoice,
+    counts_for_very_vocal,
+)
 from lets_play.new_rules.catalog import CHATGAMES_MAX_ACTIVE_DONT_FORGET
 from lets_play.new_rules.contracts import (
     EmojiIdentity,
@@ -104,6 +110,7 @@ class MessageDecision:
     actor_id: int
     evaluations: tuple[RuleEvaluation, ...]
     score: ScoreTotals
+    qualifying_voice_memo: bool = field(default=False, kw_only=True)
 
     @property
     def enroll(self) -> bool:
@@ -145,6 +152,7 @@ def evaluate_message(
     if not context.dependencies_available:
         raise RuleConfigurationError("The frozen private gameplay list is unavailable.")
     is_whisper = event.content is not None and event.content.startswith("-# ")
+    qualifying_voice_memo = False
     if (
         position.phase is Phase.MODE
         and mode is not None
@@ -161,6 +169,8 @@ def evaluate_message(
             raise NotImplementedError("Non-whisper mode messages need a mode validator.")
         evaluation = MODE_VALIDATORS[mode.card_id](event, mode)
         evaluations, score = (evaluation,), mode_score(evaluation)
+        if mode.card_id == PLAYING_TELEPHONE:
+            qualifying_voice_memo = counts_for_very_vocal(event, evaluation)
     else:
         view = parse_message(event.content)
         results = []
@@ -199,7 +209,12 @@ def evaluate_message(
         evaluations = tuple(results)
         score = ordinary_score(evaluations)
     return MessageDecision(
-        position, event.envelope.source_key, event.envelope.actor_id, evaluations, score
+        position,
+        event.envelope.source_key,
+        event.envelope.actor_id,
+        evaluations,
+        score,
+        qualifying_voice_memo=qualifying_voice_memo,
     )
 
 

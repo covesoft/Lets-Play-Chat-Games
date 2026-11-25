@@ -19,8 +19,10 @@ import aiosqlite
 
 from lets_play.new_rules.breaking_moments import (
     MODE_FAILURE_REASONS,
+    MODES_ALLOWING_UNSCORED_POSTS,
     MOMENT_OF_SILENCE,
-    WHY_ARE_WE_SHOUTING,
+    PLAYING_TELEPHONE,
+    TELEPHONE_MIN_MESSAGES,
 )
 from lets_play.new_rules.contracts import EventKind, Lifecycle, Outcome, Phase, SessionPosition
 from lets_play.new_rules.evaluation import (
@@ -522,6 +524,15 @@ class GameUnitOfWork:
         if decision.enroll:
             await self._add_score(session_id, p.round_id, decision.actor_id, decision.score)
         if is_message:
+            if decision.qualifying_voice_memo:
+                await _execute(
+                    self._conn,
+                    """INSERT INTO nr_telephone_progress VALUES (?,?,?,1)
+                    ON CONFLICT(session_id,round_id,actor_id) DO UPDATE SET
+                        qualifying_memos=qualifying_memos+1
+                    WHERE qualifying_memos<?""",
+                    (session_id, p.round_id, decision.actor_id, TELEPHONE_MIN_MESSAGES),
+                )
             for table, where, keys in (
                 ("nr_sessions", "session_id=?", (session_id,)),
                 ("nr_rounds", "session_id=? AND round_id=?", (session_id, p.round_id)),
@@ -585,6 +596,11 @@ class GameUnitOfWork:
         if type(decision.actor_id) is not int or decision.actor_id <= 0:
             raise ValueError("A positive actor ID is required.")
         if isinstance(decision, MessageDecision):
+            if type(decision.qualifying_voice_memo) is not bool or (
+                decision.qualifying_voice_memo
+                and (context.position.phase is not Phase.MODE or decision.score.whispers)
+            ):
+                raise ValueError("A qualifying voice memo must be a mode observation.")
             if decision.score.whispers:
                 if decision.score != whisper_score() or decision.evaluations:
                     raise ValueError("A whisper may only add traffic.")
@@ -603,7 +619,14 @@ class GameUnitOfWork:
                         )
                         and (
                             result.outcome is not Outcome.NOT_APPLICABLE
-                            or bout.choice.card_id == WHY_ARE_WE_SHOUTING
+                            or bout.choice.card_id in MODES_ALLOWING_UNSCORED_POSTS
+                        )
+                        and (
+                            not decision.qualifying_voice_memo
+                            or (
+                                bout.choice.card_id == PLAYING_TELEPHONE
+                                and result.outcome is Outcome.PASS
+                            )
                         )
                         and result.reason_code
                         == (

@@ -1,9 +1,9 @@
-# New Rules Discord preview — v0.3.57 / schema 20
+# New Rules Discord preview — v0.3.58 / schema 21
 
 This development build connects the existing ordinary engine to Discord. Run one
 bot process against a database. Private/requested scores, automatic interims and
 compact round-end reports and acknowledged ordinary-phase reboot recovery are
-wired. The four supported Breaking Moments use the same announced cutover.
+wired. All five Breaking Moments use the same announced cutover.
 An interrupted bout restores ordinary play after read-in. Other Breaking Moments and remaining
 release work are still open.
 
@@ -171,6 +171,13 @@ A regular post, forward, or pasted message link faults Pass It On.
     Quietude at natural expiry for players with five outgoing-round posts and
     no bout faults.
 
+16. Choose Playing Telephone in a channel where players can send voice messages.
+    Send three native recordings of at least four seconds each. Try a short
+    recording, a pure forwarded voice message, and an uploaded audio file.
+    The short recording passes and the forward is unscored. The audio file
+    gets one marker. Offline tests check the Very Vocal award at bout close and
+    verify that a recovery interruption settles the recordings already observed.
+
 ## Delivery and ordering
 
 One bounded FIFO per session orders Gateway chat/reactions, controls, ACKs and
@@ -261,6 +268,6 @@ reference and require creation strictly before the saved cutover. Held and
 recovery notices also carry exact references. A verified recovery notice from
 a superseded restart clears the old uncertainty. The latest restart gets its
 own announcement and read-in. Recovery notices use a read-only Game status
-button. Public score posts use Check current scores. Both supported modes follow recovery. Keep
+button. Public score posts use Check current scores. All five modes follow recovery. Keep
 recovery unattended; technical reconciliation is host/service work. Do not reintroduce a
 manager resume gate or expand retired debug UI. See [RECOVERY.md](RECOVERY.md).

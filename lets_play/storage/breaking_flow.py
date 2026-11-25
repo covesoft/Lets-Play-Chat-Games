@@ -3,7 +3,12 @@
 from dataclasses import dataclass, replace
 from datetime import datetime
 
-from lets_play.new_rules.breaking_moments import MODE_VALIDATORS, ModeChoice, mode_ends_at
+from lets_play.new_rules.breaking_moments import (
+    MODE_VALIDATORS,
+    PLAYING_TELEPHONE,
+    ModeChoice,
+    mode_ends_at,
+)
 from lets_play.new_rules.contracts import Advancement, Lifecycle, Phase
 from lets_play.storage.game_codec import IncompatibleState
 from lets_play.storage.game_store import _execute, _row
@@ -82,11 +87,7 @@ class BreakingFlow:
             p, phase=Phase.ORDINARY, ruleset_version=p.ruleset_version + 1, revision=p.revision + 1
         )
         await self.unit.set_owner(p, replace(context, position=new))
-        await _execute(
-            self.conn,
-            "UPDATE nr_breaking_moments SET outcome=? WHERE session_id=? AND round_id=?",
-            ("interrupted" if interrupted else "completed", p.route.session_id, p.round_id),
-        )
+        await self._finish(p, "interrupted" if interrupted else "completed")
         await _execute(
             self.conn,
             "UPDATE nr_round_pacing SET ruleset_version=?,owner_revision=? WHERE session_id=? AND round_id=?",
@@ -105,8 +106,17 @@ class BreakingFlow:
             )
 
     async def close(self, position):
-        await _execute(
+        await self._finish(position, "ended")
+
+    async def _finish(self, position, outcome):
+        session = position.route.session_id
+        bout = await _row(
             self.conn,
-            "UPDATE nr_breaking_moments SET outcome='ended' WHERE session_id=? AND round_id=? AND outcome IS NULL",
-            (position.route.session_id, position.round_id),
+            """UPDATE nr_breaking_moments SET outcome=?
+            WHERE session_id=? AND round_id=? AND outcome IS NULL RETURNING kind""",
+            (outcome, session, position.round_id),
         )
+        if bout and bout["kind"] == PLAYING_TELEPHONE:
+            from lets_play.storage.progression import Progression
+
+            await Progression(self.unit).finish_telephone(session, position.round_id)

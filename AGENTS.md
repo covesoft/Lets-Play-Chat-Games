@@ -8,7 +8,7 @@ contains operational and API documentation only.
 
 ## Current implementation
 
-Application v0.3.57 uses schema 20. M1 closed at v0.2.9/schema 8, M2 at
+Application v0.3.58 uses schema 21. M1 closed at v0.2.9/schema 8, M2 at
 v0.3.30/schema 16, and M3 at v0.3.45/schema 17. Getting Graphic opens M4.
 Preserve the existing domain/storage APIs. This build is a development-only
 Discord preview.
@@ -18,8 +18,8 @@ markers, ordinary warning/picker/choice/replacement/timeout/cutover, held play,
 same-round revival, manager ending, private live scores, requested public reports,
 gated automatic interims, compact round-end boards and ranked final standings.
 Eligible later hands use one shared Breaking Moment ticket for Drawing Conclusions,
-Getting Graphic, Why Are We Shouting, and Moment of Silence. Opening and post-mode hands are
-ordinary-only.
+Getting Graphic, Why Are We Shouting, Moment of Silence, and Playing Telephone.
+Opening and post-mode hands are ordinary-only.
 `/support-server` is registered when the resolved support URL is configured.
 All forty ordinary predicates exist. The opening pool has ten templates.
 Later offers use up to forty templates. NR032 uses its private gameplay list.
@@ -145,6 +145,10 @@ migration or command sync; documentation-only patches need no reinstall/restart.
   Moment of Silence ignores whispers, native poll posts and poll results. Each
   other human post faults once. At natural expiry, Quietude and game credit use
   five ordinary posts in the frozen outgoing round and zero faults in the bout.
+  Playing Telephone passes native voice messages and leaves voice forwards
+  unscored. Three native memos of at least 4.0 seconds each in the bout qualify
+  for Very Vocal and game credit. Resolve both when the bout closes, including
+  an early end or interruption, then discard the temporary counts.
   Credit and badge ownership are independent.
 - Lobby clocks start at actual publication (180 seconds; first choice 60).
   Starter plus two distinct humans is quorum; joins alone do not credit a game.
@@ -303,6 +307,5 @@ a claimed close, without reopening a game or occupying capacity.
 Inconclusive evidence keeps the claim unresolved. A live route stays paused
 and can be explicitly ended by a manager. An ended route remains ended without
 replaying an uncertain result. The existing authorized ending is the operator
-disposition for stalled games. Continue M4 in bounded increments. Reuse the
-shared Breaking Moment lifecycle for the remaining modes.
+disposition for stalled games. Continue M4 in bounded increments.
 The owner’s soft patch-size limit is 200 KB.

@@ -66,6 +66,12 @@ Moment of Silence faults every other human message once, regardless of content
 or media. It ignores Discord's native poll posts and automatic poll results.
 Whispers and polls create no traffic, observation, marker, or participation in
 this mode. The source guard prevents replay scoring after rules return.
+Playing Telephone passes native voice messages with one attachment and no
+accompanying text, stickers, or poll. Pure forwarded voice messages add traffic
+without a score observation or duration credit. Audio uploads, other forwards,
+and messages with text fault. The mode uses Discord's voice flag and attachment
+duration metadata. Finite native duration of at least 4.0 seconds yields one
+qualifying memo for progression. The usual whisper exemption applies.
 An applicable outcome contributes one binary observation and a failed post
 requests one marker. Mode messages contribute no ordinary participation. A mode
 without a supported choice raises `NotImplementedError` on non-whisper posts.

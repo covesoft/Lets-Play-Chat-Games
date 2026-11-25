@@ -49,7 +49,14 @@ posts made after the picker snapshot and before actual cutover. A player who
 faults during the bout loses that bout's eligibility. Whispers and native polls
 have no effect. Silence creates no success observations. The award and any
 uncredited game count commit with the completion, once per actor and game.
-Profile presentation and the remaining mode and theme predicates are future work.
+In Playing Telephone, three native voice messages of at least 4.0 seconds each
+from one player in one bout qualify for Very Vocal (`mode_telephone`) and game
+credit. On natural expiry, manager ending, or recovery interruption, settle
+already-observed qualifying messages even if the player also faulted. The
+counter saturates at three and is deleted during settlement. Voice forwards
+and shorter or unknown-duration memos contribute no count. Raw audio and
+durations are never retained. Profile presentation and theme predicates are
+future work.
 
 ## Actual round closure
 

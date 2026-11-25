@@ -16,6 +16,8 @@ from lets_play.new_rules.breaking_moments import (
     GIF_GAMEPLAY_MIN_MESSAGES,
     HEADING_MIN_MESSAGES,
     MOMENT_OF_SILENCE,
+    PLAYING_TELEPHONE,
+    TELEPHONE_MIN_MESSAGES,
     WHY_ARE_WE_SHOUTING,
 )
 from lets_play.new_rules.contracts import Lifecycle
@@ -238,6 +240,39 @@ class Progression:
             SELECT actor_id,? FROM nr_profiles WHERE actor_id IN ({eligible})
             ON CONFLICT(actor_id,badge_key) DO NOTHING""",
             (badge, *values),
+        )
+
+    @_write
+    async def finish_telephone(self, session_id: str, round_id: str) -> None:
+        """Resolve the action goal from a closed bout and discard the counters."""
+        bout = await _row(
+            self.conn,
+            """SELECT 1 FROM nr_breaking_moments
+            WHERE session_id=? AND round_id=? AND kind=? AND outcome IS NOT NULL""",
+            (session_id, round_id, PLAYING_TELEPHONE),
+        )
+        if bout is None:
+            return
+        eligible = """SELECT actor_id FROM nr_telephone_progress
+            WHERE session_id=? AND round_id=? AND qualifying_memos>=?"""
+        values = (session_id, round_id, TELEPHONE_MIN_MESSAGES)
+        await self._credit(
+            session_id,
+            f"""SELECT actor_id FROM nr_player_progress WHERE session_id=?
+            AND game_count_credited=0 AND actor_id IN ({eligible})""",
+            (session_id, *values),
+        )
+        await _execute(
+            self.conn,
+            f"""INSERT INTO nr_badges(actor_id,badge_key)
+            SELECT actor_id,'mode_telephone' FROM nr_profiles WHERE actor_id IN ({eligible})
+            ON CONFLICT(actor_id,badge_key) DO NOTHING""",
+            values,
+        )
+        await _execute(
+            self.conn,
+            "DELETE FROM nr_telephone_progress WHERE session_id=? AND round_id=?",
+            (session_id, round_id),
         )
 
     async def _credit(self, session_id, eligible, values):
