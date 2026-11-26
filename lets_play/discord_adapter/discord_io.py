@@ -32,6 +32,7 @@ from lets_play.presentation import PresentationError, default_presentation
 from lets_play.storage.discord_store import DiscordStore
 from lets_play.storage.game_codec import IncompatibleState
 from lets_play.storage.game_store import StoreOverloaded
+from lets_play.storage.guild_phrases import GuildPhraseBank
 from lets_play.storage.opening_flow import OpeningCapabilities, OpeningFlow, OpeningStatus
 from lets_play.storage.recovery_flow import RECOVERY_READ_IN_SECONDS
 from lets_play.storage.round_reports import RoundReports
@@ -771,6 +772,13 @@ class DiscordGame:
                     callback=self.support_server,
                 )
             )
+        bot.tree.add_command(
+            app_commands.Command(
+                name="wordlist",
+                description="Manage guild custom wordlist for Don't Forget",
+                callback=self.wordlist,
+            )
+        )
 
     @property
     def copy(self):
@@ -839,6 +847,19 @@ class DiscordGame:
 
     async def rules(self, interaction: discord.Interaction):
         await self._show_rules(interaction, self.route(interaction))
+
+    @app_commands.checks.has_permissions(manage_guild=True)
+    async def wordlist(self, interaction: discord.Interaction):
+        if not interaction.guild_id:
+            return await interaction.response.send_message(
+                "This command can only be used in a server.", ephemeral=True
+            )
+        async with self.runtime.store.transaction() as unit:
+            phrases = await GuildPhraseBank(unit).seed(interaction.guild_id)
+        from lets_play.discord_adapter.wordlist_ui import WordlistConfigLayoutView
+
+        view = WordlistConfigLayoutView(self.bot, interaction.guild_id, phrases)
+        await interaction.response.send_message(view=view, ephemeral=True)
 
     async def support_server(self, interaction: discord.Interaction):
         view = discord.ui.View()

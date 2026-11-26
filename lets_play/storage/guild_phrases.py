@@ -1,5 +1,7 @@
 """Guild-owned phrase settings, independent of session offers and usage."""
 
+from lets_play.new_rules.hands import PhraseChoice
+from lets_play.new_rules.phrase_bank import parse_phrase_bank
 from lets_play.storage.game_store import _execute, _row, _unit_mutating
 from lets_play.storage.opening_codec import decode_config, encode_config
 
@@ -39,3 +41,27 @@ class GuildPhraseBank:
             ON CONFLICT(guild_id) DO UPDATE SET bank_json=excluded.bank_json""",
             (guild_id, encode_config(phrases, frozenset())),
         )
+
+    @_unit_mutating
+    async def add(self, guild_id, phrase_text: str):
+        current = await self.seed(guild_id) or ()
+        texts = [p.text for p in current] + [phrase_text]
+        new_bank = parse_phrase_bank("\n".join(texts), suitability=self.unit.profanity)
+        await self.replace(guild_id, new_bank)
+        return new_bank
+
+    @_unit_mutating
+    async def remove(self, guild_id, phrase_id: str):
+        current = await self.seed(guild_id) or ()
+        new_bank = tuple(p for p in current if p.phrase_id != phrase_id)
+        reindexed = tuple(
+            PhraseChoice(str(i + 1), p.text, p.revision) for i, p in enumerate(new_bank)
+        )
+        await self.replace(guild_id, reindexed)
+        return reindexed
+
+    @_unit_mutating
+    async def reset(self, guild_id):
+        defaults = self.unit.guild_phrase_defaults or ()
+        await self.replace(guild_id, defaults)
+        return defaults
