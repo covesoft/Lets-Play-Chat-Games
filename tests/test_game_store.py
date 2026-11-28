@@ -813,3 +813,34 @@ async def test_bad_store_bounds_fail_before_creating_a_database(tmp_path, kwargs
         async with open_game_store(path, **kwargs):
             pytest.fail("Invalid store bounds were accepted")
     assert not path.exists()
+
+
+@pytest.mark.asyncio
+async def test_operator_erasure_service(tmp_path):
+    path = tmp_path / "game.sqlite3"
+    ctx = context("NR034")
+    async with open_game_store(path) as store:
+        await seed(store, ctx)
+        assert await store.apply(message(ctx)) is ApplyStatus.APPLIED
+        async with store.transaction() as unit:
+            assert await unit.get_context("session-a") is not None
+            deleted = await unit.erase_session("session-a")
+            assert deleted > 0
+            assert await unit.get_context("session-a") is None
+
+        async with store.transaction() as unit:
+            with pytest.raises(ValueError):
+                await unit.erase_session("")
+
+        async with store.transaction() as unit:
+            with pytest.raises(ValueError):
+                await unit.erase_guild(0)
+
+        other_route = SessionRoute(101, 203, "session-b")
+        other_ctx = context("NR034", position=replace(POSITION, route=other_route))
+        async with store.transaction() as unit:
+            await unit.insert_session(other_ctx)
+            assert await unit.get_context("session-b") is not None
+            deleted_guild = await unit.erase_guild(101)
+            assert deleted_guild > 0
+            assert await unit.get_context("session-b") is None
