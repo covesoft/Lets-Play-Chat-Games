@@ -5,7 +5,6 @@ import asyncio
 import discord
 
 from lets_play.discord_adapter.beacon_helper_views import DestructiveConfirmationView
-
 from lets_play.new_rules.phrase_bank import PhraseBankError
 from lets_play.storage.guild_phrases import GuildPhraseBank
 
@@ -89,7 +88,10 @@ class WordlistConfigLayoutView(discord.ui.LayoutView):
             # Buttons
             container.add_item(discord.ui.Separator())
             add_btn = discord.ui.Button(
-                label="Add Phrase", style=discord.ButtonStyle.primary, custom_id="wordlist:add", disabled=len(self.phrases) >= 15
+                label="Add Phrase",
+                style=discord.ButtonStyle.primary,
+                custom_id="wordlist:add",
+                disabled=len(self.phrases) >= 15,
             )
             add_btn.callback = self.add_callback
             reset_btn = discord.ui.Button(
@@ -149,9 +151,7 @@ class WordlistConfigLayoutView(discord.ui.LayoutView):
             except Exception as e:
                 try:
                     if not i.response.is_done():
-                        await i.response.send_message(
-                            f"An error occurred: {e}", ephemeral=True
-                        )
+                        await i.response.send_message(f"An error occurred: {e}", ephemeral=True)
                     else:
                         await i.followup.send(f"An error occurred: {e}", ephemeral=True)
                 except Exception:

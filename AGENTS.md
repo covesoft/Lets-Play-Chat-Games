@@ -81,7 +81,7 @@ proposed next steps are historical; use current source and owner instructions.
 
 ## Development and verification
 
-Use Python 3.13. `pyproject.toml` owns dependency pins; update `uv.lock` and both
+Use Python 3.15. `pyproject.toml` owns dependency pins; update `uv.lock` and both
 requirements exports together. Use `CHATGAMES_*` configuration names, with no
 legacy aliases. Run `python -m lets_play` or the installed `lets-play` command.
 Offline tests require no token or external private list.

@@ -61,5 +61,5 @@ def decode_config(value):
         phrases = tuple(PhraseChoice(*p) for p in data["phrases"])
         encode_config(phrases, templates)
         return phrases, templates
-    except (ValueError, TypeError, KeyError, AttributeError, NotImplementedError):
+    except ValueError, TypeError, KeyError, AttributeError, NotImplementedError:
         raise IncompatibleState("Opening configuration needs explicit recovery.") from None

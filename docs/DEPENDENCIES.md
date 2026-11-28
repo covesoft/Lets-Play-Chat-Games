@@ -1,8 +1,8 @@
 # Dependency verification — foundation and offline M1 increments
 
 Verified November 6, 2026 against publisher metadata from PyPI and an actual
-installation using **CPython 3.13.17 on Linux**. These are tested pins, not a claim
-of universal compatibility or a dependency security audit. Python 3.13 is the
+installation using **CPython 3.15.0 on Linux**. These are tested pins, not a claim
+of universal compatibility or a dependency security audit. Python 3.15 is the
 supported minor version; the patch release can differ on the owner’s machine.
 
 | Runtime distribution | Pin | Purpose |
@@ -16,17 +16,17 @@ supported minor version; the patch release can differ on the owner’s machine.
 
 Python supplies `asyncio`, `sqlite3`, `logging`, `pathlib`, `dataclasses`, and the
 other standard-library modules used here. Do not add those to requirements.
-`discord.py` supplies `aiohttp` and the Python-3.13 `audioop-lts` compatibility
+`discord.py` supplies `aiohttp` and the Python-3.15 `audioop-lts` compatibility
 dependency transitively; the latter is not a request for voice-channel support.
 Pillow, FFmpeg, PyNaCl, davey, a database ORM, and a migration framework are not
 needed for M0. The first M1 parser increment adds `regex` for Unicode word/grapheme properties
 and `markdown-it-py` for structured tokenization. Their pins were checked against
-PyPI metadata and installed/tested on CPython 3.13.17. `mdurl` is a transitive
+PyPI metadata and installed/tested on CPython 3.15.0. `mdurl` is a transitive
 dependency; no renderer, HTTP parser service, or media downloader is introduced.
 
 The v0.2.1 evaluation/scoring increment adds no dependencies. Its exact arithmetic
 uses standard-library `fractions.Fraction`. The existing pins were reinstalled
-and verified together on Linux/Python 3.13.17 on November 7, 2026; this is separate
+and verified together on Linux/Python 3.15.0 on November 7, 2026; this is separate
 from Windows execution evidence.
 
 The v0.2.2 SQLite unit of work also adds no dependencies. It uses the pinned

@@ -76,6 +76,6 @@ def load_guild_phrases(
             text = data.decode("utf-8-sig")
         else:
             raise PhraseBankError("The phrase file exceeds 16 KiB.")
-    except (OSError, UnicodeError):
+    except OSError, UnicodeError:
         raise PhraseBankError("The phrase file must be readable UTF-8.") from None
     return parse_phrase_bank(text, suitability=suitability)

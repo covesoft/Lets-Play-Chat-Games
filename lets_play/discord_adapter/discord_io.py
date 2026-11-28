@@ -628,7 +628,7 @@ class DiscordTransport:
                 await channel.get_partial_message(state.recovery_notice_id).edit(
                     embed=embed, view=view, allowed_mentions=discord.AllowedMentions.none()
                 )
-        except (discord.HTTPException, TimeoutError):
+        except discord.HTTPException, TimeoutError:
             # The notice already exists. A cosmetic correction cannot restart read-in.
             pass
 
@@ -839,7 +839,7 @@ class DiscordGame:
                 replies.get(result, self.copy.text("start.failed")),
                 ephemeral=True,
             )
-        except (LaneUnavailable, discord.HTTPException, TimeoutError, StoreOverloaded):
+        except LaneUnavailable, discord.HTTPException, TimeoutError, StoreOverloaded:
             await interaction.followup.send(
                 self.copy.text("start.access_failed"),
                 ephemeral=True,
@@ -877,7 +877,7 @@ class DiscordGame:
         await interaction.response.defer(ephemeral=True, thinking=True)
         try:
             state = await self.runtime.state(route.session_id) if route else None
-        except (IncompatibleState, StoreOverloaded):
+        except IncompatibleState, StoreOverloaded:
             await interaction.followup.send(
                 self.copy.text("reboot.blocked_description"), ephemeral=True
             )
@@ -1280,7 +1280,7 @@ class DiscordGame:
             if state is None or state.admission.stage != "ended":
                 raise ValueError("Final results are unavailable.")
             embed, view = render(state, kind="closed", page=int(page), presentation=self.copy)
-        except (ValueError, StoreOverloaded):
+        except ValueError, StoreOverloaded:
             await requested_summary.reply_private(
                 interaction, editing, content=self.copy.text("results.unavailable")
             )

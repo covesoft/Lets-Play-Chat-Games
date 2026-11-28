@@ -231,7 +231,7 @@ def assess_state(
         phrases = tuple(phrase_keys(i) for i in instances if i.card_id == "NR036")
     except ParserLimitError:
         return Assessment(rejection=Rejection.SEARCH_LIMIT)
-    except (ValueError, NotImplementedError):
+    except ValueError, NotImplementedError:
         return Assessment(rejection=Rejection.INVALID)
     if any(len(phrase) > budget.max_words for phrase in phrases):
         return Assessment(rejection=Rejection.SEARCH_LIMIT)

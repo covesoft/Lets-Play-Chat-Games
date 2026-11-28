@@ -1,13 +1,15 @@
-"""Interaction views and components copied from the Beacon Framework because it requires Python 3.14 but the project uses 3.13"""
+"""Interaction views and components copied from the Beacon Framework because it requires Python 3.14 but the project uses 3.15"""
+
+import inspect
+from collections.abc import Callable, Coroutine
+from typing import Any
 
 import discord
-from typing import Any, Callable, Coroutine
-import inspect
+
 
 class PrivateView(discord.ui.View):
-    """Base view that only accepts interactions from one authorized user.
+    """Base view that only accepts interactions from one authorized user."""
 
-    """
     def __init__(self, user: discord.User | discord.Member, *args, **kwargs):
         """Initialize a private interaction view bound to a specific user.
 
@@ -29,20 +31,22 @@ class PrivateView(discord.ui.View):
             bool: True when the check passes.
         """
         if interaction.user.id != self.user.id:
-            watermark = getattr(interaction.client, "FRAMEWORK_WATERMARK", "\n-# Powered by [Beacon Framework](<https://beacon.dopaminestudios.in/>).")
+            watermark = getattr(
+                interaction.client,
+                "FRAMEWORK_WATERMARK",
+                "\n-# Powered by [Beacon Framework](<https://beacon.dopaminestudios.in/>).",
+            )
             await interaction.response.send_message(
                 f"This isn't for you! This menu was originally opened by {self.user.mention}. To use it, you will have to run the original command yourself, I don't make the rules.{watermark}",
-                ephemeral=True
+                ephemeral=True,
             )
             return False
         return True
 
 
-
 class PrivateLayoutView(discord.ui.LayoutView):
-    """Layout-view variant that enforces single-user interaction ownership.
+    """Layout-view variant that enforces single-user interaction ownership."""
 
-    """
     def __init__(self, user: discord.User | discord.Member, *args, **kwargs):
         """Initialize a private layout view bound to a specific user.
 
@@ -64,28 +68,43 @@ class PrivateLayoutView(discord.ui.LayoutView):
             bool: True when the check passes.
         """
         if interaction.user.id != self.user.id:
-            watermark = getattr(interaction.client, "FRAMEWORK_WATERMARK", "\n-# Powered by [Beacon Framework](<https://beacon.dopaminestudios.in/>).")
+            watermark = getattr(
+                interaction.client,
+                "FRAMEWORK_WATERMARK",
+                "\n-# Powered by [Beacon Framework](<https://beacon.dopaminestudios.in/>).",
+            )
             await interaction.response.send_message(
                 f"This isn't for you! This menu was originally opened by {self.user.mention}. To use it, you will have to run the original command yourself, I don't make the rules.{watermark}",
-                ephemeral=True
+                ephemeral=True,
             )
             return False
         return True
 
+
 class ConfirmationView(PrivateLayoutView):
-    def __init__(self, user: discord.User | discord.Member, timeout: float = 30.0, title_text: str = "Pending Confirmation", body_text: str = "Click Confirm to confirm the action.", on_confirmation_callback: Callable[[discord.Interaction], Any | Coroutine[Any, Any, Any]] | None = None, *args, **kwargs):
+    def __init__(
+        self,
+        user: discord.User | discord.Member,
+        timeout: float = 30.0,
+        title_text: str = "Pending Confirmation",
+        body_text: str = "Click Confirm to confirm the action.",
+        on_confirmation_callback: Callable[[discord.Interaction], Any | Coroutine[Any, Any, Any]]
+        | None = None,
+        *args,
+        **kwargs,
+    ):
         """A custom Confirmation View that executes a custom callback that you define and passes the arguments you provide into it.
 
-                Args:
-                    user: The discord user or member object of the user who originally triggered the interaction or command, so that only they can use this confirmation view.
-                    timeout: The timeout for the discord view.
-                    title_text: The big title text shown at the top of the confirmation view.
-                    body_text: The body text of the confirmation view.
-                    on_confirmation_callback: A synchronous or asynchronous function to execute when "Confirm" is successfully pressed. Use functools.partial if it requires any extra arguments other than interaction.
-                    *args: Positional arguments forwarded to the underlying implementation.
-                    **kwargs: Additional keyword arguments forwarded to the underlying implementation.
-                """
-        super().__init__(user, timeout=timeout, *args, **kwargs)
+        Args:
+            user: The discord user or member object of the user who originally triggered the interaction or command, so that only they can use this confirmation view.
+            timeout: The timeout for the discord view.
+            title_text: The big title text shown at the top of the confirmation view.
+            body_text: The body text of the confirmation view.
+            on_confirmation_callback: A synchronous or asynchronous function to execute when "Confirm" is successfully pressed. Use functools.partial if it requires any extra arguments other than interaction.
+            *args: Positional arguments forwarded to the underlying implementation.
+            **kwargs: Additional keyword arguments forwarded to the underlying implementation.
+        """
+        super().__init__(user, *args, timeout=timeout, **kwargs)
         self.value = None
         self.colour = None
         self.title_text = title_text
@@ -105,8 +124,12 @@ class ConfirmationView(PrivateLayoutView):
 
         is_disabled = self.value is not None
         action_row = discord.ui.ActionRow()
-        cancel = discord.ui.Button(label="Cancel", style=discord.ButtonStyle.secondary, disabled=is_disabled)
-        confirm = discord.ui.Button(label="Confirm", style=discord.ButtonStyle.green, disabled=is_disabled)
+        cancel = discord.ui.Button(
+            label="Cancel", style=discord.ButtonStyle.secondary, disabled=is_disabled
+        )
+        confirm = discord.ui.Button(
+            label="Confirm", style=discord.ButtonStyle.green, disabled=is_disabled
+        )
 
         cancel.callback = self.cancel_callback
         confirm.callback = self.confirm_callback
@@ -118,7 +141,9 @@ class ConfirmationView(PrivateLayoutView):
 
         self.add_item(container)
 
-    async def update_view(self, interaction: discord.Interaction | None, title: str, colour: discord.Colour):
+    async def update_view(
+        self, interaction: discord.Interaction | None, title: str, colour: discord.Colour
+    ):
         self.title_text = title
         self.body_text = f"~~{self.body_text}~~"
         self.colour = colour
@@ -139,7 +164,7 @@ class ConfirmationView(PrivateLayoutView):
 
     async def cancel_callback(self, interaction: discord.Interaction):
         self.value = False
-        await self.update_view(interaction, "Action Canceled", discord.Color(0xdf5046))
+        await self.update_view(interaction, "Action Canceled", discord.Color(0xDF5046))
 
     async def confirm_callback(self, interaction: discord.Interaction):
         self.value = True
@@ -154,21 +179,32 @@ class ConfirmationView(PrivateLayoutView):
     async def on_timeout(self) -> None:
         if self.value is None:
             self.value = False
-            await self.update_view(None, "Timed Out", discord.Color(0xdf5046))
+            await self.update_view(None, "Timed Out", discord.Color(0xDF5046))
+
 
 class DestructiveConfirmationView(PrivateLayoutView):
-    def __init__(self, user: discord.User | discord.Member, timeout: float = 30.0, title_text: str = "Pending Confirmation", body_text: str = "Click Confirm to confirm the action.", on_confirmation_callback: Callable[[discord.Interaction], Any | Coroutine[Any, Any, Any]] | None = None, *args, **kwargs):
+    def __init__(
+        self,
+        user: discord.User | discord.Member,
+        timeout: float = 30.0,
+        title_text: str = "Pending Confirmation",
+        body_text: str = "Click Confirm to confirm the action.",
+        on_confirmation_callback: Callable[[discord.Interaction], Any | Coroutine[Any, Any, Any]]
+        | None = None,
+        *args,
+        **kwargs,
+    ):
         """Like Beacon's normal Confirmation View, but the button is red. A custom Confirmation View that executes a custom callback that you define and passes the arguments you provide into it.
 
-                Args:
-                    user: The discord user or member object of the user who originally triggered the interaction or command, so that only they can use this confirmation view.
-                    timeout: The timeout for the discord view.
-                    title_text: The big title text shown at the top of the confirmation view.
-                    body_text: The body text of the confirmation view.
-                    on_confirmation_callback: A synchronous or asynchronous function to execute when "Confirm" is successfully pressed. Use functools.partial if it requires any extra arguments other than interaction.
-                    *args: Positional arguments forwarded to the underlying implementation.
-                    **kwargs: Additional keyword arguments forwarded to the underlying implementation.
-                """
+        Args:
+            user: The discord user or member object of the user who originally triggered the interaction or command, so that only they can use this confirmation view.
+            timeout: The timeout for the discord view.
+            title_text: The big title text shown at the top of the confirmation view.
+            body_text: The body text of the confirmation view.
+            on_confirmation_callback: A synchronous or asynchronous function to execute when "Confirm" is successfully pressed. Use functools.partial if it requires any extra arguments other than interaction.
+            *args: Positional arguments forwarded to the underlying implementation.
+            **kwargs: Additional keyword arguments forwarded to the underlying implementation.
+        """
         super().__init__(user, timeout=timeout)
         self.value = None
         self.colour = None
@@ -189,8 +225,12 @@ class DestructiveConfirmationView(PrivateLayoutView):
 
         is_disabled = self.value is not None
         action_row = discord.ui.ActionRow()
-        cancel = discord.ui.Button(label="Cancel", style=discord.ButtonStyle.secondary, disabled=is_disabled)
-        confirm = discord.ui.Button(label="Confirm", style=discord.ButtonStyle.danger, disabled=is_disabled)
+        cancel = discord.ui.Button(
+            label="Cancel", style=discord.ButtonStyle.secondary, disabled=is_disabled
+        )
+        confirm = discord.ui.Button(
+            label="Confirm", style=discord.ButtonStyle.danger, disabled=is_disabled
+        )
 
         cancel.callback = self.cancel_callback
         confirm.callback = self.confirm_callback
@@ -202,7 +242,9 @@ class DestructiveConfirmationView(PrivateLayoutView):
 
         self.add_item(container)
 
-    async def update_view(self, interaction: discord.Interaction | None, title: str, colour: discord.Colour):
+    async def update_view(
+        self, interaction: discord.Interaction | None, title: str, colour: discord.Colour
+    ):
         self.title_text = title
         self.body_text = f"~~{self.body_text}~~"
         self.colour = colour
@@ -223,7 +265,7 @@ class DestructiveConfirmationView(PrivateLayoutView):
 
     async def cancel_callback(self, interaction: discord.Interaction):
         self.value = False
-        await self.update_view(interaction, "Action Canceled", discord.Color(0xdf5046))
+        await self.update_view(interaction, "Action Canceled", discord.Color(0xDF5046))
 
     async def confirm_callback(self, interaction: discord.Interaction):
         self.value = True
@@ -238,4 +280,4 @@ class DestructiveConfirmationView(PrivateLayoutView):
     async def on_timeout(self) -> None:
         if self.value is None:
             self.value = False
-            await self.update_view(None, "Timed Out", discord.Color(0xdf5046))
+            await self.update_view(None, "Timed Out", discord.Color(0xDF5046))

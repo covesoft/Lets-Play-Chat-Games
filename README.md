@@ -50,11 +50,11 @@ notes are excluded from Git and package distributions.
 
 ## Install on Windows
 
-Use **CPython 3.13** and run these commands from the repository root in VS Code’s
+Use **CPython 3.15** and run these commands from the repository root in VS Code’s
 terminal. An existing clone/folder named `Chat_Rules` is fine.
 
 ```powershell
-py -3.13 -m venv .venv
+py -3.15 -m venv .venv
 .venv\Scripts\python -m pip install -r requirements-dev.txt
 .venv\Scripts\python -m pip install -e . --no-deps
 ```
@@ -66,7 +66,7 @@ point. `python -m lets_play` is the standard package entry point.
 On Linux:
 
 ```bash
-python3.13 -m venv .venv
+python3.15 -m venv .venv
 .venv/bin/python -m pip install -r requirements-dev.txt
 .venv/bin/python -m pip install -e . --no-deps
 ```
@@ -138,14 +138,14 @@ python -m pip check
 
 Tests need no Discord token, private word list, external service, or real-time
 gameplay delays. They use temporary databases and harmless text fixtures.
-GitHub Actions is configured for Python 3.13 on Ubuntu and Windows; its actual
+GitHub Actions is configured for Python 3.15 on Ubuntu and Windows; its actual
 results must be checked after pushing. Local Linux results do not certify Windows.
 
 ## Dependencies and layout
 
 `pyproject.toml` is the source for direct pins and test tooling. `uv.lock`
 captures resolution, and the generated requirements files include transitive
-pins and platform markers for Python 3.13. See
+pins and platform markers for Python 3.15. See
 [dependency verification](docs/DEPENDENCIES.md) for versions and reproducible
 update commands.
 

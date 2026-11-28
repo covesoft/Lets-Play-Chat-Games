@@ -132,7 +132,7 @@ class MessageView:
                 destinations.add(destination)
         return self.links + tuple(bare)
 
-    def without_urls(self) -> "MessageView | None":
+    def without_urls(self) -> MessageView | None:
         """Use the visible text without URL spans, or skip a URL-only post."""
         text = self._logical_without_urls
         if text is None:

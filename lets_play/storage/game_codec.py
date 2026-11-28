@@ -83,7 +83,7 @@ def decode_context(
             tuple(EmojiIdentity(custom, unicode) for custom, unicode in data["exclusions"]),
             profanity=profanity,
         )
-    except (ValueError, TypeError, KeyError, AttributeError, NotImplementedError):
+    except ValueError, TypeError, KeyError, AttributeError, NotImplementedError:
         raise IncompatibleState("Live context is invalid; explicit recovery is required.") from None
 
 
@@ -115,5 +115,5 @@ def decode_score(row: sqlite3.Row) -> ScoreTotals:
             else:
                 values[item.name] = row[item.name]
         return ScoreTotals(**values)
-    except (ValueError, TypeError, ZeroDivisionError):
+    except ValueError, TypeError, ZeroDivisionError:
         raise IncompatibleState("Stored score is invalid; explicit recovery is required.") from None

@@ -110,7 +110,7 @@ def load_profanity_list(path: Path | None) -> ProfanityList | None:
             data = source.read(MAX_LIST_BYTES + 1)
         if len(data) <= MAX_LIST_BYTES:
             return ProfanityList(data.decode("utf-8-sig"))
-    except (OSError, ValueError):
+    except OSError, ValueError:
         # Diagnostics deliberately omit the path, entry and underlying exception.
         pass
     return None

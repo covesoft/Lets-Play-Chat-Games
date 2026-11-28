@@ -175,7 +175,7 @@ def decode_hand(
             data["evaluator"],
             data["parser"],
         )
-    except (ValueError, TypeError, KeyError, AttributeError, OverflowError, NotImplementedError):
+    except ValueError, TypeError, KeyError, AttributeError, OverflowError, NotImplementedError:
         raise IncompatibleState(
             "Stored offer needs explicit recovery; it cannot be reinterpreted."
         ) from None
