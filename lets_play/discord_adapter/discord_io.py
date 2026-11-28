@@ -774,9 +774,9 @@ class DiscordGame:
             )
         bot.tree.add_command(
             app_commands.Command(
-                name="wordlist",
-                description="Manage guild custom wordlist for Don't Forget",
-                callback=self.wordlist,
+                name="settings",
+                description="Centralised settings manager for all games",
+                callback=self.settings,
             )
         )
 
@@ -849,7 +849,7 @@ class DiscordGame:
         await self._show_rules(interaction, self.route(interaction))
 
     @app_commands.checks.has_permissions(manage_guild=True)
-    async def wordlist(self, interaction: discord.Interaction):
+    async def settings(self, interaction: discord.Interaction):
         if not interaction.guild_id:
             return await interaction.response.send_message(
                 "This command can only be used in a server.", ephemeral=True
