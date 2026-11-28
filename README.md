@@ -129,12 +129,14 @@ audio decoding. Do not install `discord.py[voice]`, Pillow, or a separate
 ## Verify offline
 
 ```bash
-python -m pytest
+python -m pytest -n auto
 python -m ruff check .
 python -m ruff format --check .
 python -m build
 python -m pip check
 ```
+
+Tests run in parallel across available CPU cores using `pytest-xdist` (`-n auto`), dramatically reducing test suite execution time and optimizing continuous integration and local development feedback loops.
 
 Tests need no Discord token, private word list, external service, or real-time
 gameplay delays. They use temporary databases and harmless text fixtures.

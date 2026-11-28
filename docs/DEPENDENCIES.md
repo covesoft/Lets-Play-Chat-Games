@@ -56,12 +56,17 @@ codecs. Direct/transitive pins and environment keys remain unchanged.
 | --- | --- | --- |
 | `pytest` | 9.2.0 | Offline test runner |
 | `pytest-asyncio` | 1.4.1.post1 | Strict async tests |
+| `pytest-xdist` | 3.8.0 | Parallel test execution (`-n auto`) |
 | `ruff` | 0.17.4 | Lint and formatting |
 | `build` | 1.6.1 | Isolated source/wheel build checks |
 | `setuptools` | 84.2.1 | Pinned PEP 517 build backend |
 
 NR032 uses the private configured gameplay list and the shared
 [word parser](PARSER.md#mind-your-language).
+
+## Parallel Test Execution & Performance (`pytest-xdist`)
+
+The test suite integrates `pytest-xdist` to enable parallel test execution via the `-n auto` flag. By distributing tests across available CPU cores, `pytest-xdist` significantly reduces overall test suite execution time, providing faster feedback loops for local development workflows and continuous integration (CI) pipelines. Contributors should always run tests using `python -m pytest -n auto` (or `uv run --locked python -m pytest -n auto`).
 
 ## Lock and update procedure
 
@@ -79,7 +84,7 @@ uv lock
 uv sync --locked
 uv export --locked --no-dev --no-emit-project --no-hashes --output-file requirements.txt
 uv export --locked --no-emit-project --no-hashes --output-file requirements-dev.txt
-uv run --locked python -m pytest
+uv run --locked python -m pytest -n auto
 uv run --locked python -m ruff check .
 uv run --locked python -m ruff format --check .
 uv run --locked python -m build

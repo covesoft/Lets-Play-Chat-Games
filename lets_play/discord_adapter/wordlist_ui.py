@@ -1,8 +1,8 @@
 from __future__ import annotations
 
 import discord
-
 from beacon import DestructiveConfirmationView
+
 from lets_play.new_rules.phrase_bank import PhraseBankError
 from lets_play.storage.guild_phrases import GuildPhraseBank
 
@@ -161,7 +161,7 @@ class WordlistConfigLayoutView(discord.ui.LayoutView):
             body_text="Are you sure you want to delete all custom phrases and reset the wordlist to system defaults?",
             on_confirmation_callback=confirm_reset,
             parent_view=self,
-            parent_view_refresh_function=self.build_layout
+            parent_view_refresh_function=self.build_layout,
         )
         await interaction.response.edit_message(view=view)
 

@@ -89,7 +89,7 @@ Offline tests require no token or external private list.
 For behavior changes, run meaningful scenarios and the appropriate regression:
 
 ```bash
-python -m pytest
+python -m pytest -n auto
 python -m ruff check .
 python -m ruff format --check .
 python -m lets_play --check-config

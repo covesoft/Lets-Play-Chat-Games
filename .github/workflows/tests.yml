@@ -25,7 +25,7 @@ jobs:
       - run: python -m pip install -e . --no-deps
       - run: python -m pip check
       - run: python -m lets_play --check-config
-      - run: python -m pytest
+      - run: python -m pytest -n auto
       - run: python -m ruff check .
       - run: python -m ruff format --check .
       - run: python -m build
