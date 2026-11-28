@@ -44,7 +44,7 @@ class AddPhraseModal(discord.ui.Modal):
                 await interaction.followup.send(msg, ephemeral=True)
 
 
-class WordlistConfigLayoutView(discord.ui.LayoutView):
+class WordlistConfigView(discord.ui.LayoutView):
     def __init__(self, bot, guild_id: int, phrases, presentation=None):
         super().__init__(timeout=300)
         self.bot = bot

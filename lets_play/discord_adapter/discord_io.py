@@ -856,9 +856,9 @@ class DiscordGame:
             )
         async with self.runtime.store.transaction() as unit:
             phrases = await GuildPhraseBank(unit).seed(interaction.guild_id)
-        from lets_play.discord_adapter.wordlist_ui import WordlistConfigLayoutView
+        from lets_play.discord_adapter.wordlist_ui import WordlistConfigView
 
-        view = WordlistConfigLayoutView(self.bot, interaction.guild_id, phrases)
+        view = WordlistConfigView(self.bot, interaction.guild_id, phrases)
         await interaction.response.send_message(view=view, ephemeral=True)
 
     async def support_server(self, interaction: discord.Interaction):

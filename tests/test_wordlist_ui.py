@@ -1,7 +1,7 @@
 import discord
 import pytest
 
-from lets_play.discord_adapter.wordlist_ui import WordlistConfigLayoutView
+from lets_play.discord_adapter.wordlist_ui import WordlistConfigView
 from lets_play.new_rules.phrase_bank import parse_phrase_bank
 from lets_play.storage.game_store import open_game_store
 from lets_play.storage.guild_phrases import GuildPhraseBank
@@ -50,7 +50,7 @@ def test_wordlist_config_layout_view():
     class MockBot:
         settings = MockSettings()
 
-    view = WordlistConfigLayoutView(MockBot(), 123456789, phrases)
+    view = WordlistConfigView(MockBot(), 123456789, phrases)
     assert len(view.children) > 0
     # Verify sections with remove buttons
     container = view.children[0]
@@ -100,7 +100,7 @@ def test_wordlist_config_layout_view_with_six_phrases():
     class MockBot:
         settings = MockSettings()
 
-    view = WordlistConfigLayoutView(MockBot(), 123456789, phrases)
+    view = WordlistConfigView(MockBot(), 123456789, phrases)
     container = view.children[0]
     text_displays = [
         item for item in container.children if isinstance(item, discord.ui.TextDisplay)
