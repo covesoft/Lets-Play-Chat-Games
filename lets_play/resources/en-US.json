@@ -367,6 +367,7 @@
     "wordlist.title": "## Don't Forget Wordlist Management",
     "wordlist.description": "Players must include one of these phrases during Don't Forget card activations.",
     "wordlist.empty_description": "Nothing here yet. Add your own custom beautiful phrase!",
+    "wordlist.slots_count": "{count}/15 Slots Used",
     "buttons.wordlist_add": "Add Phrase",
     "buttons.wordlist_reset": "Delete All Custom Phrases",
     "wordlist.reset_title": "Delete All Custom Phrases",

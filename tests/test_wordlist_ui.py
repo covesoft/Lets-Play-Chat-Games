@@ -54,6 +54,9 @@ def test_wordlist_config_layout_view():
     assert len(view.children) > 0
     # Verify sections with remove buttons
     container = view.children[0]
+    first_section = container.children[0]
+    assert isinstance(first_section, discord.ui.Section)
+    assert first_section.accessory.label == "2/15 Slots Used"
     sections = [
         item
         for item in container.children

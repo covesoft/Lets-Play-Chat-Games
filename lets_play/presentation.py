@@ -95,6 +95,7 @@ TEMPLATE_FIELDS = {
     "scheduled.description": frozenset({"timestamp"}),
     "wordlist.error_add": frozenset({"e"}),
     "wordlist.error_generic": frozenset({"e"}),
+    "wordlist.slots_count": frozenset({"count"}),
 }
 
 
@@ -169,6 +170,7 @@ def _validate_strings(strings):
                             "rule",
                             "name",
                             "e",
+                            "count",
                         }
                         else 1
                     )

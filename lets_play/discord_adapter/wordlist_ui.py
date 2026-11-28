@@ -77,7 +77,9 @@ class WordlistConfigLayoutView(discord.ui.LayoutView):
         container = discord.ui.Container()
         if self.phrases:
             phrases_count_btn = discord.ui.Button(
-                label=f"{len(self.phrases)}/15", style=discord.ButtonStyle.secondary, disabled=True
+                label=self.copy.text("wordlist.slots_count", count=len(self.phrases)),
+                style=discord.ButtonStyle.secondary,
+                disabled=True,
             )
             container.add_item(
                 discord.ui.Section(
