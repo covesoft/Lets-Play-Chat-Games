@@ -51,7 +51,24 @@ class WordlistConfigLayoutView(discord.ui.LayoutView):
         self.guild_id = guild_id
         self.phrases = phrases or ()
         self.copy = presentation or getattr(bot, "presentation", None) or default_presentation()
+        settings = getattr(bot, "settings", None) if bot else None
+        add_emoji_str = getattr(settings, "add_emoji", None) if settings else None
+        cancel_emoji_str = getattr(settings, "cancel_emoji", None) if settings else None
+        self.add_emoji = self._parse_emoji(add_emoji_str)
+        self.cancel_emoji = self._parse_emoji(cancel_emoji_str)
         self.build_layout()
+
+    def _parse_emoji(self, val):
+        if not val:
+            return None
+        if isinstance(val, (discord.PartialEmoji, discord.Emoji)):
+            return val
+        if isinstance(val, str):
+            try:
+                return discord.PartialEmoji.from_str(val)
+            except Exception:
+                return val
+        return val
 
     def build_layout(self):
         self.clear_items()
@@ -74,7 +91,7 @@ class WordlistConfigLayoutView(discord.ui.LayoutView):
         if self.phrases:
             for p in self.phrases:
                 remove_btn = discord.ui.Button(
-                    label=self.copy.text("buttons.wordlist_remove"),
+                    emoji=self.cancel_emoji,
                     style=discord.ButtonStyle.secondary,
                     custom_id=f"wordlist:remove:{p.phrase_id}",
                 )
@@ -89,6 +106,7 @@ class WordlistConfigLayoutView(discord.ui.LayoutView):
             container.add_item(discord.ui.Separator())
             add_btn = discord.ui.Button(
                 label=self.copy.text("buttons.wordlist_add"),
+                emoji=self.add_emoji,
                 style=discord.ButtonStyle.primary,
                 custom_id="wordlist:add",
                 disabled=len(self.phrases) >= 15,
@@ -108,6 +126,7 @@ class WordlistConfigLayoutView(discord.ui.LayoutView):
         else:
             add_btn = discord.ui.Button(
                 label=self.copy.text("buttons.wordlist_add"),
+                emoji=self.add_emoji,
                 style=discord.ButtonStyle.primary,
                 custom_id="wordlist:add",
             )

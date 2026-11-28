@@ -41,7 +41,15 @@ async def test_guild_phrase_bank_mutations(tmp_path):
 
 def test_wordlist_config_layout_view():
     phrases = parse_phrase_bank("hello world\nnice duck")
-    view = WordlistConfigLayoutView(None, 123456789, phrases)
+
+    class MockSettings:
+        add_emoji = "➕"
+        cancel_emoji = "❌"
+
+    class MockBot:
+        settings = MockSettings()
+
+    view = WordlistConfigLayoutView(MockBot(), 123456789, phrases)
     assert len(view.children) > 0
     # Verify sections with remove buttons
     container = view.children[0]
@@ -56,7 +64,8 @@ def test_wordlist_config_layout_view():
     assert len(sections) == 2
     for sec in sections:
         assert isinstance(sec.accessory, discord.ui.Button)
-        assert sec.accessory.label == "Remove"
+        assert sec.accessory.label is None
+        assert sec.accessory.emoji is not None
         assert sec.accessory.style == discord.ButtonStyle.secondary
         assert sec.accessory.custom_id.startswith("wordlist:remove:")
 
