@@ -55,9 +55,11 @@ class WordlistConfigLayoutView(discord.ui.LayoutView):
         add_emoji_str = getattr(settings, "add_emoji", None) if settings else None
         cancel_emoji_str = getattr(settings, "cancel_emoji", None) if settings else None
         bin_emoji_str = getattr(settings, "bin_emoji", None) if settings else None
+        info_emoji_str = getattr(settings, "info_emoji", None) if settings else None
         self.add_emoji = self._parse_emoji(add_emoji_str)
         self.cancel_emoji = self._parse_emoji(cancel_emoji_str)
         self.bin_emoji = self._parse_emoji(bin_emoji_str)
+        self.info_emoji = self._parse_emoji(info_emoji_str)
         self.build_layout()
 
     def _parse_emoji(self, val):
@@ -107,7 +109,9 @@ class WordlistConfigLayoutView(discord.ui.LayoutView):
                 container.add_item(section)
                 if idx == 4 and len(self.phrases) > 5:
                     container.add_item(
-                        discord.ui.TextDisplay(self.copy.text("wordlist.limit_notice"))
+                        discord.ui.TextDisplay(
+                            f"""{self.info_emoji} {self.copy.text("wordlist.limit_notice")}"""
+                        )
                     )
 
             # Buttons
