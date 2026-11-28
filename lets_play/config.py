@@ -33,6 +33,10 @@ class Settings:
     phrase_suitability_list_path: Path | None = field(default=None, repr=False)
     badge_emoji_map_path: Path | None = None
     ding_emoji: str | None = field(default=None, repr=False)
+    add_emoji: str | None = field(default=None, repr=False)
+    cancel_emoji: str | None = field(default=None, repr=False)
+    back_emoji: str | None = field(default=None, repr=False)
+    forward_emoji: str | None = field(default=None, repr=False)
     presentation_path: Path | None = field(default=None, repr=False)
     development_mode: bool = False
     sync_commands: bool = False
@@ -156,6 +160,10 @@ def load_settings(
         ),
         badge_emoji_map_path=_path(base, _value(env, "CHATGAMES_BADGE_EMOJI_MAP_PATH")),
         ding_emoji=_value(env, "CHATGAMES_DING_EMOJI"),
+        add_emoji=_value(env, "CHATGAMES_ADD_EMOJI"),
+        cancel_emoji=_value(env, "CHATGAMES_CANCEL_EMOJI"),
+        back_emoji=_value(env, "CHATGAMES_BACK_EMOJI"),
+        forward_emoji=_value(env, "CHATGAMES_FORWARD_EMOJI"),
         presentation_path=_path(base, _value(env, "CHATGAMES_PRESENTATION_PATH")),
         development_mode=_boolean(env, "CHATGAMES_DEVELOPMENT_MODE"),
         sync_commands=_boolean(env, "CHATGAMES_SYNC_COMMANDS"),

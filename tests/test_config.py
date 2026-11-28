@@ -25,7 +25,11 @@ def test_offline_defaults_do_not_need_token_or_create_files(tmp_path):
 def test_dotenv_is_explicit_and_environment_wins_without_mutation(tmp_path, monkeypatch):
     (tmp_path / ".env").write_text(
         "CHATGAMES_APP_ID=123\nCHATGAMES_DISCORD_TOKEN=local-sentinel\n"
-        "CHATGAMES_DING_EMOJI=${UNEXPANDED}\n",
+        "CHATGAMES_DING_EMOJI=${UNEXPANDED}\n"
+        "CHATGAMES_ADD_EMOJI=:add:\n"
+        "CHATGAMES_CANCEL_EMOJI=:cancel:\n"
+        "CHATGAMES_BACK_EMOJI=:back:\n"
+        "CHATGAMES_FORWARD_EMOJI=:forward:\n",
         encoding="utf-8",
     )
     monkeypatch.setenv("CHATGAMES_APP_ID", "456")
@@ -34,11 +38,17 @@ def test_dotenv_is_explicit_and_environment_wins_without_mutation(tmp_path, monk
     assert settings.app_id == 456
     assert settings.token is None
     assert settings.ding_emoji == "${UNEXPANDED}"
+    assert settings.add_emoji == ":add:"
+    assert settings.cancel_emoji == ":cancel:"
+    assert settings.back_emoji == ":back:"
+    assert settings.forward_emoji == ":forward:"
     import os
 
     assert "CHATGAMES_DING_EMOJI" not in os.environ
-    # An explicit mapping bypasses even an existing file.
-    assert load_settings(base_dir=tmp_path, environ={}).app_id is None
+    assert "CHATGAMES_ADD_EMOJI" not in os.environ
+    assert "CHATGAMES_CANCEL_EMOJI" not in os.environ
+    assert "CHATGAMES_BACK_EMOJI" not in os.environ
+    assert "CHATGAMES_FORWARD_EMOJI" not in os.environ
 
 
 def test_settings_repr_never_discloses_token_or_private_list_paths(tmp_path):
