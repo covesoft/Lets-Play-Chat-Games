@@ -110,7 +110,7 @@ class WordlistConfigView(discord.ui.LayoutView):
                 if idx == 4 and len(self.phrases) > 5:
                     container.add_item(
                         discord.ui.TextDisplay(
-                            f"""{self.info_emoji} {self.copy.text("wordlist.limit_notice")}"""
+                            f"""-# {self.info_emoji} {self.copy.text("wordlist.limit_notice")}"""
                         )
                     )
 
