@@ -54,8 +54,10 @@ class WordlistConfigLayoutView(discord.ui.LayoutView):
         settings = getattr(bot, "settings", None) if bot else None
         add_emoji_str = getattr(settings, "add_emoji", None) if settings else None
         cancel_emoji_str = getattr(settings, "cancel_emoji", None) if settings else None
+        bin_emoji_str = getattr(settings, "bin_emoji", None) if settings else None
         self.add_emoji = self._parse_emoji(add_emoji_str)
         self.cancel_emoji = self._parse_emoji(cancel_emoji_str)
+        self.bin_emoji = self._parse_emoji(bin_emoji_str)
         self.build_layout()
 
     def _parse_emoji(self, val):
@@ -91,7 +93,7 @@ class WordlistConfigLayoutView(discord.ui.LayoutView):
         if self.phrases:
             for p in self.phrases:
                 remove_btn = discord.ui.Button(
-                    emoji=self.cancel_emoji,
+                    emoji=self.bin_emoji,
                     style=discord.ButtonStyle.secondary,
                     custom_id=f"wordlist:remove:{p.phrase_id}",
                 )
@@ -114,6 +116,7 @@ class WordlistConfigLayoutView(discord.ui.LayoutView):
             add_btn.callback = self.add_callback
             reset_btn = discord.ui.Button(
                 label=self.copy.text("buttons.wordlist_reset"),
+                emoji=self.bin_emoji,
                 style=discord.ButtonStyle.danger,
                 custom_id="wordlist:reset",
             )

@@ -37,6 +37,7 @@ class Settings:
     cancel_emoji: str | None = field(default=None, repr=False)
     back_emoji: str | None = field(default=None, repr=False)
     forward_emoji: str | None = field(default=None, repr=False)
+    bin_emoji: str | None = field(default=None, repr=False)
     presentation_path: Path | None = field(default=None, repr=False)
     development_mode: bool = False
     sync_commands: bool = False
@@ -164,6 +165,7 @@ def load_settings(
         cancel_emoji=_value(env, "CHATGAMES_CANCEL_EMOJI"),
         back_emoji=_value(env, "CHATGAMES_BACK_EMOJI"),
         forward_emoji=_value(env, "CHATGAMES_FORWARD_EMOJI"),
+        bin_emoji=_value(env, "CHATGAMES_BIN_EMOJI"),
         presentation_path=_path(base, _value(env, "CHATGAMES_PRESENTATION_PATH")),
         development_mode=_boolean(env, "CHATGAMES_DEVELOPMENT_MODE"),
         sync_commands=_boolean(env, "CHATGAMES_SYNC_COMMANDS"),

@@ -42,6 +42,7 @@ def test_dotenv_is_explicit_and_environment_wins_without_mutation(tmp_path, monk
     assert settings.cancel_emoji == ":cancel:"
     assert settings.back_emoji == ":back:"
     assert settings.forward_emoji == ":forward:"
+    assert settings.bin_emoji is None
     import os
 
     assert "CHATGAMES_DING_EMOJI" not in os.environ
@@ -49,6 +50,7 @@ def test_dotenv_is_explicit_and_environment_wins_without_mutation(tmp_path, monk
     assert "CHATGAMES_CANCEL_EMOJI" not in os.environ
     assert "CHATGAMES_BACK_EMOJI" not in os.environ
     assert "CHATGAMES_FORWARD_EMOJI" not in os.environ
+    assert "CHATGAMES_BIN_EMOJI" not in os.environ
 
 
 def test_settings_repr_never_discloses_token_or_private_list_paths(tmp_path):

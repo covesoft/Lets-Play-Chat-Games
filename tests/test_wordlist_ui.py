@@ -45,6 +45,7 @@ def test_wordlist_config_layout_view():
     class MockSettings:
         add_emoji = "➕"
         cancel_emoji = "❌"
+        bin_emoji = "🗑"
 
     class MockBot:
         settings = MockSettings()
