@@ -93,6 +93,8 @@ TEMPLATE_FIELDS = {
     "results.footer": frozenset({"page"}),
     "offer.description": frozenset({"picker"}),
     "scheduled.description": frozenset({"timestamp"}),
+    "wordlist.error_add": frozenset({"e"}),
+    "wordlist.error_generic": frozenset({"e"}),
 }
 
 
@@ -166,6 +168,7 @@ def _validate_strings(strings):
                             "session",
                             "rule",
                             "name",
+                            "e",
                         }
                         else 1
                     )

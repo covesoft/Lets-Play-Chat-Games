@@ -360,7 +360,20 @@
     "reboot.revival_link": "[Return to the Continue check]({url}). The original deadline is {deadline}.",
     "buttons.final_results": "View final results",
     "buttons.game_status": "Game status",
-    "reboot.recovery_footer": "Thanks for your patience!"
+    "reboot.recovery_footer": "Thanks for your patience!",
+    "wordlist.modal_title": "Add Don't Forget Phrase",
+    "wordlist.input_label": "Phrase or GIF URL",
+    "wordlist.input_placeholder": "Enter 1-5 words or 1 GIF URL (max 80 chars)",
+    "wordlist.title": "## Don't Forget Wordlist Management",
+    "wordlist.description": "Players must include one of these phrases during Don't Forget card activations.",
+    "wordlist.empty_description": "Nothing here yet. Add your own custom beautiful phrase!",
+    "buttons.wordlist_remove": "Remove",
+    "buttons.wordlist_add": "Add Phrase",
+    "buttons.wordlist_reset": "Delete All Custom Phrases",
+    "wordlist.reset_title": "Delete All Custom Phrases",
+    "wordlist.reset_body": "Are you sure you want to delete all custom phrases and reset the wordlist to system defaults?",
+    "wordlist.error_add": "Cannot add phrase: {e}",
+    "wordlist.error_generic": "An error occurred: {e}"
   },
   "colors": {
     "mode_ended": "#32CD32",
