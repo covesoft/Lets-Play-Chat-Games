@@ -372,7 +372,8 @@
     "wordlist.reset_title": "Delete All Custom Phrases",
     "wordlist.reset_body": "Are you sure you want to delete all custom phrases and reset the wordlist to system defaults?",
     "wordlist.error_add": "Cannot add phrase: {e}",
-    "wordlist.error_generic": "An error occurred: {e}"
+    "wordlist.error_generic": "An error occurred: {e}",
+    "wordlist.limit_notice": "-# Phrases after this will be disabled for free games. Upgrade this guild to Premium to use all fifteen phrases."
   },
   "colors": {
     "mode_ended": "#32CD32",

@@ -91,7 +91,7 @@ class WordlistConfigLayoutView(discord.ui.LayoutView):
         container.add_item(discord.ui.Separator())
 
         if self.phrases:
-            for p in self.phrases:
+            for idx, p in enumerate(self.phrases):
                 remove_btn = discord.ui.Button(
                     emoji=self.bin_emoji,
                     style=discord.ButtonStyle.secondary,
@@ -103,6 +103,10 @@ class WordlistConfigLayoutView(discord.ui.LayoutView):
                     accessory=remove_btn,
                 )
                 container.add_item(section)
+                if idx == 4 and len(self.phrases) > 5:
+                    container.add_item(
+                        discord.ui.TextDisplay(self.copy.text("wordlist.limit_notice"))
+                    )
 
             # Buttons
             container.add_item(discord.ui.Separator())

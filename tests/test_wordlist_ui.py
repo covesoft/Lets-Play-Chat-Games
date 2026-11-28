@@ -83,3 +83,24 @@ def test_wordlist_config_layout_view():
     assert reset_btn is not None
     assert reset_btn.label == "Delete All Custom Phrases"
     assert reset_btn.style == discord.ButtonStyle.danger
+
+
+def test_wordlist_config_layout_view_with_six_phrases():
+    phrases_text = "\n".join([f"phrase number {i}" for i in range(1, 7)])
+    phrases = parse_phrase_bank(phrases_text)
+
+    class MockSettings:
+        add_emoji = "➕"
+        cancel_emoji = "❌"
+        bin_emoji = "🗑"
+
+    class MockBot:
+        settings = MockSettings()
+
+    view = WordlistConfigLayoutView(MockBot(), 123456789, phrases)
+    container = view.children[0]
+    text_displays = [
+        item for item in container.children if isinstance(item, discord.ui.TextDisplay)
+    ]
+    assert any("disabled for free games" in td.content for td in text_displays)
+
