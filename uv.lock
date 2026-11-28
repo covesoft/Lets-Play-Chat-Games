@@ -233,7 +233,7 @@ wheels = [
 
 [[package]]
 name = "discord-beacon"
-version = "4.7.0"
+version = "4.7.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "discord-py" },
@@ -241,9 +241,9 @@ dependencies = [
     { name = "pillow" },
     { name = "psutil" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/a6/9d/124bcf570e4f14b558e08031299b4f4c3b77aa78fc97d65bcf2e33e06545/discord_beacon-4.7.0.tar.gz", hash = "sha256:0dc711d06602cbdd7be276c83de1373ca200000c509711eaa4847c6f05de68f6", size = 192040, upload-time = "2026-11-28T06:08:20.868Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/db/25/41cee6513ccf5de96af1f90bf60034051c701c6138983e69c311b52db143/discord_beacon-4.7.1.tar.gz", hash = "sha256:91b85e2531e134ada029511c03d5b4bfd097201e5b64358203393c8d1392fee5", size = 192113, upload-time = "2026-11-28T09:17:56.587Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/ec/31/b610c1ea19c89cc202c48399f21e24c348d881cf3182df1d9b4d673a5742/discord_beacon-4.7.0-py3-none-any.whl", hash = "sha256:d67ffdf765630391509c37cf371ba0df4c32f9fdae4b85a85d05bb0afbe4aea1", size = 191198, upload-time = "2026-11-28T06:08:19.163Z" },
+    { url = "https://files.pythonhosted.org/packages/10/df/7491c68c8fd531a6403e073b89e1ed029aaa447a614d4d11d3f066ec4b6d/discord_beacon-4.7.1-py3-none-any.whl", hash = "sha256:2742c097214ac6fe802a3f991eaaf3f02bd42a3c8e439962e0030c94a38ec1ce", size = 191338, upload-time = "2026-11-28T09:17:55.208Z" },
 ]
 
 [[package]]
@@ -345,7 +345,7 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "aiosqlite", specifier = "==0.22.1" },
-    { name = "discord-beacon", specifier = "==4.7.0" },
+    { name = "discord-beacon", specifier = "==4.7.1" },
     { name = "discord-py", specifier = "==2.7.1" },
     { name = "emoji", specifier = "==2.16.0" },
     { name = "markdown-it-py", specifier = "==4.2.0" },

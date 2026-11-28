@@ -4,7 +4,7 @@ import asyncio
 
 import discord
 
-from lets_play.discord_adapter.beacon_helper_views import DestructiveConfirmationView
+from beacon import DestructiveConfirmationView
 from lets_play.new_rules.phrase_bank import PhraseBankError
 from lets_play.storage.guild_phrases import GuildPhraseBank
 
@@ -147,7 +147,7 @@ class WordlistConfigLayoutView(discord.ui.LayoutView):
             try:
                 async with self.bot.game_runtime.store.transaction() as unit:
                     bank = await GuildPhraseBank(unit).reset(self.guild_id)
-                await self.refresh_phrases(i, bank)
+                self.phrases = bank or ()
             except Exception as e:
                 try:
                     if not i.response.is_done():
@@ -162,13 +162,14 @@ class WordlistConfigLayoutView(discord.ui.LayoutView):
             title_text="Delete All Custom Phrases",
             body_text="Are you sure you want to delete all custom phrases and reset the wordlist to system defaults?",
             on_confirmation_callback=confirm_reset,
+            parent_view=self,
+            parent_view_refresh_function=self.build_layout
         )
         await interaction.response.edit_message(view=view)
 
     async def refresh_phrases(self, interaction: discord.Interaction, new_phrases):
         self.phrases = new_phrases or ()
         self.build_layout()
-        await asyncio.sleep(1.5)
         try:
             if not interaction.response.is_done():
                 await interaction.response.edit_message(view=self)

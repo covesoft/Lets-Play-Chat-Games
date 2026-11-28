@@ -12,16 +12,34 @@ attrs==26.1.0
     # via aiohttp
 audioop-lts==0.2.2
     # via discord-py
-discord-py==2.7.1
+certifi==2026.11.20
+    # via requests
+charset-normalizer==3.5.3
+    # via requests
+click==8.5.1
+    # via geocoder
+decorator==5.3.2
+    # via ratelim
+discord-beacon==4.7.1
     # via lets-play-chat-games
+discord-py==2.7.1
+    # via
+    #   discord-beacon
+    #   lets-play-chat-games
 emoji==2.16.0
     # via lets-play-chat-games
 frozenlist==1.8.0
     # via
     #   aiohttp
     #   aiosignal
+future==1.0.0
+    # via geocoder
+geocoder==1.38.1
+    # via discord-beacon
 idna==3.20
-    # via yarl
+    # via
+    #   requests
+    #   yarl
 markdown-it-py==4.2.0
     # via lets-play-chat-games
 mdurl==0.1.2
@@ -30,13 +48,25 @@ multidict==7.2.1
     # via
     #   aiohttp
     #   yarl
+pillow==13.0.0
+    # via discord-beacon
 propcache==0.5.4
     # via
     #   aiohttp
     #   yarl
+psutil==7.2.2
+    # via discord-beacon
 python-dotenv==1.2.4
     # via lets-play-chat-games
+ratelim==0.1.6
+    # via geocoder
 regex==2026.11.7
     # via lets-play-chat-games
+requests==2.34.2
+    # via geocoder
+six==1.17.0
+    # via geocoder
+urllib3==2.8.0
+    # via requests
 yarl==1.25.1
     # via aiohttp
